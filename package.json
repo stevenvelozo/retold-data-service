@@ -1,0 +1,38 @@
+{
+  "name": "retold-data-service",
+  "version": "1.0.0",
+  "description": "Serve up a whole model!",
+  "main": "source/Retold-Data-Service.js",
+  "scripts": {
+    "start": "node source/Retold-Data-Service.js",
+    "coverage": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha -- -u tdd -R spec",
+    "test": "./node_modules/mocha/bin/_mocha -u tdd -R spec",
+    "harness": "node debug/Harness.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stevenvelozo/retold-data-service.git"
+  },
+  "keywords": [
+    "entity",
+    "behavior"
+  ],
+  "author": "Steven Velozo <steven@velozo.com> (http://velozo.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/stevenvelozo/retold-data-service/issues"
+  },
+  "homepage": "https://github.com/stevenvelozo/retold-data-service",
+  "devDependencies": {
+    "chai": "3.5.0",
+    "coveralls": "2.13.1",
+    "istanbul": "0.4.5",
+    "mocha": "3.4.1",
+    "mysql2": "1.2.0"
+  },
+  "dependencies": {
+    "fable": "^2.0.5",
+    "meadow-endpoints": "^3.0.1",
+    "orator": "^2.0.4"
+  }
+}

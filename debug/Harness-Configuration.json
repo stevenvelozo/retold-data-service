@@ -1,0 +1,47 @@
+{
+	"Product": "RetoldDataService-Harness",
+	"ProductVersion": "1.0.0",
+
+	"UUID":
+		{
+			"DataCenter": 0,
+			"Worker": 0
+		},
+	"LogStreams":
+		[
+			{
+				"level": "trace",
+				"streamtype": "prettystream"
+			}
+		],
+
+	"APIServerPort": 8088,
+
+	"Retold":
+		{
+			"AutoConnectProvider": true,
+			"AutoMapBackplaneEndpoints": true,
+			"AutoMapEntityEndpoints": true,
+			"AutoStartAPIServer": true,
+
+			"AllowDatabaseCreate": false,
+			"AllowTableCreate": false,
+			"AllowTableUpdate": false,
+
+			"DefaultMeadowDataProvider": "MySQL",
+
+			"MeadowModel": "../test/model/meadow_model/BookStore-Extended.json",
+			"MeadowEntitySchema": false,
+			"StrictureDDL": false
+		},
+
+	"MySQL":
+		{
+			"Server": "127.0.0.1",
+			"Port": 3306,
+			"User": "root",
+			"Password": "123456789",
+			"Database": "bookstore",
+			"ConnectionPoolLimit": 20
+		}
+}
