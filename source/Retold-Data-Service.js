@@ -9,6 +9,9 @@ const libMeadow = require('meadow');
 const libMeadowEndpoints = require('meadow-endpoints');
 
 const libProviderBase = require('./ProviderHelpers/Meadow-Provider-Helper-Base.js');
+
+const libGraphSolver = require('./GraphGet.js');
+const libCumulation = require('./Cumulation.js');
 /**
 * Retold Data Service
 * 
@@ -53,6 +56,8 @@ class RetoldDataService
 		this._MeadowEndpoints = {};
 
 		this._Providers = {};
+
+		this._GraphSolver = false;
 
 		this.log = this._Fable.log;
 
@@ -139,6 +144,45 @@ class RetoldDataService
 				},
 				(fStageComplete) =>
 				{
+					// Initialize the graph solver library
+					this.initializeGraphEndpoints();
+					// Map the graph endpoints to it
+					// TODO: Decide if this follows the Meadow pattern or some other prefix pattern
+					this._Orator.webServer.post(`/1.0/GraphRead/:Entity`,
+						(pRequest, pResponse, fNext) =>
+						{
+							let tmpGraphRequestEntity = pRequest.params.Entity;
+							let tmpGraphRequestFilter = pRequest.body;
+
+							// TODO: Discuss how to pass in request settings -- what was in there worked for the web client and works for tokens so maybe it's okay?
+							let tmpCumulation = new libCumulation(this._Fable, {});
+
+							this._GraphSolver.get(tmpGraphRequestEntity, tmpGraphRequestFilter, tmpCumulation,
+								(pError, pRecords, pValidFilters, pFinalFilters, pJoinedDataSets, pValidIdentities) =>
+								{
+									pResponse.send(
+										{
+											GraphRequestEntity: tmpGraphRequestEntity,
+											GraphRequestFilter: tmpGraphRequestFilter,
+
+											Records: pRecords,
+
+											ValidFilters: pValidFilters,
+											Finalfilters: pFinalFilters,
+
+											JoinedDataSets: pJoinedDataSets,
+											ValidIdentities: pValidIdentities,
+
+											Error: pError
+										});
+									return fNext();		
+								});
+						});
+		
+					return fStageComplete();
+				},
+				(fStageComplete) =>
+				{
 					if (this._Settings.Retold.AutoStartAPIServer)
 					{
 						this.start(fStageComplete);
@@ -168,6 +212,11 @@ class RetoldDataService
 		this._Providers.Default = new libProvider(this._Fable);
 		
 		return this._Providers.Default.connect();
+	}
+
+	initializeGraphEndpoints()
+	{
+		this._GraphSolver = new libGraphSolver(this._Fable, this._MeadowModelGraph);
 	}
 
 	mapBackplaneEndpoints()

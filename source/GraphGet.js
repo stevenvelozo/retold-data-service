@@ -14,15 +14,13 @@ var libUnderscore = require('underscore');
 
 class GraphGet
 {
-	constructor(pFable, pCumulation, pModel)
+	constructor(pFable, pModel)
 	{
-        this._Cumulation = pCumulation;
-
-        // Wire up logging
+      // Wire up logging
 		this.log = pFable.log;
 
 		// Wire up settings
-		this._Settings = pFable._Settings;
+		this._Settings = pFable.settings;
 
 		// Get the data model graph
 		this._DataModel = pModel;
@@ -237,12 +235,12 @@ class GraphGet
 		return fCallback(null, tmpValidFilters);
 	};
 
-	get(pEntityName, pFilterObject, fGetRecords, fCallback)
+	get(pEntityName, pFilterObject, pCumulation, fCallback)
 	{
 		// Get a set of EntityNames based on the FilterObject
 		if (this._Settings.DebugLog)
 			this.log.debug(`[${pEntityName}] Beginning to graph GET a set of records based on some filter criteria`,pFilterObject);
-		let tmpGraphGetTime = this.log.getTimeStamp();
+		//let tmpGraphGetTime = this.log.getTimeStamp();
 
 		let tmpGraphHints = {};
 		let tmpGraphIgnores = {};
@@ -457,7 +455,7 @@ class GraphGet
 
 							// TODO: This is sick.  Fix it.
 							tmpURIFilter += `/0/10000`;
-							fGetRecords(pFilter.SatisfyingJoin, tmpURIFilter,
+							pCumulation.fetchRecords(pFilter.SatisfyingJoin, tmpURIFilter,
 								(pError, pData)=>
 								{
 									tmpJoinedDataSets[pFilter.Entity] = pData;
@@ -586,7 +584,7 @@ class GraphGet
 					if (tmpURIFilter !== '')
 						tmpURIFilter += '/';
 					tmpURIFilter += tmpPagingString;
-					fGetRecords(pEntityName, tmpURIFilter,
+					pCumulation.fetchRecords(pEntityName, tmpURIFilter,
 						(pError, pData)=>
 						{
 							return fStageComplete(pError, pData, pValidFilters, pFinalFilters, pJoinedDataSets, pValidIdentities);
@@ -598,7 +596,8 @@ class GraphGet
 				if (pError)
 					this.log.error(`[${pEntityName}] Graph Filter operation failed due to error: ${pError}`);
 
-				this.log.debug(`[${pEntityName}] Graph Filter operation completed in ${this.log.getTimeDelta(tmpGraphGetTime)}ms`);
+				//this.log.debug(`[${pEntityName}] Graph Filter operation completed in ${this.log.getTimeDelta(tmpGraphGetTime)}ms`);
+				this.log.debug(`[${pEntityName}] Graph Filter operation completed`);
 
 				fCallback(pError, pRecords, pValidFilters, pFinalFilters, pJoinedDataSets, pValidIdentities);
 			});

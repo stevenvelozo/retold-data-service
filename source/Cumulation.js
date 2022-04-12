@@ -11,7 +11,7 @@ const libGraphGet = require('./GraphGet.js');
 */
 class Cumulation
 {
-	constructor(pFable, pRequestSettings, pModel)
+	constructor(pFable, pRequestSettings)
 	{
 		this._Dependencies = {};
 		this._Dependencies.underscore = require('underscore');
@@ -20,7 +20,7 @@ class Cumulation
 		this._Dependencies.cumulation = this;
 
         // We want to make sure these are unique settings trees for each Cumulation object created.
-		this._RequestSettings = JSON.parse(JSON.stringify(this._Dependencies.underscore.extend(JSON.parse(JSON.stringify(require('./Cumulation-Settings-Default.js'))), pSettings)));
+		this._RequestSettings = JSON.parse(JSON.stringify(this._Dependencies.underscore.extend(JSON.parse(JSON.stringify(require('./Cumulation-Settings-Default.js'))), pRequestSettings)));
 
 		// This has behaviors similar to bunyan, for consistency
 		this._Log = pFable.log;
@@ -31,7 +31,7 @@ class Cumulation
 	 * GET RECORDS (plural)
 	 * 
 	**/
-	getRecordsFromServerGeneric (pEntity, pRecordsString, fCallback)
+	fetchRecords (pEntity, pRecordsString, fCallback)
 	{
 		let tmpCallBack = (typeof(fCallback) === 'function') ? fCallback : ()=>{};
 		let tmpURL = this._RequestSettings.Server+pEntity+'s/'+pRecordsString;
@@ -51,7 +51,7 @@ class Cumulation
 
 		if (this._RequestSettings.DebugLog)
 			this._Log.debug(`Beginning GET plural request`,tmpRequestOptions);
-		let tmpRequestTime = this._Log.getTimeStamp();
+		//let tmpRequestTime = this._Log.getTimeStamp();
 
 		this._Dependencies.simpleget.get(tmpRequestOptions, (pError, pResponse)=>
 			{
@@ -59,15 +59,15 @@ class Cumulation
 				{
 					return tmpCallBack(pError);
 				}
-				if (this._RequestSettings.DebugLog)
-					this._Log.debug(`--> GET plural connected in ${this._Log.getTimeDelta(tmpRequestTime)}ms code ${pResponse.statusCode}`);
+				//if (this._RequestSettings.DebugLog)
+				//	this._Log.debug(`--> GET plural connected in ${this._Log.getTimeDelta(tmpRequestTime)}ms code ${pResponse.statusCode}`);
 
 				let tmpData = '';
 
 				pResponse.on('data', (pChunk)=>
 					{
-						if (this._RequestSettings.DebugLog)
-							this._Log.debug(`--> GET plural data chunk size ${pChunk.length}b received in ${this._Log.getTimeDelta(tmpRequestTime)}ms`);
+						//if (this._RequestSettings.DebugLog)
+						//	this._Log.debug(`--> GET plural data chunk size ${pChunk.length}b received in ${this._Log.getTimeDelta(tmpRequestTime)}ms`);
 						tmpData += pChunk;
 					});
 
@@ -79,7 +79,7 @@ class Cumulation
 						if (this._RequestSettings.DebugLog)
 						{
 							//this._Log.debug(`==> GET plural completed data size ${tmpData.length}b received in ${this._Log.getTimeDelta(tmpRequestTime)}ms`,tmpResult);
-							this._Log.debug(`==> GET plural completed data size ${tmpData.length}b (${tmpResult.length} records) received in ${this._Log.getTimeDelta(tmpRequestTime)}ms`);
+							//this._Log.debug(`==> GET plural completed data size ${tmpData.length}b (${tmpResult.length} records) received in ${this._Log.getTimeDelta(tmpRequestTime)}ms`);
 						}
 						tmpCallBack(pError, tmpResult);
 					});
