@@ -5,7 +5,10 @@
 */
 const libAsync = require('async');
 const libOrator = require('orator');
+const libMeadow = require('meadow');
 const libMeadowEndpoints = require('meadow-endpoints');
+
+const libProviderBase = require('./ProviderHelpers/Meadow-Provider-Helper-Base.js');
 /**
 * Retold Data Service
 * 
@@ -41,21 +44,27 @@ class RetoldDataService
 		this._Orator = libOrator.new(tmpConfiguration);
 
 		this._Fable = this._Orator.fable;
+		this._Settings = this._Fable.settings;
+
+		this._Meadow = libMeadow.new(this._Fable);
+		this._MeadowModelGraph = {};
 
 		this._DAL = {};
 		this._MeadowEndpoints = {};
 
+		this._Providers = {};
+
 		this.log = this._Fable.log;
 
 		// Load the configurations
-		if (this._Fable.settings.hasOwnProperty('Retold'))
+		if (this._Settings.hasOwnProperty('Retold'))
 		{
-			if (this._Fable.settings.Retold.hasOwnProperty('MeadowModel'))
+			if (this._Settings.Retold.hasOwnProperty('MeadowModel'))
 			{
 				// One or many full Model file path(s) has been set
 			}
 			
-			if (this._Fable.settings.Retold.hasOwnProperty('MeadowEntitySchema'))
+			if (this._Settings.Retold.hasOwnProperty('MeadowEntitySchema'))
 			{
 				// One or many Entity Schema file path(s) is set
 			}
@@ -63,8 +72,10 @@ class RetoldDataService
 		else
 		{
 			// Create a retold entry with defaults
-			this._Fable.settings.Retold = (
+			this._Settings.Retold = (
 			{
+				// This setting will automatically load the model
+				"AutoLoadModel": true,
 				// This setting will automatically connect the provider via the helper
 				// (e.g. connect to MySQL)
 				"AutoConnectProvider": true,
@@ -84,35 +95,96 @@ class RetoldDataService
 				// Maybe switch to ALASQL by default for stateless services.
 				"DefaultMeadowDataProvider": "Base",
 
+				// Either the Meadow side or Stricture side should be set.
 				"MeadowModel": false,
-				"MeadowEntitySchema": false,
+				"MeadowEntitySchemaPrefix": false,
+
 				"StrictureDDL": false
-			})
+			});
 		}
+
+		this.initialize();
 	}
 
-	initialize()
+	initialize(fCallback)
 	{
+		let tmpCallback = (typeof(fCallback) == 'function') ? fCallback : ()=>{};
 		libAsync.waterfall(
 			[
 				(fStageComplete) =>
 				{
-					fStageComplete();
+					if (this._Settings.Retold.AutoLoadModel)
+					{
+						this.loadModels();
+					}
+
+					return fStageComplete();
+				},
+				(fStageComplete) =>
+				{
+					if (this._Settings.Retold.AutoConnectProvider)
+					{
+						this.initializeDefaultProvider();					
+					}
+					return fStageComplete();
+				},
+				(fStageComplete) =>
+				{
+					if (this._Settings.Retold.AutoMapBackplaneEndpoints)
+					{
+						this.mapBackplaneEndpoints();
+					}
+
+					return fStageComplete();
+				},
+				(fStageComplete) =>
+				{
+					if (this._Settings.Retold.AutoStartAPIServer)
+					{
+						this.start(fStageComplete);
+					}
+					else
+					{
+						return fStageComplete();
+					}
 				}
 			],
 			(pError)=>
 			{
+				if (pError)
+				{
+					this._Fable.log.error('Error initializing Retold Data Service: '+pError.toString(), pError);
+				}
 
+				tmpCallback(pError);
 			});
+	}
+
+	initializeDefaultProvider()
+	{
+		let libProvider = require(`./ProviderHelpers/Meadow-Provider-Helper-${this._Settings.Retold.DefaultMeadowDataProvider}.js`);
+		
+		// This is to support multiple providers
+		this._Providers.Default = new libProvider(this._Fable);
+		
+		return this._Providers.Default.connect();
 	}
 
 	mapBackplaneEndpoints()
 	{
-		const tmpBackplanePrefix = 'Backplane';
+		const tmpBackplanePrefix = 'BACKPLANE';
 		// Pull version from the config file.
-		const tmpEndpointVersion = _Fable.settings.MeadowEndpointVersion || '1.0';
+		const tmpEndpointVersion = this._Fable.settings.MeadowEndpointVersion || '1.0';
 
-		const tmpBackplaneEndpointPrefix = `/${tmpEndpointVersion}`;
+		const tmpBackplaneEndpointPrefix = `/${tmpBackplanePrefix}/${tmpEndpointVersion}`;
+
+		// TODO: Break this out into separate classes
+		this._Orator.webServer.get(`${tmpBackplaneEndpointPrefix}/Model`,
+			(pRequest, pResponse, fNext) =>
+			{
+				pResponse.send(this._MeadowModelGraph);
+				return fNext();
+			});
 	}
 
 	// Lock the service to a specific session (this will bypass auth)
@@ -131,6 +203,22 @@ class RetoldDataService
 			fNext();
 		};
 		this._Orator.webServer.use(fMockAuthentication);
+	}
+
+	// Load models based on what's in the configuration
+	loadModels()
+	{
+		if (this._Settings.Retold.MeadowModel)
+		{
+			this.loadMeadowModelFile(this._Settings.Retold.MeadowModel);
+		}
+	}
+
+	loadMeadowModelFile(pModelFilePath)
+	{
+		// TODO: Wrap this in a try/catch/finally
+		this._MeadowModelGraph = require(pModelFilePath);
+		this.loadMeadowModel(this._MeadowModelGraph);
 	}
 
 	loadMeadowModel(pModelObject)
@@ -158,7 +246,8 @@ class RetoldDataService
 			let tmpDALEntityName = tmpModelTableList[i];
 			this.log.info(`   -> Creating the [${tmpDALEntityName}] DAL...`);
 			// 4. Create the DAL for each entry (e.g. it would be at _DAL.Book or _DAL.Author)
-			this._DAL[tmpDALEntityName] = _Meadow.loadFromPackageObject(pModelObject.Tables[tmpDALEntityName]);
+			// TODO: I don't like this ... stricture should just generate a huge file of these in an array, which could be loaded with the new injector
+			this._DAL[tmpDALEntityName] = this._Meadow.loadFromPackage(`${this._Settings.Retold.MeadowEntitySchemaPrefix}${tmpDALEntityName}.json`);
 			// 5. Tell this DAL object to use the default provider
 			this._DAL[tmpDALEntityName].setProvider(tmpDefaultProvider);
 			// 6. Create a Meadow Endpoints class for this DAL
@@ -170,6 +259,11 @@ class RetoldDataService
 				this._MeadowEndpoints[tmpDALEntityName].RoutesConnected = true;
 			}
 		}
+	}
+
+	start(fCallback)
+	{
+		this._Orator.startWebServer(fCallback);
 	}
 
 	get orator()

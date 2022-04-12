@@ -14,26 +14,29 @@ class RetoldProviderHelperMySQL extends libRetoldProviderHelperBase
 {
 	constructor(pFable)
 	{
-		this._Fable = pFable;
+		super(pFable);
 	}
 
 	// Connect to the server
 	connect()
 	{
-		this._Fable.log.info(`...Creating SQL Connection pools at [${_Fable.settings.MySQL.Server}]...`,_Fable.settings.MySQL);
+		this._Fable.log.info(`...Creating SQL Connection pools at [${this._Fable.settings.MySQL.Server}]...`,this._Fable.settings.MySQL);
 		// Setup SQL Connection Pool
-		_Fable.MeadowMySQLConnectionPool = libMySQL.createPool
+		// TODO: try/catch/finally
+		this._Fable.MeadowMySQLConnectionPool = libMySQL.createPool
 			(
 				{
-					connectionLimit: _Fable.settings.MySQL.ConnectionPoolLimit,
-					host: _Fable.settings.MySQL.Server,
-					port: _Fable.settings.MySQL.Port,
-					user: _Fable.settings.MySQL.User,
-					password: _Fable.settings.MySQL.Password,
-					database: _Fable.settings.MySQL.Database,
+					connectionLimit: this._Fable.settings.MySQL.ConnectionPoolLimit,
+					host: this._Fable.settings.MySQL.Server,
+					port: this._Fable.settings.MySQL.Port,
+					user: this._Fable.settings.MySQL.User,
+					password: this._Fable.settings.MySQL.Password,
+					database: this._Fable.settings.MySQL.Database,
 					namedPlaceholders: true
 				}
 			);
+		
+		return true;
 	}
 
 	// Create database (this deals with its own connections and closes them)

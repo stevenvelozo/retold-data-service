@@ -14,7 +14,7 @@ class RetoldProviderHelperALASQL extends libRetoldProviderHelperBase
 {
 	constructor(pFable)
 	{
-		this._Fable = pFable;
+		super(pFable);
 	}
 
 	// Connect to the server

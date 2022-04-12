@@ -19,6 +19,7 @@
 
 	"Retold":
 		{
+			"AutoLoadModel": true,
 			"AutoConnectProvider": true,
 			"AutoMapBackplaneEndpoints": true,
 			"AutoMapEntityEndpoints": true,
@@ -28,10 +29,13 @@
 			"AllowTableCreate": false,
 			"AllowTableUpdate": false,
 
+			"ServeDebugEnvironment": true,
+
 			"DefaultMeadowDataProvider": "MySQL",
 
-			"MeadowModel": "../test/model/meadow_model/BookStore-Extended.json",
-			"MeadowEntitySchema": false,
+			"MeadowModel":              "/home/coder/retold-dev/library/debug/model/Model.json",
+			"MeadowEntitySchemaPrefix": "/home/coder/retold-dev/library/debug/model/meadow/Model-MeadowSchema-",
+
 			"StrictureDDL": false
 		},
 

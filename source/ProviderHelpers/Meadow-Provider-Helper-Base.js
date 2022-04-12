@@ -19,6 +19,8 @@ class RetoldProviderHelperBase
 	connect()
 	{
 		this._Fable.log.info(`...no connection operation on base Meadow Provider Helper`);
+
+		return true;
 	}
 
 	// Create database (this deals with its own connections and closes them)
