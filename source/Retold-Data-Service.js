@@ -67,11 +67,13 @@ class RetoldDataService
 			if (this._Settings.Retold.hasOwnProperty('MeadowModel'))
 			{
 				// One or many full Model file path(s) has been set
+				this._Settings.Retold.MeadowModel = `${process.cwd()}/model/MeadowModel.json`;
 			}
 			
-			if (this._Settings.Retold.hasOwnProperty('MeadowEntitySchema'))
+			if (this._Settings.Retold.hasOwnProperty('MeadowEntitySchemaPrefix'))
 			{
 				// One or many Entity Schema file path(s) is set
+				this._Settings.Retold.MeadowEntitySchemaPrefix = `${process.cwd()}/model/meadow/MeadowSchema`;
 			}
 		}
 		else
@@ -101,8 +103,9 @@ class RetoldDataService
 				"DefaultMeadowDataProvider": "Base",
 
 				// Either the Meadow side or Stricture side should be set.
-				"MeadowModel": false,
-				"MeadowEntitySchemaPrefix": false,
+				// Try to use the opinionated Stricture locations if they arent (you really should set this though!)
+				"MeadowModel": `${process.cwd()}/model/MeadowModel.json`,
+				"MeadowEntitySchemaPrefix": `${process.cwd()}/model/meadow/MeadowSchema`,
 
 				"StrictureDDL": false
 			});
