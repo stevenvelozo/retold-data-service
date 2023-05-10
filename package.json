@@ -1,6 +1,6 @@
 {
   "name": "retold-data-service",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Serve up a whole model!",
   "main": "source/Retold-Data-Service.js",
   "scripts": {
@@ -27,8 +27,7 @@
     "chai": "3.5.0",
     "coveralls": "2.13.1",
     "istanbul": "0.4.5",
-    "mocha": "3.4.1",
-    "mysql2": "1.2.0"
+    "mocha": "3.4.1"
   },
   "dependencies": {
     "async": "^3.2.3",
@@ -38,6 +37,7 @@
     "orator": "^2.0.4",
     "restify": "^8.6.1",
     "simple-get": "^4.0.1",
-    "underscore": "^1.13.2"
+    "underscore": "^1.13.2",
+    "mysql2": "1.2.0"
   }
 }

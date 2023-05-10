@@ -34,7 +34,7 @@
 			"DefaultMeadowDataProvider": "MySQL",
 
 			"MeadowModel":              "/home/coder/retold-dev/library/debug/model/Model.json",
-			"MeadowEntitySchemaPrefix": "/home/coder/retold-dev/library/debug/model/meadow/Model-MeadowSchema-",
+			"MeadowEntitySchemaPrefix": "/home/coder/retold-dev/library/debug/model/meadow/MeadowSchema-",
 
 			"StrictureDDL": false
 		},
