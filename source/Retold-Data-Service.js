@@ -1,6 +1,6 @@
 /**
  * Retold Data Service
- * 
+ *
  * All-in-one add-ins for fable to provide endpoints.
  *
  * @author Steven Velozo <steven@velozo.com>
@@ -15,7 +15,7 @@ const defaultDataServiceSettings = (
 	{
 		FullMeadowSchemaPath: `${process.cwd()}/model/`,
 		FullMeadowSchemaFilename: `Model-Extended.json`,
-		
+
 		DALMeadowSchemaPath: `${process.cwd()}/model/meadow/`,
 		DALMeadowSchemaPrefix: `Model-MeadowSchema-`,
 		DALMeadowSchemaPostfix: ``,

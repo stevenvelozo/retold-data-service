@@ -1,73 +1,60 @@
 {
-  "name": "retold-data-service",
-  "version": "1.0.3",
-  "description": "Serve up a whole model!",
-  "main": "source/Retold-Data-Service.js",
-  "scripts": {
-    "start": "node source/Retold-Data-Service.js",
-    "coverage": "./node_modules/.bin/nyc --reporter=lcov --reporter=text-lcov ./node_modules/mocha/bin/_mocha -- -u tdd -R spec",
-    "test": "./node_modules/.bin/mocha -u tdd -R spec",
-    "build": "./node_modules/.bin/gulp build",
-    "build-compatible": "GULP_CUSTOM_BUILD_TARGET=compatible ./node_modules/.bin/gulp build",
-    "docker-dev-build": "docker build ./ -f Dockerfile_LUXURYCode -t retold/retold-data-service:local",
-    "docker-dev-run": "docker run -it -d --name retold-retold-data-service-dev -p 44444:8080 -p 48086:8086 -v \"$PWD/.config:/home/coder/.config\"  -v \"$PWD:/home/coder/retold-data-service\" -u \"$(id -u):$(id -g)\" -e \"DOCKER_USER=$USER\" retold/retold-data-service:local",
-    "docker-dev-shell": "docker exec -it retold-retold-data-service-dev /bin/bash"
-  },
-  "mocha": {
-    "diff": true,
-    "extension": [
-      "js"
+    "name": "retold-data-service",
+    "version": "1.0.3",
+    "description": "Serve up a whole model!",
+    "main": "source/Retold-Data-Service.js",
+    "scripts": {
+        "start": "node source/Retold-Data-Service.js",
+        "coverage": "./node_modules/.bin/nyc --reporter=lcov --reporter=text-lcov ./node_modules/mocha/bin/_mocha -- -u tdd -R spec",
+        "test": "./node_modules/.bin/mocha -u tdd -R spec",
+        "build": "npx quack build",
+        "docker-dev-build": "docker build ./ -f Dockerfile_LUXURYCode -t retold-data-service-image:local",
+        "docker-dev-run": "docker run -it -d --name retold-data-service-dev -p 44444:8080 -p 43306:3306 -p 48086:8086 -v \"$PWD/.config:/home/coder/.config\"  -v \"$PWD:/home/coder/retold-data-service\" -u \"$(id -u):$(id -g)\" -e \"DOCKER_USER=$USER\" retold-data-service-image:local",
+        "docker-dev-shell": "docker exec -it retold-data-service-dev /bin/bash"
+    },
+    "mocha": {
+        "diff": true,
+        "extension": [
+            "js"
+        ],
+        "package": "./package.json",
+        "reporter": "spec",
+        "slow": "75",
+        "timeout": "5000",
+        "ui": "tdd",
+        "watch-files": [
+            "source/**/*.js",
+            "test/**/*.js"
+        ],
+        "watch-ignore": [
+            "lib/vendor"
+        ]
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/stevenvelozo/retold-data-service.git"
+    },
+    "keywords": [
+        "entity",
+        "behavior",
+        "api"
     ],
-    "package": "./package.json",
-    "reporter": "spec",
-    "slow": "75",
-    "timeout": "5000",
-    "ui": "tdd",
-    "watch-files": [
-      "source/**/*.js",
-      "test/**/*.js"
-    ],
-    "watch-ignore": [
-      "lib/vendor"
-    ]
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/stevenvelozo/retold-data-service.git"
-  },
-  "keywords": [
-    "entity",
-    "behavior"
-  ],
-  "author": "Steven Velozo <steven@velozo.com> (http://velozo.com/)",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/stevenvelozo/retold-data-service/issues"
-  },
-  "homepage": "https://github.com/stevenvelozo/retold-data-service",
-  "devDependencies": {
-    "@babel/core": "^7.21.8",
-    "@babel/preset-env": "^7.21.5",
-    "browserify": "^17.0.0",
-    "chai": "4.3.7",
-    "gulp": "^4.0.2",
-    "gulp-babel": "^8.0.0",
-    "gulp-env": "^0.4.0",
-    "gulp-sourcemaps": "^3.0.0",
-    "gulp-terser": "^2.1.0",
-    "gulp-util": "^3.0.8",
-    "mocha": "10.2.0",
-    "nyc": "^15.1.0",
-    "vinyl-buffer": "^1.0.1",
-    "vinyl-source-stream": "^2.0.0"
-  },
-  "dependencies": {
-    "fable": "^3.0.46",
-    "fable-serviceproviderbase": "^3.0.4",
-    "meadow": "^2.0.5",
-    "meadow-connection-mysql": "^1.0.2",
-    "meadow-endpoints": "^4.0.2",
-    "orator": "^3.0.11",
-    "orator-serviceserver-restify": "^1.0.4"
-  }
+    "author": "Steven Velozo <steven@velozo.com> (http://velozo.com/)",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/stevenvelozo/retold-data-service/issues"
+    },
+    "homepage": "https://github.com/stevenvelozo/retold-data-service",
+    "devDependencies": {
+        "quackage": "^1.0.14"
+    },
+    "dependencies": {
+        "fable": "^3.0.68",
+        "fable-serviceproviderbase": "^3.0.10",
+        "meadow": "^2.0.5",
+        "meadow-connection-mysql": "^1.0.4",
+        "meadow-endpoints": "^4.0.2",
+        "orator": "^3.0.11",
+        "orator-serviceserver-restify": "^1.0.4"
+    }
 }
