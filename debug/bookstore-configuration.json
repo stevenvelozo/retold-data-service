@@ -14,7 +14,7 @@
 			}
 		],
 
-	"APIServerPort": 8086,
+	"APIServerPort": 8087,
 
 	"MySQL":
 		{
@@ -25,5 +25,6 @@
 			"Database": "bookstore",
 			"ConnectionPoolLimit": 20
 		},
+
 	"MeadowConnectionMySQLAutoConnect": true
 }

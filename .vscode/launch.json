@@ -9,7 +9,7 @@
             "type": "node",
             "request": "launch",
             "outputCapture": "std",
-            "cwd": "/home/coder/retold-data-service/debug/",
+            "cwd": "${workspaceFolder}/debug/",
             "skipFiles": [
                 "<node_internals>/**"
             ],
