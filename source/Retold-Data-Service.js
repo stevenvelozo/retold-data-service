@@ -117,7 +117,7 @@ class RetoldDataService extends libFableServiceProviderBase
 			this._MeadowEndpoints[tmpDALEntityName] = libMeadowEndpoints.new(this._DAL[tmpDALEntityName]);
 			// 8. Expose the meadow endpoints on Orator
 			_Fable.log.info(`...mapping the ${tmpDALEntityName} Meadow Endpoints to Orator`);
-			this._MeadowEndpoints[tmpDALEntityName].connectRoutes(this.fable.Orator.webServer);
+			this._MeadowEndpoints[tmpDALEntityName].connectRoutes(this.fable.OratorServiceServer);
 		}
 
 		return fCallback();
@@ -137,7 +137,19 @@ class RetoldDataService extends libFableServiceProviderBase
 
 			tmpAnticipate.anticipate(this.onBeforeInitialize.bind(this));
 
-			tmpAnticipate.anticipate(this.fable.Orator.startWebServer.bind(this.fable.Orator));
+			tmpAnticipate.anticipate(
+				(fCallback) =>
+				{
+					if (this.options.AutoStartOrator)
+					{
+						this.fable.Orator.startWebServer(fCallback);
+					}
+					else
+					{
+						return fCallback();
+					}
+				});
+
 			tmpAnticipate.anticipate(this.initializePersistenceEngine.bind(this));
 
 			tmpAnticipate.anticipate(this.onInitialize.bind(this));
@@ -154,7 +166,7 @@ class RetoldDataService extends libFableServiceProviderBase
 						this.log.error(`Error initializing Retold Data Service: ${pError}`);
 						return fCallback(pError);
 					}
-
+					this.fable.Orator.startWebServer.bind(this.fable.Orator);
 					this.serviceInitialized = true;
 					return fCallback();
 				});
