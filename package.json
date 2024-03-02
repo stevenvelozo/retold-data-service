@@ -1,6 +1,6 @@
 {
     "name": "retold-data-service",
-    "version": "2.0.1",
+    "version": "2.0.3",
     "description": "Serve up a whole model!",
     "main": "source/Retold-Data-Service.js",
     "scripts": {
@@ -54,7 +54,7 @@
         "meadow": "^2.0.15",
         "meadow-connection-mysql": "^1.0.4",
         "meadow-endpoints": "^4.0.5",
-        "orator": "^4.0.2",
-        "orator-serviceserver-restify": "^2.0.2"
+        "orator": "^4.0.3",
+        "orator-serviceserver-restify": "^2.0.3"
     }
 }
