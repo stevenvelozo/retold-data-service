@@ -28,9 +28,11 @@ const defaultDataServiceSettings = (
 
 class RetoldDataService extends libFableServiceProviderBase
 {
-	constructor(pFable, pManifest, pServiceHash)
+	constructor(pFable, pOptions, pServiceHash)
 	{
-		super(pFable, pManifest, pServiceHash);
+		// Intersect default options, parent constructor, service information
+		let tmpOptions = Object.assign({}, JSON.parse(JSON.stringify(defaultDataServiceSettings)), pOptions);
+		super(pFable, tmpOptions, pServiceHash);
 
         this.serviceType = 'RetoldDataService';
 
