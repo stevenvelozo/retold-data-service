@@ -42,9 +42,7 @@ suite
 								AutoStartOrator: true
 							});
 
-						tmpRetoldDataService.initializeService();
-
-						return fDone();
+						tmpRetoldDataService.initializeService(()=>{return fDone()});
 					}
 				);
 			}

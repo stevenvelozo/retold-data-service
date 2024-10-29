@@ -47,7 +47,7 @@ class RetoldDataService extends libFableServiceProviderBase
 		this.fable.serviceManager.instantiateServiceProvider('Orator', this.options);
 
 		// TODO: This code will be much cleaner with meadow and meadow-endpoints as services
-		this._Meadow = libMeadow.new(_Fable);
+		this._Meadow = libMeadow.new(pFable);
 
 		// Create DAL objects for each table in the schema
 		// These will be unnecessary when meadow and meadow-endpoints are full fledged fable services
@@ -92,31 +92,31 @@ class RetoldDataService extends libFableServiceProviderBase
 		// Create DAL objects for each table in the schema
 
 		// 1. Load full compiled schema of the model from stricture
-		_Fable.log.info(`...loading full model stricture schema...`);
+		this.fable.log.info(`...loading full model stricture schema...`);
 		this.fullModel = require (`${this.options.FullMeadowSchemaPath}${this.options.FullMeadowSchemaFilename}`);
-		_Fable.log.info(`...full model stricture schema loaded.`);
+		this.fable.log.info(`...full model stricture schema loaded.`);
 
 		// 2. Extract an array of each table in the schema
-		_Fable.log.info(`...getting entity list...`);
+		this.fable.log.info(`...getting entity list...`);
 		this.entityList = Object.keys(this.fullModel.Tables);
 
 		// 3. Enumerate each entry in the compiled model and load a DAL for that table
-		_Fable.log.info(`...initializing ${this.entityList.length} DAL objects and corresponding Meadow Endpoints...`);
+		this.fable.log.info(`...initializing ${this.entityList.length} DAL objects and corresponding Meadow Endpoints...`);
 		for (let i = 0; i < this.entityList.length; i++)
 		{
 			// 4. Create the DAL for each entry (e.g. it would be at _DAL.Movie for the Movie entity)
 			let tmpDALEntityName = this.entityList[i];
 			let tmpDALPackageFile = `${this.options.DALMeadowSchemaPath}${this.options.DALMeadowSchemaPrefix}${tmpDALEntityName}${this.options.DALMeadowSchemaPostfix}.json`
-			_Fable.log.info(`Initializing the ${tmpDALEntityName} DAL from [${tmpDALPackageFile}]...`);
+			this.fable.log.info(`Initializing the ${tmpDALEntityName} DAL from [${tmpDALPackageFile}]...`);
 			this._DAL[tmpDALEntityName] = this._Meadow.loadFromPackage(tmpDALPackageFile);
 			// 5. Tell this DAL object to use MySQL
-			_Fable.log.info(`...defaulting the ${tmpDALEntityName} DAL to use MySQL`);
+			this.fable.log.info(`...defaulting the ${tmpDALEntityName} DAL to use MySQL`);
 			this._DAL[tmpDALEntityName].setProvider('MySQL');
 			// 6. Create a Meadow Endpoints class for this DAL
-			_Fable.log.info(`...initializing the ${tmpDALEntityName} Meadow Endpoints to use MySQL`);
+			this.fable.log.info(`...initializing the ${tmpDALEntityName} Meadow Endpoints to use MySQL`);
 			this._MeadowEndpoints[tmpDALEntityName] = libMeadowEndpoints.new(this._DAL[tmpDALEntityName]);
 			// 8. Expose the meadow endpoints on Orator
-			_Fable.log.info(`...mapping the ${tmpDALEntityName} Meadow Endpoints to Orator`);
+			this.fable.log.info(`...mapping the ${tmpDALEntityName} Meadow Endpoints to Orator`);
 			this._MeadowEndpoints[tmpDALEntityName].connectRoutes(this.fable.OratorServiceServer);
 		}
 
@@ -138,15 +138,15 @@ class RetoldDataService extends libFableServiceProviderBase
 			tmpAnticipate.anticipate(this.onBeforeInitialize.bind(this));
 
 			tmpAnticipate.anticipate(
-				(fCallback) =>
+				(fInitCallback) =>
 				{
 					if (this.options.AutoStartOrator)
 					{
-						this.fable.Orator.startWebServer(fCallback);
+						this.fable.Orator.startWebServer(fInitCallback);
 					}
 					else
 					{
-						return fCallback();
+						return fInitCallback();
 					}
 				});
 
