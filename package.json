@@ -55,6 +55,8 @@
         "meadow-connection-mysql": "^1.0.4",
         "meadow-endpoints": "^4.0.5",
         "orator": "^4.0.3",
-        "orator-serviceserver-restify": "^2.0.3"
+        "orator-http-proxy": "^1.0.0",
+        "orator-serviceserver-restify": "^2.0.3",
+        "orator-static-server": "^1.0.0"
     }
 }
