@@ -42,7 +42,12 @@ suite
 								AutoStartOrator: true
 							});
 
-						tmpRetoldDataService.initializeService(()=>{return fDone()});
+						tmpRetoldDataService.initializeService(
+							()=>
+							{
+								// The data service created an orator
+								_Fable.Orator.stopService(fDone);
+							});
 					}
 				);
 			}

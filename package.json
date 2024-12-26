@@ -46,17 +46,17 @@
     },
     "homepage": "https://github.com/stevenvelozo/retold-data-service",
     "devDependencies": {
-        "quackage": "^1.0.28"
+        "quackage": "^1.0.36"
     },
     "dependencies": {
-        "fable": "^3.0.112",
-        "fable-serviceproviderbase": "^3.0.12",
+        "fable": "^3.0.146",
+        "fable-serviceproviderbase": "^3.0.15",
         "meadow": "^2.0.15",
         "meadow-connection-mysql": "^1.0.4",
         "meadow-endpoints": "^4.0.5",
-        "orator": "^4.0.3",
-        "orator-http-proxy": "^1.0.0",
+        "orator": "^5.0.0",
+        "orator-http-proxy": "^1.0.1",
         "orator-serviceserver-restify": "^2.0.3",
-        "orator-static-server": "^1.0.0"
+        "orator-static-server": "^1.0.1"
     }
 }
