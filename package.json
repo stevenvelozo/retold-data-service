@@ -8,6 +8,7 @@
         "coverage": "./node_modules/.bin/nyc --reporter=lcov --reporter=text-lcov ./node_modules/mocha/bin/_mocha -- -u tdd -R spec",
         "test": "./node_modules/.bin/mocha -u tdd -R spec",
         "build": "npx quack build",
+        "build-test-model": "cd test && npx stricture -i model/ddl/BookStore.ddl",
         "docker-dev-build": "docker build ./ -f Dockerfile_LUXURYCode -t retold-data-service-image:local",
         "docker-dev-run": "docker run -it -d --name retold-data-service-dev -p 44444:8080 -p 43306:3306 -p 48086:8086 -v \"$PWD/.config:/home/coder/.config\"  -v \"$PWD:/home/coder/retold-data-service\" -u \"$(id -u):$(id -g)\" -e \"DOCKER_USER=$USER\" retold-data-service-image:local",
         "docker-dev-shell": "docker exec -it retold-data-service-dev /bin/bash",
@@ -50,7 +51,8 @@
     },
     "homepage": "https://github.com/stevenvelozo/retold-data-service",
     "devDependencies": {
-        "quackage": "^1.0.41"
+        "quackage": "^1.0.41",
+        "stricture": "^1.0.37"
     },
     "dependencies": {
         "fable": "^3.1.11",

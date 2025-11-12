@@ -15,12 +15,11 @@ const libMeadowEndpoints = require('meadow-endpoints');
 
 const defaultDataServiceSettings = (
 	{
-		FullMeadowSchemaPath: `${process.cwd()}/model/`,
-		FullMeadowSchemaFilename: `Model-Extended.json`,
+		StorageProvider: 'MySQL',
+		StorageProviderModule: 'meadow-connection-mysql',
 
-		DALMeadowSchemaPath: `${process.cwd()}/model/meadow/`,
-		DALMeadowSchemaPrefix: `Model-MeadowSchema-`,
-		DALMeadowSchemaPostfix: ``,
+		FullMeadowSchemaPath: `${process.cwd()}/model/`,
+		FullMeadowSchemaFilename: `MeadowModel-Extended.json`,
 
 		AutoInitializeDataService: true,
 		AutoStartOrator: true
@@ -71,10 +70,12 @@ class RetoldDataService extends libFableServiceProviderBase
 	{
 		return fCallback();
 	}
+
 	onInitialize(fCallback)
 	{
 		return fCallback();
 	}
+
 	onAfterInitialize(fCallback)
 	{
 		return fCallback();
@@ -84,9 +85,10 @@ class RetoldDataService extends libFableServiceProviderBase
 	{
 		// TODO: Change this to an option (e.g. we might want to do ALASQL)
 		// Load the mysql connection for meadow if it doesn't exist yet
-		this.fable.serviceManager.addAndInstantiateServiceType('MeadowMySQLProvider', require('meadow-connection-mysql'));
+		this.fable.serviceManager.addAndInstantiateServiceType(`Meadow${this.options.StorageProvider}Provider`, require(this.options.StorageProviderModule));
 		return fCallback();
 	}
+
 	initializeDataEndpoints(fCallback)
 	{
 		this.fable.log.info("Retold Data Service initializing Endpoints...");
@@ -108,14 +110,15 @@ class RetoldDataService extends libFableServiceProviderBase
 		{
 			// 4. Create the DAL for each entry (e.g. it would be at _DAL.Movie for the Movie entity)
 			let tmpDALEntityName = this.entityList[i];
-			let tmpDALPackageFile = `${this.options.DALMeadowSchemaPath}${this.options.DALMeadowSchemaPrefix}${tmpDALEntityName}${this.options.DALMeadowSchemaPostfix}.json`
-			this.fable.log.info(`Initializing the ${tmpDALEntityName} DAL from [${tmpDALPackageFile}]...`);
-			this._DAL[tmpDALEntityName] = this._Meadow.loadFromPackage(tmpDALPackageFile);
-			// 5. Tell this DAL object to use MySQL
-			this.fable.log.info(`...defaulting the ${tmpDALEntityName} DAL to use MySQL`);
-			this._DAL[tmpDALEntityName].setProvider('MySQL');
+			let tmpDALPackageObject = this.fullModel.Tables[tmpDALEntityName];
+			// We no longer need to load it from a package file; it's all in the full model
+			this.fable.log.info(`Initializing the ${tmpDALEntityName} DAL...`);
+			this._DAL[tmpDALEntityName] = this._Meadow.loadFromPackageObject(tmpDALPackageObject.MeadowSchema);
+			// 5. Tell this DAL object to use the specified storage provider
+			this.fable.log.info(`...defaulting the ${tmpDALEntityName} DAL to use ${this.options.StorageProvider}`);
+			this._DAL[tmpDALEntityName].setProvider(this.options.StorageProvider);
 			// 6. Create a Meadow Endpoints class for this DAL
-			this.fable.log.info(`...initializing the ${tmpDALEntityName} Meadow Endpoints to use MySQL`);
+			this.fable.log.info(`...initializing the ${tmpDALEntityName} Meadow Endpoints to use ${this.options.StorageProvider}`);
 			this._MeadowEndpoints[tmpDALEntityName] = libMeadowEndpoints.new(this._DAL[tmpDALEntityName]);
 			// 8. Expose the meadow endpoints on Orator
 			this.fable.log.info(`...mapping the ${tmpDALEntityName} Meadow Endpoints to Orator`);
@@ -170,6 +173,34 @@ class RetoldDataService extends libFableServiceProviderBase
 					}
 					this.fable.Orator.startWebServer.bind(this.fable.Orator);
 					this.serviceInitialized = true;
+					return fCallback();
+				});
+		}
+	}
+
+	stopService(fCallback)
+	{
+		if (!this.serviceInitialized)
+		{
+			return fCallback(new Error("Retold Data Service Application is being stopped but is not initialized..."));
+		}
+		else
+		{
+			this.fable.log.info(`The Retold Data Service is stopping Orator`);
+
+			let tmpAnticipate = this.fable.newAnticipate();
+
+			tmpAnticipate.anticipate(this.fable.Orator.stopWebServer.bind(this.fable.Orator));
+
+			tmpAnticipate.wait(
+				(pError)=>
+				{
+					if (pError)
+					{
+						this.log.error(`Error stopping Retold Data Service: ${pError}`);
+						return fCallback(pError);
+					}
+					this.serviceInitialized = false;
 					return fCallback();
 				});
 		}

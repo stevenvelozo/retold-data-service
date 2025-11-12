@@ -6,21 +6,21 @@ Book
 Column Name | Size | Data Type | Join 
 ----------- | ---: | --------- | ---- 
 IDBook |  | ID |  
-GUIDBook |  | GUID |  
+GUIDBook | 36 | GUID |  
 CreateDate |  | DateTime |  
-CreatingIDUser |  | Numeric |  
+CreatingIDUser | int | Numeric |  
 UpdateDate |  | DateTime |  
-UpdatingIDUser |  | Numeric |  
+UpdatingIDUser | int | Numeric |  
 Deleted |  | Boolean |  
 DeleteDate |  | DateTime |  
-DeletingIDUser |  | Numeric |  
+DeletingIDUser | int | Numeric |  
 Title | 200 | String |  
 Type | 32 | String |  
 Genre | 128 | String |  
 ISBN | 64 | String |  
 Language | 12 | String |  
 ImageURL | 254 | String |  
-PublicationYear |  | Numeric |  
+PublicationYear | int | Numeric |  
 - - -
 
-Generated on 2022-03-29 at 11:36
+Generated on 2025-11-12 at 11:14

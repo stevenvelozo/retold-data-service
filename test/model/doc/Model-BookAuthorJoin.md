@@ -6,9 +6,9 @@ BookAuthorJoin
 Column Name | Size | Data Type | Join 
 ----------- | ---: | --------- | ---- 
 IDBookAuthorJoin |  | ID |  
-GUIDBookAuthorJoin |  | GUID |  
-IDBook |  | Numeric | Book.IDBook 
-IDAuthor |  | Numeric | Author.IDAuthor 
+GUIDBookAuthorJoin | 36 | GUID |  
+IDBook | int | Numeric | Book.IDBook 
+IDAuthor | int | Numeric | Author.IDAuthor 
 - - -
 
-Generated on 2022-03-29 at 11:36
+Generated on 2025-11-12 at 11:14

@@ -1,4 +1,4 @@
--- Data Model -- Generated 2022-03-29T11:36:36.684Z
+-- Data Model -- Generated 2025-11-12T19:14:56.701Z
 
 -- This script creates the following tables:
 -- Table ----------------------------------------- Column Count ----------------
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS
     Book
     (
         IDBook INT UNSIGNED NOT NULL AUTO_INCREMENT,
-        GUIDBook CHAR(36) NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+        GUIDBook CHAR(36) NOT NULL DEFAULT '0xDe',
         CreateDate DATETIME,
         CreatingIDUser INT NOT NULL DEFAULT '0',
         UpdateDate DATETIME,
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS
     BookAuthorJoin
     (
         IDBookAuthorJoin INT UNSIGNED NOT NULL AUTO_INCREMENT,
-        GUIDBookAuthorJoin CHAR(36) NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+        GUIDBookAuthorJoin CHAR(36) NOT NULL DEFAULT '0xDe',
         IDBook INT NOT NULL DEFAULT '0',
         IDAuthor INT NOT NULL DEFAULT '0',
 
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS
     Author
     (
         IDAuthor INT UNSIGNED NOT NULL AUTO_INCREMENT,
-        GUIDAuthor CHAR(36) NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+        GUIDAuthor CHAR(36) NOT NULL DEFAULT '0xDe',
         CreateDate DATETIME,
         CreatingIDUser INT NOT NULL DEFAULT '0',
         UpdateDate DATETIME,
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS
     BookPrice
     (
         IDBookPrice INT UNSIGNED NOT NULL AUTO_INCREMENT,
-        GUIDBookPrice CHAR(36) NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+        GUIDBookPrice CHAR(36) NOT NULL DEFAULT '0xDe',
         CreateDate DATETIME,
         CreatingIDUser INT NOT NULL DEFAULT '0',
         UpdateDate DATETIME,
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS
     Review
     (
         IDReviews INT UNSIGNED NOT NULL AUTO_INCREMENT,
-        GUIDReviews CHAR(36) NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000',
+        GUIDReviews CHAR(36) NOT NULL DEFAULT '0xDe',
         CreateDate DATETIME,
         CreatingIDUser INT NOT NULL DEFAULT '0',
         UpdateDate DATETIME,

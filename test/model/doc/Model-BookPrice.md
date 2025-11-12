@@ -6,20 +6,20 @@ BookPrice
 Column Name | Size | Data Type | Join 
 ----------- | ---: | --------- | ---- 
 IDBookPrice |  | ID |  
-GUIDBookPrice |  | GUID |  
+GUIDBookPrice | 36 | GUID |  
 CreateDate |  | DateTime |  
-CreatingIDUser |  | Numeric |  
+CreatingIDUser | int | Numeric |  
 UpdateDate |  | DateTime |  
-UpdatingIDUser |  | Numeric |  
+UpdatingIDUser | int | Numeric |  
 Deleted |  | Boolean |  
 DeleteDate |  | DateTime |  
-DeletingIDUser |  | Numeric |  
+DeletingIDUser | int | Numeric |  
 Price | 8,2 | Decimal |  
 StartDate |  | DateTime |  
 EndDate |  | DateTime |  
 Discountable |  | Boolean |  
 CouponCode | 16 | String |  
-IDBook |  | Numeric | Book.IDBook 
+IDBook | int | Numeric | Book.IDBook 
 - - -
 
-Generated on 2022-03-29 at 11:36
+Generated on 2025-11-12 at 11:14

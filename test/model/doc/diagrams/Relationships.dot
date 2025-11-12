@@ -1,0 +1,13 @@
+## Table Connection Graph -- Generated 2025-11-12T19:14:56.706Z
+digraph DataModel {
+rankdir=LR
+Book;
+BookAuthorJoin;
+Author;
+BookPrice;
+Review;
+BookAuthorJoin -> Book
+BookAuthorJoin -> Author
+BookPrice -> Book
+Review -> Book
+}

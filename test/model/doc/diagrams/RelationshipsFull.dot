@@ -1,4 +1,4 @@
-## Table Connection Graph -- Generated 2022-03-29T11:36:37.788Z
+## Table Connection Graph -- Generated 2025-11-12T19:14:56.709Z
 digraph DataModel {
 rankdir=LR
 Book;
