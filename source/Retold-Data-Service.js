@@ -110,19 +110,28 @@ class RetoldDataService extends libFableServiceProviderBase
 		{
 			// 4. Create the DAL for each entry (e.g. it would be at _DAL.Movie for the Movie entity)
 			let tmpDALEntityName = this.entityList[i];
-			let tmpDALPackageObject = this.fullModel.Tables[tmpDALEntityName];
-			// We no longer need to load it from a package file; it's all in the full model
-			this.fable.log.info(`Initializing the ${tmpDALEntityName} DAL...`);
-			this._DAL[tmpDALEntityName] = this._Meadow.loadFromPackageObject(tmpDALPackageObject.MeadowSchema);
-			// 5. Tell this DAL object to use the specified storage provider
-			this.fable.log.info(`...defaulting the ${tmpDALEntityName} DAL to use ${this.options.StorageProvider}`);
-			this._DAL[tmpDALEntityName].setProvider(this.options.StorageProvider);
-			// 6. Create a Meadow Endpoints class for this DAL
-			this.fable.log.info(`...initializing the ${tmpDALEntityName} Meadow Endpoints to use ${this.options.StorageProvider}`);
-			this._MeadowEndpoints[tmpDALEntityName] = libMeadowEndpoints.new(this._DAL[tmpDALEntityName]);
-			// 8. Expose the meadow endpoints on Orator
-			this.fable.log.info(`...mapping the ${tmpDALEntityName} Meadow Endpoints to Orator`);
-			this._MeadowEndpoints[tmpDALEntityName].connectRoutes(this.fable.OratorServiceServer);
+			try
+			{
+				let tmpDALSchema = this.fullModel.Tables[tmpDALEntityName];
+				let tmpDALMeadowSchema = tmpDALSchema.MeadowSchema;
+
+				//let tmpDALPackageFile = `${this.options.DALMeadowSchemaPath}${this.options.DALMeadowSchemaPrefix}${tmpDALEntityName}${this.options.DALMeadowSchemaPostfix}.json`
+				//this.fable.log.info(`Initializing the ${tmpDALEntityName} DAL from [${tmpDALPackageFile}]...`);
+				this._DAL[tmpDALEntityName] = this._Meadow.loadFromPackageObject(tmpDALMeadowSchema);
+				// 5. Tell this DAL object to use MySQL
+				this.fable.log.info(`...defaulting the ${tmpDALEntityName} DAL to use MySQL`);
+				this._DAL[tmpDALEntityName].setProvider('MySQL');
+				// 6. Create a Meadow Endpoints class for this DAL
+				this.fable.log.info(`...initializing the ${tmpDALEntityName} Meadow Endpoints to use MySQL`);
+				this._MeadowEndpoints[tmpDALEntityName] = libMeadowEndpoints.new(this._DAL[tmpDALEntityName]);
+				// 8. Expose the meadow endpoints on Orator
+				this.fable.log.info(`...mapping the ${tmpDALEntityName} Meadow Endpoints to Orator`);
+				this._MeadowEndpoints[tmpDALEntityName].connectRoutes(this.fable.OratorServiceServer);				
+			}
+			catch (pError)
+			{
+				this.fable.log.error(`Error initializing DAL and Endpoints for entity [${tmpDALEntityName}]: ${pError}`);
+			}
 		}
 
 		return fCallback();

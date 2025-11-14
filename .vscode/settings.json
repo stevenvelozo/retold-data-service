@@ -1,17 +1,36 @@
 {
     "sqltools.connections": [
-        {
-            "mysqlOptions": {
-                "authProtocol": "default"
-            },
-            "previewLimit": 50,
-            "server": "localhost",
-            "port": 3306,
-            "driver": "MariaDB",
-            "name": "Local",
-            "database": "bookstore",
-            "username": "root",
-            "password": "123456789"
-        }
-    ]
+		{
+			"mysqlOptions": {
+				"authProtocol": "default",
+				"enableSsl": "Disabled"
+			},
+			"ssh": "Disabled",
+			"previewLimit": 50,
+			"server": "localhost",
+			"port": 3306,
+			"driver": "MariaDB",
+			"name": "Local MariaDB Harness",
+			"database": "bookstore",
+			"username": "root",
+			"password": "123456789",
+			"group": "Retold Development"
+		},
+		{
+			"mysqlOptions": {
+				"authProtocol": "default",
+				"enableSsl": "Disabled"
+			},
+			"ssh": "Disabled",
+			"previewLimit": 50,
+			"server": "localhost",
+			"port": 31306,
+			"driver": "MariaDB",
+			"name": "Containerized MariaDB Harness",
+			"group": "Retold Development",
+			"database": "bookstore",
+			"username": "root",
+			"password": "123456789"
+		}
+	]
 }
