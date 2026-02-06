@@ -5,8 +5,8 @@
     "main": "source/Retold-Data-Service.js",
     "scripts": {
         "start": "node source/Retold-Data-Service.js",
-        "coverage": "./node_modules/.bin/nyc --reporter=lcov --reporter=text-lcov ./node_modules/mocha/bin/_mocha -- -u tdd -R spec",
-        "test": "./node_modules/.bin/mocha -u tdd -R spec",
+        "coverage": "npx nyc --reporter=lcov --reporter=text-lcov npx mocha -- -u tdd -R spec",
+        "test": "npx mocha -u tdd -R spec",
         "build": "npx quack build",
         "build-test-model": "cd test && npx stricture -i model/ddl/BookStore.ddl",
         "docker-dev-build": "docker build ./ -f Dockerfile_LUXURYCode -t retold-data-service-image:local",
@@ -51,15 +51,19 @@
     },
     "homepage": "https://github.com/stevenvelozo/retold-data-service",
     "devDependencies": {
+        "chai": "^6.2.2",
+        "meadow-connection-sqlite": "file:../meadow-connection-sqlite",
+        "mocha": "^11.7.5",
         "quackage": "^1.0.41",
-        "stricture": "^1.0.37"
+        "stricture": "^1.0.37",
+        "supertest": "^7.2.2"
     },
     "dependencies": {
         "fable": "^3.1.11",
         "fable-serviceproviderbase": "^3.0.15",
-        "meadow": "^2.0.15",
+        "meadow": "file:../meadow",
         "meadow-connection-mysql": "^1.0.4",
-        "meadow-endpoints": "^4.0.5",
+        "meadow-endpoints": "file:../meadow-endpoints",
         "orator": "^5.0.1",
         "orator-http-proxy": "^1.0.1",
         "orator-serviceserver-restify": "^2.0.4",
