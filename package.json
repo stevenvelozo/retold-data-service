@@ -1,6 +1,6 @@
 {
     "name": "retold-data-service",
-    "version": "2.0.10",
+    "version": "2.0.11",
     "description": "Serve up a whole model!",
     "main": "source/Retold-Data-Service.js",
     "scripts": {
@@ -52,7 +52,7 @@
     "homepage": "https://github.com/stevenvelozo/retold-data-service",
     "devDependencies": {
         "chai": "^6.2.2",
-        "meadow-connection-sqlite": "file:../meadow-connection-sqlite",
+        "meadow-connection-sqlite": "^1.0.11",
         "mocha": "^11.7.5",
         "quackage": "^1.0.41",
         "stricture": "^1.0.37",
@@ -61,9 +61,9 @@
     "dependencies": {
         "fable": "^3.1.11",
         "fable-serviceproviderbase": "^3.0.15",
-        "meadow": "file:../meadow",
+        "meadow": "^2.0.21",
         "meadow-connection-mysql": "^1.0.4",
-        "meadow-endpoints": "file:../meadow-endpoints",
+        "meadow-endpoints": "^4.0.7",
         "orator": "^5.0.1",
         "orator-http-proxy": "^1.0.1",
         "orator-serviceserver-restify": "^2.0.4",
