@@ -118,7 +118,7 @@ class RetoldDataService extends libFableServiceProviderBase
 				//let tmpDALPackageFile = `${this.options.DALMeadowSchemaPath}${this.options.DALMeadowSchemaPrefix}${tmpDALEntityName}${this.options.DALMeadowSchemaPostfix}.json`
 				//this.fable.log.info(`Initializing the ${tmpDALEntityName} DAL from [${tmpDALPackageFile}]...`);
 				this._DAL[tmpDALEntityName] = this._Meadow.loadFromPackageObject(tmpDALMeadowSchema);
-				// 5. Tell this DAL object to use MySQL
+				// 5. Tell this DAL object to use the configured storage provider
 				this.fable.log.info(`...defaulting the ${tmpDALEntityName} DAL to use ${this.options.StorageProvider}`);
 				this._DAL[tmpDALEntityName].setProvider(this.options.StorageProvider);
 				// 6. Create a Meadow Endpoints class for this DAL
