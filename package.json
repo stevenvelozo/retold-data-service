@@ -1,6 +1,6 @@
 {
     "name": "retold-data-service",
-    "version": "2.0.11",
+    "version": "2.0.12",
     "description": "Serve up a whole model!",
     "main": "source/Retold-Data-Service.js",
     "scripts": {
@@ -57,14 +57,14 @@
         "supertest": "^7.2.2"
     },
     "dependencies": {
-        "fable": "^3.1.11",
-        "fable-serviceproviderbase": "^3.0.15",
-        "meadow": "^2.0.21",
-        "meadow-connection-mysql": "^1.0.4",
-        "meadow-endpoints": "^4.0.7",
-        "orator": "^5.0.1",
-        "orator-http-proxy": "^1.0.1",
-        "orator-serviceserver-restify": "^2.0.4",
-        "orator-static-server": "^1.0.1"
+        "fable": "^3.1.63",
+        "fable-serviceproviderbase": "^3.0.19",
+        "meadow": "^2.0.23",
+        "meadow-connection-mysql": "^1.0.9",
+        "meadow-endpoints": "^4.0.10",
+        "orator": "^6.0.3",
+        "orator-http-proxy": "^1.0.5",
+        "orator-serviceserver-restify": "^2.0.9",
+        "orator-static-server": "^2.0.4"
     }
 }
