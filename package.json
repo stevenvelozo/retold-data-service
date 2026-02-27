@@ -51,9 +51,7 @@
     },
     "homepage": "https://github.com/stevenvelozo/retold-data-service",
     "devDependencies": {
-        "chai": "^6.2.2",
         "meadow-connection-sqlite": "^1.0.11",
-        "mocha": "^11.7.5",
         "quackage": "^1.0.41",
         "stricture": "^1.0.37",
         "supertest": "^7.2.2"
