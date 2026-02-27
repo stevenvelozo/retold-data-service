@@ -5,7 +5,7 @@
     "main": "source/Retold-Data-Service.js",
     "scripts": {
         "start": "node source/Retold-Data-Service.js",
-        "coverage": "npx nyc --reporter=lcov --reporter=text-lcov npx mocha -- -u tdd -R spec",
+        "coverage": "npx quack coverage",
         "test": "npx mocha -u tdd -R spec",
         "build": "npx quack build",
         "build-test-model": "cd test && npx stricture -i model/ddl/BookStore.ddl",
