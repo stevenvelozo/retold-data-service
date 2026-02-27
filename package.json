@@ -52,7 +52,7 @@
     "homepage": "https://github.com/stevenvelozo/retold-data-service",
     "devDependencies": {
         "meadow-connection-sqlite": "^1.0.11",
-        "quackage": "^1.0.41",
+        "quackage": "^1.0.58",
         "stricture": "^1.0.37",
         "supertest": "^7.2.2"
     },
