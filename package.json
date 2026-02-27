@@ -6,7 +6,7 @@
     "scripts": {
         "start": "node source/Retold-Data-Service.js",
         "coverage": "npx quack coverage",
-        "test": "npx mocha -u tdd -R spec",
+        "test": "npx quack test",
         "build": "npx quack build",
         "build-test-model": "cd test && npx stricture -i model/ddl/BookStore.ddl",
         "docker-dev-build": "docker build ./ -f Dockerfile_LUXURYCode -t retold-data-service-image:local",
