@@ -1,0 +1,3530 @@
+{
+	"Generated": "2026-03-02T03:24:01.450Z",
+	"DocumentCount": 9,
+	"LunrIndex": {
+		"version": "2.3.9",
+		"fields": [
+			"title",
+			"module",
+			"group",
+			"body"
+		],
+		"fieldVectors": [
+			[
+				"title/docs/api/api/constructor.md",
+				[
+					0,
+					10.946
+				]
+			],
+			[
+				"module/docs/api/api/constructor.md",
+				[
+					1,
+					0.613
+				]
+			],
+			[
+				"group/docs/api/api/constructor.md",
+				[
+					2,
+					0.154
+				]
+			],
+			[
+				"body/docs/api/api/constructor.md",
+				[
+					0,
+					0.876,
+					3,
+					0.613,
+					4,
+					1.156,
+					5,
+					1.156,
+					6,
+					1.973,
+					7,
+					2.295,
+					8,
+					0.851,
+					9,
+					0.499,
+					10,
+					3.279,
+					11,
+					0.136,
+					12,
+					0.197,
+					13,
+					0.11,
+					14,
+					0.062,
+					15,
+					0.062,
+					16,
+					1.639,
+					17,
+					1.583,
+					18,
+					1.156,
+					19,
+					0.254,
+					20,
+					0.876,
+					21,
+					2.297,
+					22,
+					1.583,
+					23,
+					1.583,
+					24,
+					1.27,
+					25,
+					0.851,
+					26,
+					0.876,
+					27,
+					1.583,
+					28,
+					0.876,
+					29,
+					1.583,
+					30,
+					1.156,
+					31,
+					1.27,
+					32,
+					1.583,
+					33,
+					1.677,
+					34,
+					1.583,
+					35,
+					0.136,
+					36,
+					1.583,
+					37,
+					0.666,
+					38,
+					0.24,
+					39,
+					0.666,
+					40,
+					0.499,
+					41,
+					1.156,
+					42,
+					0.876,
+					43,
+					1.583,
+					44,
+					1.677,
+					45,
+					1.583,
+					46,
+					1.583,
+					47,
+					1.583,
+					48,
+					1.677,
+					49,
+					1.156,
+					50,
+					0.666,
+					51,
+					0.876
+				]
+			],
+			[
+				"title/docs/api/api/initializeDataEndpoints.md",
+				[
+					52,
+					10.946
+				]
+			],
+			[
+				"module/docs/api/api/initializeDataEndpoints.md",
+				[
+					1,
+					0.613
+				]
+			],
+			[
+				"group/docs/api/api/initializeDataEndpoints.md",
+				[
+					2,
+					0.154
+				]
+			],
+			[
+				"body/docs/api/api/initializeDataEndpoints.md",
+				[
+					3,
+					0.701,
+					8,
+					0.476,
+					11,
+					0.13,
+					12,
+					0.19,
+					13,
+					0.109,
+					14,
+					0.041,
+					15,
+					0.041,
+					19,
+					0.13,
+					24,
+					1.228,
+					25,
+					0.476,
+					30,
+					1.622,
+					31,
+					1.228,
+					35,
+					0.19,
+					38,
+					0.229,
+					40,
+					0.476,
+					50,
+					0.636,
+					52,
+					0.837,
+					53,
+					1.512,
+					54,
+					1.105,
+					55,
+					0.504,
+					56,
+					1.622,
+					57,
+					0.837,
+					58,
+					1.604,
+					59,
+					1.622,
+					60,
+					1.922,
+					61,
+					1.358,
+					62,
+					0.229,
+					63,
+					0.229,
+					64,
+					0.829,
+					65,
+					0.343,
+					66,
+					1.512,
+					67,
+					1.512,
+					68,
+					2.22,
+					69,
+					1.512,
+					70,
+					1.105,
+					71,
+					1.604,
+					72,
+					1.512,
+					73,
+					0.636,
+					74,
+					1.512,
+					75,
+					1.622,
+					76,
+					1.228,
+					77,
+					2.22,
+					78,
+					2.22,
+					79,
+					1.512,
+					80,
+					1.512,
+					81,
+					1.105,
+					82,
+					1.105,
+					83,
+					1.512,
+					84,
+					1.512,
+					85,
+					2.22,
+					86,
+					1.512,
+					87,
+					3.335,
+					88,
+					1.512,
+					89,
+					0.837,
+					90,
+					1.512,
+					91,
+					1.512,
+					92,
+					2.22,
+					93,
+					1.512,
+					94,
+					1.512
+				]
+			],
+			[
+				"title/docs/api/api/initializePersistenceEngine.md",
+				[
+					95,
+					10.946
+				]
+			],
+			[
+				"module/docs/api/api/initializePersistenceEngine.md",
+				[
+					1,
+					0.613
+				]
+			],
+			[
+				"group/docs/api/api/initializePersistenceEngine.md",
+				[
+					2,
+					0.154
+				]
+			],
+			[
+				"body/docs/api/api/initializePersistenceEngine.md",
+				[
+					11,
+					0.166,
+					12,
+					0.227,
+					13,
+					0.11,
+					14,
+					0.052,
+					15,
+					0.052,
+					16,
+					1.072,
+					19,
+					0.227,
+					20,
+					1.072,
+					25,
+					0.95,
+					26,
+					1.465,
+					28,
+					1.465,
+					41,
+					1.416,
+					55,
+					0.601,
+					62,
+					0.294,
+					63,
+					0.294,
+					65,
+					0.44,
+					73,
+					0.816,
+					81,
+					1.416,
+					95,
+					1.072,
+					96,
+					1.938,
+					97,
+					1.938,
+					98,
+					0.95,
+					99,
+					1.938,
+					100,
+					1.938,
+					101,
+					1.938,
+					102,
+					1.938,
+					103,
+					1.938,
+					104,
+					1.938
+				]
+			],
+			[
+				"title/docs/api/api/initializeService.md",
+				[
+					105,
+					10.946
+				]
+			],
+			[
+				"module/docs/api/api/initializeService.md",
+				[
+					1,
+					0.613
+				]
+			],
+			[
+				"group/docs/api/api/initializeService.md",
+				[
+					2,
+					0.154
+				]
+			],
+			[
+				"body/docs/api/api/initializeService.md",
+				[
+					3,
+					0.454,
+					9,
+					0.965,
+					11,
+					0.171,
+					12,
+					0.232,
+					13,
+					0.104,
+					14,
+					0.054,
+					15,
+					0.054,
+					19,
+					0.171,
+					25,
+					0.63,
+					35,
+					0.303,
+					37,
+					0.842,
+					38,
+					0.303,
+					39,
+					0.842,
+					40,
+					0.63,
+					42,
+					1.695,
+					50,
+					0.842,
+					51,
+					1.107,
+					54,
+					1.976,
+					55,
+					0.614,
+					57,
+					1.107,
+					58,
+					1.107,
+					62,
+					0.303,
+					63,
+					0.303,
+					64,
+					0.63,
+					71,
+					1.107,
+					73,
+					0.842,
+					89,
+					1.107,
+					98,
+					0.63,
+					105,
+					1.107,
+					106,
+					2,
+					107,
+					2,
+					108,
+					2,
+					109,
+					1.461,
+					110,
+					1.461,
+					111,
+					1.138,
+					112,
+					0.63,
+					113,
+					2,
+					114,
+					2,
+					115,
+					2,
+					116,
+					1.461,
+					117,
+					2,
+					118,
+					1.461,
+					119,
+					2,
+					120,
+					1.461,
+					121,
+					2.239,
+					122,
+					2.704,
+					123,
+					1.107,
+					124,
+					0.965,
+					125,
+					1.461,
+					126,
+					2,
+					127,
+					2,
+					128,
+					2,
+					129,
+					2
+				]
+			],
+			[
+				"title/docs/api/api/onAfterInitialize.md",
+				[
+					130,
+					10.946
+				]
+			],
+			[
+				"module/docs/api/api/onAfterInitialize.md",
+				[
+					1,
+					0.613
+				]
+			],
+			[
+				"group/docs/api/api/onAfterInitialize.md",
+				[
+					2,
+					0.154
+				]
+			],
+			[
+				"body/docs/api/api/onAfterInitialize.md",
+				[
+					3,
+					0.518,
+					8,
+					0.718,
+					9,
+					0.718,
+					11,
+					0.195,
+					12,
+					0.253,
+					13,
+					0.106,
+					14,
+					0.062,
+					15,
+					0.062,
+					35,
+					0.195,
+					61,
+					1.241,
+					62,
+					0.346,
+					63,
+					0.346,
+					64,
+					1.03,
+					65,
+					0.669,
+					75,
+					1.666,
+					76,
+					1.632,
+					98,
+					0.929,
+					111,
+					0.959,
+					112,
+					0.718,
+					124,
+					0.718,
+					130,
+					1.261,
+					131,
+					2.154,
+					132,
+					1.261,
+					133,
+					1.261,
+					134,
+					1.261,
+					135,
+					1.261,
+					136,
+					1.261,
+					137,
+					1.261,
+					138,
+					2.279,
+					139,
+					2.279,
+					140,
+					2.279,
+					141,
+					2.279,
+					142,
+					2.279,
+					143,
+					2.279,
+					144,
+					1.666,
+					145,
+					2.279,
+					146,
+					2.279
+				]
+			],
+			[
+				"title/docs/api/api/onBeforeInitialize.md",
+				[
+					147,
+					10.946
+				]
+			],
+			[
+				"module/docs/api/api/onBeforeInitialize.md",
+				[
+					1,
+					0.613
+				]
+			],
+			[
+				"group/docs/api/api/onBeforeInitialize.md",
+				[
+					2,
+					0.154
+				]
+			],
+			[
+				"body/docs/api/api/onBeforeInitialize.md",
+				[
+					8,
+					0.707,
+					9,
+					0.707,
+					11,
+					0.192,
+					12,
+					0.25,
+					13,
+					0.105,
+					14,
+					0.061,
+					15,
+					0.061,
+					19,
+					0.192,
+					20,
+					1.242,
+					35,
+					0.25,
+					37,
+					0.945,
+					38,
+					0.34,
+					55,
+					0.663,
+					62,
+					0.34,
+					63,
+					0.34,
+					65,
+					0.51,
+					98,
+					0.92,
+					111,
+					0.945,
+					112,
+					0.707,
+					118,
+					1.64,
+					123,
+					1.242,
+					124,
+					0.707,
+					132,
+					1.242,
+					133,
+					1.242,
+					134,
+					1.242,
+					135,
+					1.615,
+					136,
+					1.242,
+					137,
+					1.242,
+					147,
+					1.242,
+					148,
+					1.615,
+					149,
+					1.64,
+					150,
+					1.64,
+					151,
+					2.244,
+					152,
+					2.244,
+					153,
+					2.244,
+					154,
+					2.244,
+					155,
+					2.244,
+					156,
+					2.244,
+					157,
+					2.244,
+					158,
+					2.244,
+					159,
+					2.244,
+					160,
+					2.244
+				]
+			],
+			[
+				"title/docs/api/api/onInitialize.md",
+				[
+					161,
+					10.946
+				]
+			],
+			[
+				"module/docs/api/api/onInitialize.md",
+				[
+					1,
+					0.613
+				]
+			],
+			[
+				"group/docs/api/api/onInitialize.md",
+				[
+					2,
+					0.154
+				]
+			],
+			[
+				"body/docs/api/api/onInitialize.md",
+				[
+					3,
+					0.518,
+					8,
+					0.718,
+					9,
+					0.718,
+					11,
+					0.195,
+					12,
+					0.253,
+					13,
+					0.106,
+					14,
+					0.062,
+					15,
+					0.062,
+					19,
+					0.195,
+					31,
+					1.261,
+					35,
+					0.195,
+					37,
+					0.959,
+					38,
+					0.346,
+					55,
+					0.518,
+					61,
+					0.959,
+					62,
+					0.346,
+					63,
+					0.346,
+					64,
+					0.718,
+					65,
+					0.518,
+					76,
+					1.632,
+					98,
+					0.929,
+					111,
+					0.959,
+					112,
+					0.718,
+					124,
+					0.718,
+					131,
+					1.666,
+					132,
+					1.261,
+					133,
+					1.261,
+					134,
+					1.261,
+					135,
+					1.261,
+					136,
+					1.261,
+					137,
+					1.261,
+					144,
+					2.154,
+					148,
+					1.632,
+					149,
+					1.666,
+					150,
+					1.666,
+					161,
+					1.261,
+					162,
+					2.279,
+					163,
+					2.279,
+					164,
+					2.279,
+					165,
+					2.279
+				]
+			],
+			[
+				"title/docs/api/api/reference.md",
+				[
+					1,
+					0.924,
+					166,
+					10.445
+				]
+			],
+			[
+				"module/docs/api/api/reference.md",
+				[
+					1,
+					0.613
+				]
+			],
+			[
+				"group/docs/api/api/reference.md",
+				[
+					2,
+					0.154
+				]
+			],
+			[
+				"body/docs/api/api/reference.md",
+				[
+					0,
+					0.785,
+					1,
+					0.092,
+					3,
+					0.481,
+					4,
+					1.037,
+					5,
+					1.548,
+					6,
+					1.548,
+					13,
+					0.11,
+					14,
+					0.057,
+					15,
+					0.057,
+					16,
+					1.172,
+					18,
+					2.053,
+					19,
+					0.217,
+					21,
+					1.037,
+					24,
+					0.785,
+					25,
+					0.447,
+					26,
+					1.402,
+					28,
+					0.785,
+					33,
+					1.037,
+					35,
+					0.258,
+					38,
+					0.215,
+					39,
+					0.597,
+					40,
+					0.447,
+					42,
+					1.172,
+					44,
+					1.037,
+					48,
+					1.548,
+					49,
+					1.548,
+					52,
+					0.785,
+					55,
+					0.575,
+					56,
+					1.037,
+					57,
+					1.172,
+					58,
+					1.172,
+					59,
+					1.037,
+					60,
+					1.037,
+					61,
+					1.067,
+					64,
+					0.447,
+					70,
+					1.548,
+					73,
+					0.597,
+					82,
+					1.852,
+					89,
+					0.785,
+					95,
+					0.785,
+					105,
+					0.785,
+					109,
+					1.037,
+					110,
+					1.037,
+					112,
+					0.799,
+					116,
+					1.037,
+					123,
+					0.785,
+					124,
+					0.799,
+					125,
+					1.037,
+					130,
+					0.785,
+					147,
+					0.785,
+					148,
+					1.172,
+					161,
+					0.785,
+					166,
+					1.548,
+					167,
+					2.118,
+					168,
+					1.419,
+					169,
+					1.419,
+					170,
+					0.785,
+					171,
+					1.037,
+					172,
+					1.419,
+					173,
+					1.419,
+					174,
+					1.419,
+					175,
+					1.419,
+					176,
+					1.419,
+					177,
+					2.118
+				]
+			],
+			[
+				"title/docs/api/api/stopService.md",
+				[
+					170,
+					10.946
+				]
+			],
+			[
+				"module/docs/api/api/stopService.md",
+				[
+					1,
+					0.613
+				]
+			],
+			[
+				"group/docs/api/api/stopService.md",
+				[
+					2,
+					0.154
+				]
+			],
+			[
+				"body/docs/api/api/stopService.md",
+				[
+					11,
+					0.211,
+					12,
+					0.265,
+					13,
+					0.107,
+					14,
+					0.066,
+					15,
+					0.066,
+					19,
+					0.29,
+					35,
+					0.211,
+					38,
+					0.469,
+					39,
+					1.302,
+					40,
+					0.975,
+					50,
+					1.034,
+					51,
+					1.36,
+					62,
+					0.373,
+					63,
+					0.373,
+					65,
+					0.558,
+					71,
+					1.36,
+					120,
+					1.796,
+					121,
+					1.796,
+					170,
+					1.36,
+					171,
+					2.474,
+					178,
+					2.457,
+					179,
+					2.457,
+					180,
+					2.457
+				]
+			]
+		],
+		"invertedIndex": [
+			[
+				"",
+				{
+					"_index": 13,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"access",
+				{
+					"_index": 78,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"add",
+				{
+					"_index": 152,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"addit",
+				{
+					"_index": 164,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"alreadi",
+				{
+					"_index": 122,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"alway",
+				{
+					"_index": 172,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"anticip",
+				{
+					"_index": 114,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"api",
+				{
+					"_index": 1,
+					"title": {
+						"docs/api/api/reference.md": {}
+					},
+					"module": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"applic",
+				{
+					"_index": 17,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"array",
+				{
+					"_index": 176,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"array/boolean",
+				{
+					"_index": 175,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"auto",
+				{
+					"_index": 34,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"automat",
+				{
+					"_index": 99,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializePersistenceEngine.md": {}
+					}
+				}
+			],
+			[
+				"back",
+				{
+					"_index": 127,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"background",
+				{
+					"_index": 141,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {}
+					}
+				}
+			],
+			[
+				"befor",
+				{
+					"_index": 148,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"behavior",
+				{
+					"_index": 65,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"boolean",
+				{
+					"_index": 33,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"cach",
+				{
+					"_index": 139,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {}
+					}
+				}
+			],
+			[
+				"call",
+				{
+					"_index": 98,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"callback",
+				{
+					"_index": 63,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"case",
+				{
+					"_index": 137,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"chain",
+				{
+					"_index": 111,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"check",
+				{
+					"_index": 118,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"class",
+				{
+					"_index": 167,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"compil",
+				{
+					"_index": 30,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"complet",
+				{
+					"_index": 116,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"configur",
+				{
+					"_index": 20,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"connect",
+				{
+					"_index": 75,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/onAfterInitialize.md": {}
+					}
+				}
+			],
+			[
+				"construct",
+				{
+					"_index": 36,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"constructor",
+				{
+					"_index": 0,
+					"title": {
+						"docs/api/api/constructor.md": {}
+					},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"continu",
+				{
+					"_index": 132,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"control",
+				{
+					"_index": 60,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"core",
+				{
+					"_index": 53,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"count",
+				{
+					"_index": 94,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"creat",
+				{
+					"_index": 3,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"current",
+				{
+					"_index": 180,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"custom",
+				{
+					"_index": 9,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"dal",
+				{
+					"_index": 58,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"dal'",
+				{
+					"_index": 72,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"data",
+				{
+					"_index": 131,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"databas",
+				{
+					"_index": 162,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"decor",
+				{
+					"_index": 49,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"default",
+				{
+					"_index": 8,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"delet",
+				{
+					"_index": 92,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"descript",
+				{
+					"_index": 15,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"directli",
+				{
+					"_index": 101,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializePersistenceEngine.md": {}
+					}
+				}
+			],
+			[
+				"doc",
+				{
+					"_index": 2,
+					"title": {},
+					"module": {},
+					"group": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					},
+					"body": {}
+				}
+			],
+			[
+				"doubl",
+				{
+					"_index": 119,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"dure",
+				{
+					"_index": 41,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {}
+					}
+				}
+			],
+			[
+				"dynam",
+				{
+					"_index": 96,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializePersistenceEngine.md": {}
+					}
+				}
+			],
+			[
+				"e.g",
+				{
+					"_index": 81,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {}
+					}
+				}
+			],
+			[
+				"each",
+				{
+					"_index": 68,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"earli",
+				{
+					"_index": 156,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"empti",
+				{
+					"_index": 47,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"endpoint",
+				{
+					"_index": 64,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"engin",
+				{
+					"_index": 150,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"entiti",
+				{
+					"_index": 61,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"entri",
+				{
+					"_index": 107,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"environ",
+				{
+					"_index": 154,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"error",
+				{
+					"_index": 121,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"exampl",
+				{
+					"_index": 51,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"extend",
+				{
+					"_index": 168,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"extern",
+				{
+					"_index": 157,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"extract",
+				{
+					"_index": 66,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"fabl",
+				{
+					"_index": 16,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"fable'",
+				{
+					"_index": 113,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"fail",
+				{
+					"_index": 128,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"featur",
+				{
+					"_index": 159,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"filenam",
+				{
+					"_index": 32,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"flag",
+				{
+					"_index": 160,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"full",
+				{
+					"_index": 109,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"function",
+				{
+					"_index": 62,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"gener",
+				{
+					"_index": 79,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"handl",
+				{
+					"_index": 126,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"happen",
+				{
+					"_index": 43,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"hash",
+				{
+					"_index": 22,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"health",
+				{
+					"_index": 158,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"hook",
+				{
+					"_index": 124,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"identifi",
+				{
+					"_index": 23,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"immedi",
+				{
+					"_index": 134,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"init",
+				{
+					"_index": 42,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"initi",
+				{
+					"_index": 35,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"initializedataendpoint",
+				{
+					"_index": 52,
+					"title": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"initializepersistenceengin",
+				{
+					"_index": 95,
+					"title": {
+						"docs/api/api/initializePersistenceEngine.md": {}
+					},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"initializeservic",
+				{
+					"_index": 105,
+					"title": {
+						"docs/api/api/initializeService.md": {}
+					},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"inject",
+				{
+					"_index": 138,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {}
+					}
+				}
+			],
+			[
+				"instanc",
+				{
+					"_index": 6,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"instanti",
+				{
+					"_index": 97,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializePersistenceEngine.md": {}
+					}
+				}
+			],
+			[
+				"intern",
+				{
+					"_index": 46,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"lifecycl",
+				{
+					"_index": 112,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"list",
+				{
+					"_index": 67,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"load",
+				{
+					"_index": 55,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"logic",
+				{
+					"_index": 153,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"main",
+				{
+					"_index": 106,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"map",
+				{
+					"_index": 48,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"meadow",
+				{
+					"_index": 24,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"meadowendpoint",
+				{
+					"_index": 59,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"merg",
+				{
+					"_index": 7,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"method",
+				{
+					"_index": 82,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"mid",
+				{
+					"_index": 125,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"migrat",
+				{
+					"_index": 163,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"model",
+				{
+					"_index": 57,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"modul",
+				{
+					"_index": 28,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"multipl",
+				{
+					"_index": 88,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"name",
+				{
+					"_index": 26,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"new",
+				{
+					"_index": 4,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"npm",
+				{
+					"_index": 27,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"object",
+				{
+					"_index": 18,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"object/boolean",
+				{
+					"_index": 174,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"onafteriniti",
+				{
+					"_index": 130,
+					"title": {
+						"docs/api/api/onAfterInitialize.md": {}
+					},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"onbeforeiniti",
+				{
+					"_index": 147,
+					"title": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"oniniti",
+				{
+					"_index": 161,
+					"title": {
+						"docs/api/api/onInitialize.md": {}
+					},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"op",
+				{
+					"_index": 133,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"oper",
+				{
+					"_index": 84,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"option",
+				{
+					"_index": 10,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"orat",
+				{
+					"_index": 38,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"overrid",
+				{
+					"_index": 135,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"paramet",
+				{
+					"_index": 12,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"path",
+				{
+					"_index": 29,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"pattern",
+				{
+					"_index": 115,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"per",
+				{
+					"_index": 80,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"persist",
+				{
+					"_index": 149,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"point",
+				{
+					"_index": 108,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"post",
+				{
+					"_index": 89,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"pre",
+				{
+					"_index": 123,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"propag",
+				{
+					"_index": 129,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"properti",
+				{
+					"_index": 70,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"provid",
+				{
+					"_index": 25,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"put",
+				{
+					"_index": 90,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"read",
+				{
+					"_index": 85,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"record",
+				{
+					"_index": 87,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"refer",
+				{
+					"_index": 166,
+					"title": {
+						"docs/api/api/reference.md": {}
+					},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"regist",
+				{
+					"_index": 44,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"registr",
+				{
+					"_index": 144,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"reset",
+				{
+					"_index": 178,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"restifi",
+				{
+					"_index": 45,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {}
+					}
+				}
+			],
+			[
+				"retolddataservic",
+				{
+					"_index": 5,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"return",
+				{
+					"_index": 120,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"rout",
+				{
+					"_index": 76,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"same",
+				{
+					"_index": 177,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"schedul",
+				{
+					"_index": 143,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {}
+					}
+				}
+			],
+			[
+				"schema",
+				{
+					"_index": 31,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"seed",
+				{
+					"_index": 145,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {}
+					}
+				}
+			],
+			[
+				"sequenc",
+				{
+					"_index": 117,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"server",
+				{
+					"_index": 40,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"servic",
+				{
+					"_index": 19,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"set",
+				{
+					"_index": 50,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"signatur",
+				{
+					"_index": 11,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"singl",
+				{
+					"_index": 86,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"soft",
+				{
+					"_index": 93,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"sourc",
+				{
+					"_index": 169,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"stack",
+				{
+					"_index": 110,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"start",
+				{
+					"_index": 37,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"state",
+				{
+					"_index": 179,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"step",
+				{
+					"_index": 54,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {}
+					}
+				}
+			],
+			[
+				"stop",
+				{
+					"_index": 171,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"stopservic",
+				{
+					"_index": 170,
+					"title": {
+						"docs/api/api/stopService.md": {}
+					},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"storag",
+				{
+					"_index": 73,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"storageprovid",
+				{
+					"_index": 103,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializePersistenceEngine.md": {}
+					}
+				}
+			],
+			[
+				"storageprovidermodul",
+				{
+					"_index": 104,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializePersistenceEngine.md": {}
+					}
+				}
+			],
+			[
+				"store",
+				{
+					"_index": 77,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"strictur",
+				{
+					"_index": 56,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"string",
+				{
+					"_index": 21,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"subclass",
+				{
+					"_index": 151,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"support",
+				{
+					"_index": 102,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializePersistenceEngine.md": {}
+					}
+				}
+			],
+			[
+				"table'",
+				{
+					"_index": 69,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"task",
+				{
+					"_index": 142,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {}
+					}
+				}
+			],
+			[
+				"transform",
+				{
+					"_index": 165,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"type",
+				{
+					"_index": 14,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializePersistenceEngine.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {},
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"typic",
+				{
+					"_index": 100,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializePersistenceEngine.md": {}
+					}
+				}
+			],
+			[
+				"updat",
+				{
+					"_index": 91,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"url",
+				{
+					"_index": 83,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			],
+			[
+				"us",
+				{
+					"_index": 136,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {},
+						"docs/api/api/onBeforeInitialize.md": {},
+						"docs/api/api/onInitialize.md": {}
+					}
+				}
+			],
+			[
+				"valid",
+				{
+					"_index": 155,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onBeforeInitialize.md": {}
+					}
+				}
+			],
+			[
+				"verif",
+				{
+					"_index": 146,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {}
+					}
+				}
+			],
+			[
+				"via",
+				{
+					"_index": 71,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"warm",
+				{
+					"_index": 140,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/onAfterInitialize.md": {}
+					}
+				}
+			],
+			[
+				"web",
+				{
+					"_index": 39,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/constructor.md": {},
+						"docs/api/api/initializeService.md": {},
+						"docs/api/api/reference.md": {},
+						"docs/api/api/stopService.md": {}
+					}
+				}
+			],
+			[
+				"whether",
+				{
+					"_index": 173,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/reference.md": {}
+					}
+				}
+			],
+			[
+				"wrap",
+				{
+					"_index": 74,
+					"title": {},
+					"module": {},
+					"group": {},
+					"body": {
+						"docs/api/api/initializeDataEndpoints.md": {}
+					}
+				}
+			]
+		],
+		"pipeline": [
+			"stemmer"
+		]
+	},
+	"Documents": {
+		"docs/api/api/constructor.md": {
+			"Title": "constructor",
+			"Module": "api",
+			"Group": "docs",
+			"DocPath": "api/constructor.md"
+		},
+		"docs/api/api/initializeDataEndpoints.md": {
+			"Title": "initializeDataEndpoints",
+			"Module": "api",
+			"Group": "docs",
+			"DocPath": "api/initializeDataEndpoints.md"
+		},
+		"docs/api/api/initializePersistenceEngine.md": {
+			"Title": "initializePersistenceEngine",
+			"Module": "api",
+			"Group": "docs",
+			"DocPath": "api/initializePersistenceEngine.md"
+		},
+		"docs/api/api/initializeService.md": {
+			"Title": "initializeService",
+			"Module": "api",
+			"Group": "docs",
+			"DocPath": "api/initializeService.md"
+		},
+		"docs/api/api/onAfterInitialize.md": {
+			"Title": "onAfterInitialize",
+			"Module": "api",
+			"Group": "docs",
+			"DocPath": "api/onAfterInitialize.md"
+		},
+		"docs/api/api/onBeforeInitialize.md": {
+			"Title": "onBeforeInitialize",
+			"Module": "api",
+			"Group": "docs",
+			"DocPath": "api/onBeforeInitialize.md"
+		},
+		"docs/api/api/onInitialize.md": {
+			"Title": "onInitialize",
+			"Module": "api",
+			"Group": "docs",
+			"DocPath": "api/onInitialize.md"
+		},
+		"docs/api/api/reference.md": {
+			"Title": "API Reference",
+			"Module": "api",
+			"Group": "docs",
+			"DocPath": "api/reference.md"
+		},
+		"docs/api/api/stopService.md": {
+			"Title": "stopService",
+			"Module": "api",
+			"Group": "docs",
+			"DocPath": "api/stopService.md"
+		}
+	}
+}

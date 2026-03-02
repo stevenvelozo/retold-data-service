@@ -1,111 +1,154 @@
 # Behavior Injection
 
-Behavior injection lets you add custom logic before and after any CRUD operation on your endpoints.
+Behavior injection lets you add custom logic before or after any CRUD operation on any entity. This is the primary extension mechanism for adding business rules, validation, enrichment, and side effects.
 
 ## How It Works
 
-Each entity's Meadow Endpoints controller has a `BehaviorInjection` object that accepts pre- and post-operation hooks.  These hooks run inline with the request handling pipeline.
+Each MeadowEndpoints controller has a `BehaviorInjection` object that manages hooks for every CRUD operation. You set behaviors by specifying the operation and timing (pre or post).
+
+## Available Hooks
+
+| Hook | Fires |
+|------|-------|
+| `Create-PreOperation` | Before a record is created |
+| `Create-PostOperation` | After a record is created |
+| `Read-PreOperation` | Before a single record is read |
+| `Read-PostOperation` | After a single record is read |
+| `Reads-PreOperation` | Before multiple records are read |
+| `Reads-PostOperation` | After multiple records are read |
+| `Update-PreOperation` | Before a record is updated |
+| `Update-PostOperation` | After a record is updated |
+| `Delete-PreOperation` | Before a record is deleted |
+| `Delete-PostOperation` | After a record is deleted |
+| `Count-PreOperation` | Before a count query |
+| `Count-PostOperation` | After a count query |
 
 ## Setting a Behavior
 
 ```javascript
 _Fable.MeadowEndpoints.Book.controller.BehaviorInjection.setBehavior(
-    'Read-PreOperation',
-    (pRequest, pRequestState, fRequestComplete) =>
-    {
-        // Custom logic before the Read operation
-        console.log('About to read Book ID:', pRequest.params.IDRecord);
-        return fRequestComplete(false);
-    });
+	'Create-PreOperation',
+	(pRequest, pRequestState, fRequestComplete) =>
+	{
+		// Your custom logic here
+		return fRequestComplete(false);
+	});
 ```
 
-## Available Hook Points
+## Callback Convention
 
-Each CRUD operation supports `PreOperation` and `PostOperation` hooks:
-
-| Hook Name | Fires |
-|-----------|-------|
-| `Create-PreOperation` | Before a CREATE |
-| `Create-PostOperation` | After a CREATE |
-| `Read-PreOperation` | Before a single READ |
-| `Read-PostOperation` | After a single READ |
-| `Reads-PreOperation` | Before a READ-many |
-| `Reads-PostOperation` | After a READ-many |
-| `Update-PreOperation` | Before an UPDATE |
-| `Update-PostOperation` | After an UPDATE |
-| `Delete-PreOperation` | Before a DELETE |
-| `Delete-PostOperation` | After a DELETE |
-| `Count-PreOperation` | Before a COUNT |
-| `Count-PostOperation` | After a COUNT |
-| `Schema-PreOperation` | Before a SCHEMA read |
-| `Schema-PostOperation` | After a SCHEMA read |
-
-## Request State
-
-The `pRequestState` object contains:
-
-| Property | Description |
-|----------|-------------|
-| `Record` | The current record being operated on |
-| `RecordToCreate` | The record being created (Create operations) |
-| `Query` | The FoxHound query object |
-| `SessionData` | Session data for the current request |
+The `fRequestComplete` callback accepts a single boolean argument:
+- `false` -- Continue normal processing
+- `true` -- Halt processing (request is already handled)
 
 ## Examples
 
-### Enriching Read Results
+### Validation
 
 ```javascript
 _Fable.MeadowEndpoints.Book.controller.BehaviorInjection.setBehavior(
-    'Read-PostOperation',
-    (pRequest, pRequestState, fRequestComplete) =>
-    {
-        // Load related author data
-        let tmpQuery = _Fable.DAL.BookAuthorJoin.query
-            .addFilter('IDBook', pRequestState.Record.IDBook);
-
-        _Fable.DAL.BookAuthorJoin.doReads(tmpQuery,
-            (pError, pQuery, pJoinRecords) =>
-            {
-                pRequestState.Record.AuthorJoins = pJoinRecords;
-                return fRequestComplete(false);
-            });
-    });
+	'Create-PreOperation',
+	(pRequest, pRequestState, fRequestComplete) =>
+	{
+		if (!pRequestState.RecordToCreate.Title)
+		{
+			pRequest.CommonServices.sendCodedResponse(
+				pRequestState.response, 400, 'Title is required');
+			return fRequestComplete(true);
+		}
+		return fRequestComplete(false);
+	});
 ```
 
-### Validating Before Create
+### Record Enrichment
 
 ```javascript
 _Fable.MeadowEndpoints.Book.controller.BehaviorInjection.setBehavior(
-    'Create-PreOperation',
-    (pRequest, pRequestState, fRequestComplete) =>
-    {
-        if (!pRequestState.RecordToCreate.Title)
-        {
-            pRequest.CommonServices.sendCodedResponse(
-                pRequestState.response, 400, 'Title is required');
-            return fRequestComplete(true); // true signals an error
-        }
-        return fRequestComplete(false);
-    });
+	'Read-PostOperation',
+	(pRequest, pRequestState, fRequestComplete) =>
+	{
+		// Add computed fields to the response
+		pRequestState.Record.DisplayTitle =
+			`${pRequestState.Record.Title} (${pRequestState.Record.PublicationYear})`;
+		return fRequestComplete(false);
+	});
 ```
 
-### Adding Query Filters
+### Cross-Entity Enrichment
 
 ```javascript
 _Fable.MeadowEndpoints.Book.controller.BehaviorInjection.setBehavior(
-    'Reads-PreOperation',
-    (pRequest, pRequestState, fRequestComplete) =>
-    {
-        // Only return English-language books
-        pRequestState.Query.addFilter('Language', 'English');
-        return fRequestComplete(false);
-    });
+	'Read-PostOperation',
+	(pRequest, pRequestState, fRequestComplete) =>
+	{
+		_Fable.DAL.BookAuthorJoin.doReads(
+			_Fable.DAL.BookAuthorJoin.query.addFilter('IDBook', pRequestState.Record.IDBook),
+			(pJoinError, pJoinQuery, pJoinRecords) =>
+			{
+				let tmpAuthors = [];
+				let tmpRemaining = pJoinRecords.length;
+
+				if (tmpRemaining < 1)
+				{
+					pRequestState.Record.Authors = [];
+					return fRequestComplete(false);
+				}
+
+				for (let j = 0; j < pJoinRecords.length; j++)
+				{
+					_Fable.DAL.Author.doRead(
+						_Fable.DAL.Author.query.addFilter('IDAuthor', pJoinRecords[j].IDAuthor),
+						(pReadError, pReadQuery, pAuthor) =>
+						{
+							if (pAuthor && pAuthor.IDAuthor)
+							{
+								tmpAuthors.push(pAuthor);
+							}
+							tmpRemaining--;
+							if (tmpRemaining <= 0)
+							{
+								pRequestState.Record.Authors = tmpAuthors;
+								return fRequestComplete(false);
+							}
+						});
+				}
+			});
+	});
 ```
 
-## Removing a Behavior
+### Audit Logging
 
 ```javascript
-delete _Fable.MeadowEndpoints.Book.controller
-    .BehaviorInjection._BehaviorFunctions['Read-PreOperation'];
+_Fable.MeadowEndpoints.Book.controller.BehaviorInjection.setBehavior(
+	'Delete-PreOperation',
+	(pRequest, pRequestState, fRequestComplete) =>
+	{
+		_Fable.log.warn(`Book ${pRequestState.RecordToDelete.IDBook} is being deleted`);
+		return fRequestComplete(false);
+	});
+```
+
+## Timing
+
+- **PreOperation** hooks run before the database operation. Use them for validation, transformation, or authorization.
+- **PostOperation** hooks run after the database operation. Use them for enrichment, logging, or triggering side effects.
+
+## Using with Lifecycle Hooks
+
+The best place to inject behaviors is in the `onAfterInitialize` lifecycle hook:
+
+```javascript
+class MyDataService extends require('retold-data-service')
+{
+	onAfterInitialize(fCallback)
+	{
+		this.fable.MeadowEndpoints.Book.controller.BehaviorInjection.setBehavior(
+			'Read-PostOperation', myBookEnrichmentHook);
+
+		this.fable.MeadowEndpoints.Review.controller.BehaviorInjection.setBehavior(
+			'Create-PreOperation', myReviewValidationHook);
+
+		return fCallback();
+	}
+}
 ```

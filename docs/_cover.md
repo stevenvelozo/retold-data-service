@@ -1,11 +1,11 @@
-# Retold Data Service <small>2</small>
+# Retold Data Service <small>v2.0.11</small>
 
-> All-in-one data service for the Retold ecosystem
+> Schema-driven REST API generation for the Retold ecosystem
 
-- Schema-driven REST API generation from Stricture DDL models
-- Automatic CRUD endpoints for every entity in your data model
-- Pluggable storage providers: MySQL, SQLite, MSSQL, ALASQL
-- Built on Fable, Meadow, and Orator with lifecycle hooks for customization
+- Zero-boilerplate CRUD endpoints from Stricture DDL models
+- Pluggable storage providers across SQL and NoSQL engines
+- Lifecycle hooks and behavior injection for custom logic
+- Direct DAL access for server-side data operations
 
+[Getting Started](#retold-data-service)
 [GitHub](https://github.com/stevenvelozo/retold-data-service)
-[Get Started](#retold-data-service)

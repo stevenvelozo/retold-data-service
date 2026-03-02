@@ -8,7 +8,7 @@ Retold Data Service orchestrates several Retold modules into a unified service t
 ┌─────────────────────────────────────────────┐
 │            Your Application Code            │
 │   - Configure options                       │
-│   - Override lifecycle hooks                 │
+│   - Override lifecycle hooks                │
 │   - Inject behaviors                        │
 └──────────────────┬──────────────────────────┘
                    │
@@ -49,18 +49,66 @@ Retold Data Service orchestrates several Retold modules into a unified service t
 └─────────────────────────────────────────────┘
 ```
 
+## Initialization Flow
+
+The `initializeService()` method runs an ordered sequence of asynchronous steps using Fable's Anticipate pattern:
+
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant RDS as RetoldDataService
+    participant O as Orator
+    participant PE as PersistenceEngine
+    participant M as Meadow
+    participant ME as MeadowEndpoints
+
+    App->>RDS: initializeService()
+    RDS->>RDS: onBeforeInitialize()
+    RDS->>O: startWebServer()
+    RDS->>PE: initializePersistenceEngine()
+    RDS->>RDS: onInitialize()
+    RDS->>M: Load Stricture model
+    loop Each Entity
+        RDS->>M: loadFromPackageObject(schema)
+        M-->>RDS: DAL instance
+        RDS->>ME: new MeadowEndpoints(DAL)
+        ME->>O: connectRoutes()
+    end
+    RDS->>RDS: onAfterInitialize()
+    RDS-->>App: callback()
+```
+
+## Component Diagram
+
+```mermaid
+graph TD
+    A[Application Code] --> B[RetoldDataService]
+    B --> C[Orator + Restify]
+    B --> D[Meadow DAL]
+    B --> E[MeadowEndpoints]
+    D --> F[FoxHound Query DSL]
+    D --> G[Storage Provider]
+    G --> H[MySQL]
+    G --> I[SQLite]
+    G --> J[MSSQL]
+    G --> K[PostgreSQL]
+    G --> L[MongoDB]
+    E --> M[REST Routes]
+    E --> N[Behavior Injection]
+```
+
 ## How It Works
 
-1. **Registration** — `RetoldDataService` is registered with Fable's service manager and instantiated with options
-2. **Server Setup** — Orator and its Restify service server are registered and configured
-3. **Initialization** — calling `initializeService()` triggers an ordered sequence:
-   - `onBeforeInitialize()` — your custom pre-initialization logic
+1. **Registration** -- `RetoldDataService` is registered with Fable's service manager and instantiated with options
+2. **Server Setup** -- Orator and its Restify service server are registered and configured
+3. **Initialization** -- calling `initializeService()` triggers an ordered sequence:
+   - `onBeforeInitialize()` -- your custom pre-initialization logic
    - Orator web server start (if `AutoStartOrator` is true)
    - Persistence engine initialization (loads the storage provider module)
-   - `onInitialize()` — your custom initialization logic
+   - `onInitialize()` -- your custom initialization logic
    - Data endpoint initialization (loads model, creates DALs and endpoints)
-   - `onAfterInitialize()` — your custom post-initialization logic
-4. **Serving** — the Restify server listens for HTTP requests and routes them through Meadow Endpoints to the DAL
+   - `onAfterInitialize()` -- your custom post-initialization logic
+4. **Serving** -- the Restify server listens for HTTP requests and routes them through Meadow Endpoints to the DAL
 
 ## Key Objects
 
@@ -83,12 +131,28 @@ const libFableServiceProviderBase = require('fable-serviceproviderbase');
 
 class RetoldDataService extends libFableServiceProviderBase
 {
-    constructor(pFable, pOptions, pServiceHash)
-    {
-        super(pFable, pOptions, pServiceHash);
-        this.serviceType = 'RetoldDataService';
-    }
+	constructor(pFable, pOptions, pServiceHash)
+	{
+		super(pFable, pOptions, pServiceHash);
+		this.serviceType = 'RetoldDataService';
+	}
 }
 ```
 
-This means it inherits logging, configuration access, and service lifecycle management from the base class.
+This means it inherits logging, configuration access, and service lifecycle management from the base class.  You register it with Fable's service manager like any other service:
+
+```javascript
+const libRetoldDataService = require('retold-data-service');
+
+_Fable.serviceManager.addServiceType('RetoldDataService', libRetoldDataService);
+let _DataService = _Fable.serviceManager.instantiateServiceProvider('RetoldDataService',
+	{
+		FullMeadowSchemaPath: `${__dirname}/model/`,
+		FullMeadowSchemaFilename: 'MeadowModel-Extended.json',
+		StorageProvider: 'MySQL',
+		StorageProviderModule: 'meadow-connection-mysql',
+		AutoStartOrator: true
+	});
+```
+
+Once instantiated, the service is available at `_Fable.RetoldDataService` and can be initialized with `initializeService()`.

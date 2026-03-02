@@ -1,19 +1,28 @@
 # Retold Data Service
 
-> An all-in-one Fable service that turns a Stricture schema into a complete REST API
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+> An all-in-one Fable service that turns a compiled Stricture schema into a complete REST API
 
 Retold Data Service combines Meadow (data access), Orator (API server), and Meadow Endpoints (REST routes) into a single service provider. Point it at a compiled Stricture model and it auto-generates typed CRUD endpoints for every entity -- complete with filtering, pagination, soft deletes, and behavior injection hooks.
 
 ## Features
 
-- **Zero-Boilerplate REST** - Define your schema once, get full CRUD endpoints for every entity automatically
-- **Provider-Agnostic** - Swap between MySQL, MSSQL, SQLite, or ALASQL without changing application code
-- **Schema-Driven** - Stricture DDL compiles into a model that drives endpoint generation, validation, and defaults
-- **Lifecycle Hooks** - `onBeforeInitialize`, `onInitialize`, and `onAfterInitialize` for custom startup logic
-- **Behavior Injection** - Pre- and post-operation hooks on every CRUD operation for custom business logic
-- **DAL Access** - Direct programmatic data access alongside the REST endpoints for server-side logic
-- **Fable Service Provider** - First-class service in the Fable ecosystem with logging, configuration, and DI
-- **Double-Init Protection** - Guards against accidental re-initialization
+- **Zero-Boilerplate REST** -- define your schema once, get full CRUD endpoints for every entity automatically
+- **Provider-Agnostic** -- swap between MySQL, MSSQL, PostgreSQL, SQLite, MongoDB, DGraph, Solr, or ALASQL without changing application code
+- **Schema-Driven** -- Stricture DDL compiles into a model that drives endpoint generation, validation, and defaults
+- **Lifecycle Hooks** -- `onBeforeInitialize`, `onInitialize`, and `onAfterInitialize` for custom startup logic
+- **Behavior Injection** -- pre- and post-operation hooks on every CRUD operation for custom business logic
+- **DAL Access** -- direct programmatic data access alongside the REST endpoints for server-side logic
+- **Backplane Endpoints** -- dynamic model loading, provider switching, and settings management at runtime
+- **Fable Service Provider** -- first-class service in the Fable ecosystem with logging, configuration, and DI
+- **Double-Init Protection** -- guards against accidental re-initialization
+
+## Installation
+
+```bash
+npm install retold-data-service
+```
 
 ## Quick Start
 
@@ -21,27 +30,30 @@ Retold Data Service combines Meadow (data access), Orator (API server), and Mead
 const libFable = require('fable');
 const libRetoldDataService = require('retold-data-service');
 
-const _Fable = new libFable({
-	APIServerPort: 8086,
-	MySQL: {
-		Server: '127.0.0.1',
-		Port: 3306,
-		User: 'root',
-		Password: 'secret',
-		Database: 'bookstore',
-		ConnectionPoolLimit: 20
-	},
-	MeadowConnectionMySQLAutoConnect: true
-});
+const _Fable = new libFable(
+	{
+		APIServerPort: 8086,
+		MySQL:
+		{
+			Server: '127.0.0.1',
+			Port: 3306,
+			User: 'root',
+			Password: 'secret',
+			Database: 'bookstore',
+			ConnectionPoolLimit: 20
+		},
+		MeadowConnectionMySQLAutoConnect: true
+	});
 
 _Fable.serviceManager.addServiceType('RetoldDataService', libRetoldDataService);
 
-_Fable.serviceManager.instantiateServiceProvider('RetoldDataService', {
-	StorageProvider: 'MySQL',
-	StorageProviderModule: 'meadow-connection-mysql',
-	FullMeadowSchemaPath: `${__dirname}/model/`,
-	FullMeadowSchemaFilename: 'MeadowModel-Extended.json'
-});
+_Fable.serviceManager.instantiateServiceProvider('RetoldDataService',
+	{
+		StorageProvider: 'MySQL',
+		StorageProviderModule: 'meadow-connection-mysql',
+		FullMeadowSchemaPath: `${__dirname}/model/`,
+		FullMeadowSchemaFilename: 'MeadowModel-Extended.json'
+	});
 
 _Fable.RetoldDataService.initializeService(
 	(pError) =>
@@ -54,13 +66,7 @@ _Fable.RetoldDataService.initializeService(
 	});
 ```
 
-## Installation
-
-```bash
-npm install retold-data-service
-```
-
-## How It Works
+## Architecture
 
 Retold Data Service orchestrates the full Meadow stack into a single initialization sequence:
 
@@ -72,7 +78,7 @@ Fable (Core)
         ├── Meadow (Data Access Layer)
         │     ├── Schema (from compiled Stricture model)
         │     ├── FoxHound (Query DSL)
-        │     └── Provider (MySQL / MSSQL / SQLite / ALASQL)
+        │     └── Provider (MySQL / MSSQL / PostgreSQL / SQLite / MongoDB / etc.)
         └── Meadow Endpoints (REST Routes)
               ├── Create   POST   /1.0/Entity
               ├── Read     GET    /1.0/Entity/:ID
@@ -93,19 +99,22 @@ Fable (Core)
 | `FullMeadowSchemaPath` | `process.cwd() + '/model/'` | Path to the compiled schema |
 | `FullMeadowSchemaFilename` | `'MeadowModel-Extended.json'` | Compiled model filename |
 | `AutoStartOrator` | `true` | Start the HTTP server automatically |
-| `APIServerPort` | `8080` | Port for the HTTP server |
+| `AutoInitializeDataService` | `true` | Auto-initialize on construction |
 
 ## SQLite Example
 
 For embedded or test scenarios, use the in-memory SQLite provider:
 
 ```javascript
+const libFable = require('fable');
+const libRetoldDataService = require('retold-data-service');
 const libMeadowConnectionSQLite = require('meadow-connection-sqlite');
 
-const _Fable = new libFable({
-	APIServerPort: 8086,
-	SQLite: { SQLiteFilePath: ':memory:' }
-});
+const _Fable = new libFable(
+	{
+		APIServerPort: 8086,
+		SQLite: { SQLiteFilePath: ':memory:' }
+	});
 
 _Fable.serviceManager.addServiceType('RetoldDataService', libRetoldDataService);
 _Fable.serviceManager.addServiceType('MeadowSQLiteProvider', libMeadowConnectionSQLite);
@@ -114,12 +123,13 @@ _Fable.serviceManager.instantiateServiceProvider('MeadowSQLiteProvider');
 _Fable.MeadowSQLiteProvider.connectAsync(
 	(pError) =>
 	{
-		_Fable.serviceManager.instantiateServiceProvider('RetoldDataService', {
-			StorageProvider: 'SQLite',
-			StorageProviderModule: 'meadow-connection-sqlite',
-			FullMeadowSchemaPath: `${__dirname}/model/`,
-			FullMeadowSchemaFilename: 'MeadowModel-Extended.json'
-		});
+		_Fable.serviceManager.instantiateServiceProvider('RetoldDataService',
+			{
+				StorageProvider: 'SQLite',
+				StorageProviderModule: 'meadow-connection-sqlite',
+				FullMeadowSchemaPath: `${__dirname}/model/`,
+				FullMeadowSchemaFilename: 'MeadowModel-Extended.json'
+			});
 
 		_Fable.RetoldDataService.initializeService(
 			(pError) =>
@@ -185,7 +195,7 @@ _Fable.DAL.Book.doReads(tmpQuery,
 
 ## Backplane Endpoints
 
-For dynamic model loading at runtime, Retold Data Service provides backplane endpoints:
+For dynamic model loading and provider management at runtime:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -216,15 +226,14 @@ npx docsify-cli serve docs
 
 ## Related Packages
 
-- [meadow](https://github.com/stevenvelozo/meadow) - Data access and ORM
-- [meadow-endpoints](https://github.com/stevenvelozo/meadow-endpoints) - Auto-generated REST endpoints
-- [orator](https://github.com/stevenvelozo/orator) - API server abstraction
-- [fable](https://github.com/stevenvelozo/fable) - Application services framework
+- [meadow](https://github.com/stevenvelozo/meadow) -- data access and ORM
+- [meadow-endpoints](https://github.com/stevenvelozo/meadow-endpoints) -- auto-generated REST endpoints
+- [foxhound](https://github.com/stevenvelozo/foxhound) -- query DSL for SQL generation
+- [stricture](https://github.com/stevenvelozo/stricture) -- schema definition DDL compiler
+- [orator](https://github.com/stevenvelozo/orator) -- API server abstraction
+- [fable](https://github.com/stevenvelozo/fable) -- application services framework
+- [retold-harness](https://github.com/stevenvelozo/retold-harness) -- application harness using this service
 
 ## License
 
 MIT
-
-## Contributing
-
-Pull requests are welcome. For details on our code of conduct, contribution process, and testing requirements, see the [Retold Contributing Guide](https://github.com/stevenvelozo/retold/blob/main/docs/contributing.md).

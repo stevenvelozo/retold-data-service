@@ -1,0 +1,2 @@
+- [GitHub](https://github.com/stevenvelozo/retold-data-service)
+- [npm](https://www.npmjs.com/package/retold-data-service)
