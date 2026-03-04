@@ -181,7 +181,16 @@ suite
 								StorageProviderModule: 'meadow-connection-sqlite',
 
 								AutoInitializeDataService: true,
-								AutoStartOrator: true
+								AutoStartOrator: true,
+
+								Endpoints:
+									{
+										ConnectionManager: true,
+										ModelManagerWrite: true,
+										Stricture: true,
+										MeadowIntegration: true,
+										MeadowEndpoints: true
+									}
 							});
 
 						_RetoldDataService.initializeService(
@@ -1344,6 +1353,153 @@ suite
 								Expect(pError).to.be.an.instanceof(Error);
 								Expect(pError.message).to.contain('not initialized');
 								fDone();
+							});
+					}
+				);
+			}
+		);
+
+		suite
+		(
+			'Endpoint Allow-List Configuration',
+			function()
+			{
+				test
+				(
+					'isEndpointGroupEnabled should return false for disabled groups',
+					function()
+					{
+						// The main test service was created with all groups enabled
+						Expect(_RetoldDataService.isEndpointGroupEnabled('MeadowEndpoints')).to.equal(true);
+						Expect(_RetoldDataService.isEndpointGroupEnabled('Stricture')).to.equal(true);
+						Expect(_RetoldDataService.isEndpointGroupEnabled('ConnectionManager')).to.equal(true);
+					}
+				);
+				test
+				(
+					'isEndpointGroupEnabled should return false for unknown groups',
+					function()
+					{
+						Expect(_RetoldDataService.isEndpointGroupEnabled('NonExistentGroup')).to.equal(false);
+					}
+				);
+				test
+				(
+					'Default configuration should only enable MeadowEndpoints',
+					function(fDone)
+					{
+						let tmpFable2 = new libFable(
+							{
+								APIServerPort: 9331,
+								LogStreams: [{streamtype: 'console', level: 'fatal'}],
+								SQLite: { SQLiteFilePath: ':memory:' }
+							});
+
+						tmpFable2.serviceManager.addServiceType('MeadowSQLiteProvider', libMeadowConnectionSQLite);
+						tmpFable2.serviceManager.instantiateServiceProvider('MeadowSQLiteProvider');
+
+						tmpFable2.MeadowSQLiteProvider.connectAsync(
+							(pConnError) =>
+							{
+								if (pConnError) { return fDone(pConnError); }
+
+								tmpFable2.serviceManager.addServiceType('RetoldDataService', require('../source/Retold-Data-Service.js'));
+								let tmpService2 = tmpFable2.serviceManager.instantiateServiceProvider('RetoldDataService',
+									{
+										AutoStartOrator: false,
+										StorageProvider: 'SQLite',
+										StorageProviderModule: 'meadow-connection-sqlite',
+										FullMeadowSchemaPath: `${process.cwd()}/test/model/`,
+										FullMeadowSchemaFilename: `MeadowModel-Extended.json`
+									});
+
+								// Check the defaults
+								Expect(tmpService2.isEndpointGroupEnabled('MeadowEndpoints')).to.equal(true);
+								Expect(tmpService2.isEndpointGroupEnabled('ConnectionManager')).to.equal(false);
+								Expect(tmpService2.isEndpointGroupEnabled('ModelManagerWrite')).to.equal(false);
+								Expect(tmpService2.isEndpointGroupEnabled('Stricture')).to.equal(false);
+								Expect(tmpService2.isEndpointGroupEnabled('MeadowIntegration')).to.equal(false);
+
+								fDone();
+							});
+					}
+				);
+				test
+				(
+					'Schema read routes should always be available even with restrictive config',
+					function(fDone)
+					{
+						this.timeout(10000);
+
+						let tmpFable3 = new libFable(
+							{
+								APIServerPort: 9332,
+								LogStreams: [{streamtype: 'console', level: 'fatal'}],
+								SQLite: { SQLiteFilePath: ':memory:' }
+							});
+
+						tmpFable3.serviceManager.addServiceType('MeadowSQLiteProvider', libMeadowConnectionSQLite);
+						tmpFable3.serviceManager.instantiateServiceProvider('MeadowSQLiteProvider');
+
+						tmpFable3.MeadowSQLiteProvider.connectAsync(
+							(pConnError) =>
+							{
+								if (pConnError) { return fDone(pConnError); }
+
+								let tmpDB3 = tmpFable3.MeadowSQLiteProvider.db;
+								tmpDB3.exec(`CREATE TABLE IF NOT EXISTS Book (IDBook INTEGER PRIMARY KEY AUTOINCREMENT, GUIDBook TEXT, CreateDate TEXT, CreatingIDUser INTEGER DEFAULT 0, UpdateDate TEXT, UpdatingIDUser INTEGER DEFAULT 0, Deleted INTEGER DEFAULT 0, DeleteDate TEXT, DeletingIDUser INTEGER DEFAULT 0, Title TEXT, Type TEXT, Genre TEXT, ISBN TEXT, Language TEXT, ImageURL TEXT, PublicationYear INTEGER DEFAULT 0);`);
+
+								tmpFable3.serviceManager.addServiceType('RetoldDataService', require('../source/Retold-Data-Service.js'));
+								tmpFable3.serviceManager.instantiateServiceProvider('RetoldDataService',
+									{
+										StorageProvider: 'SQLite',
+										StorageProviderModule: 'meadow-connection-sqlite',
+										FullMeadowSchemaPath: `${process.cwd()}/test/model/`,
+										FullMeadowSchemaFilename: `MeadowModel-Extended.json`,
+										AutoStartOrator: true,
+										Endpoints:
+											{
+												ConnectionManager: false,
+												ModelManagerWrite: false,
+												Stricture: false,
+												MeadowIntegration: false,
+												MeadowEndpoints: true
+											}
+									});
+
+								tmpFable3.RetoldDataService.initializeService(
+									(pInitError) =>
+									{
+										if (pInitError) { return fDone(pInitError); }
+
+										let tmpSuperTest3 = libSuperTest(`http://localhost:9332/`);
+
+										// Schema read routes should always be available
+										tmpSuperTest3
+											.get('1.0/Retold/Models')
+											.expect(200)
+											.end(
+												(pError, pResponse) =>
+												{
+													let tmpModels = JSON.parse(pResponse.text);
+													Expect(tmpModels).to.be.an('array');
+
+													// Clean up
+													if (tmpFable3.OratorServiceServer && tmpFable3.OratorServiceServer.server)
+													{
+														tmpFable3.OratorServiceServer.server.close(
+															() =>
+															{
+																try { tmpFable3.MeadowSQLiteProvider.db.close(); } catch(e) {}
+																fDone();
+															});
+													}
+													else
+													{
+														fDone();
+													}
+												});
+									});
 							});
 					}
 				);

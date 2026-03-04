@@ -10,19 +10,38 @@ const libFableServiceProviderBase = require('fable-serviceproviderbase');
 const libOrator = require('orator');
 const libOratorServiceServerRestify = require('orator-serviceserver-restify');
 
-const libMeadow = require('meadow');
-const libMeadowEndpoints = require('meadow-endpoints');
+const libRetoldDataServiceMeadowEndpoints = require('./services/Retold-Data-Service-MeadowEndpoints.js');
+const libRetoldDataServiceConnectionManager = require('./services/Retold-Data-Service-ConnectionManager.js');
+const libRetoldDataServiceModelManager = require('./services/Retold-Data-Service-ModelManager.js');
+const libRetoldDataServiceStricture = require('./services/stricture/Retold-Data-Service-Stricture.js');
+const libRetoldDataServiceMeadowIntegration = require('./services/meadow-integration/Retold-Data-Service-MeadowIntegration.js');
 
 const defaultDataServiceSettings = (
 	{
-		StorageProvider: 'MySQL',
-		StorageProviderModule: 'meadow-connection-mysql',
+		StorageProvider: false,
+		StorageProviderModule: false,
 
 		FullMeadowSchemaPath: `${process.cwd()}/model/`,
-		FullMeadowSchemaFilename: `MeadowModel-Extended.json`,
+		FullMeadowSchemaFilename: false,
 
 		AutoInitializeDataService: true,
-		AutoStartOrator: true
+		AutoStartOrator: true,
+
+		// Endpoint allow-list.  Only enabled groups have their routes wired.
+		// Schema read routes (GET /1.0/Retold/Models, Model/:Name, etc.) are always available.
+		Endpoints:
+			{
+				// Runtime connection management (POST/DEL /1.0/Retold/Connection*)
+				ConnectionManager: false,
+				// Runtime model upload/delete/connect (POST/DEL /1.0/Retold/Model*)
+				ModelManagerWrite: false,
+				// DDL compilation and code generation (/1.0/Retold/Stricture/*)
+				Stricture: false,
+				// CSV/TSV/JSON data transformation (/1.0/Retold/MeadowIntegration/*)
+				MeadowIntegration: false,
+				// Per-entity CRUD endpoints (e.g. /1.0/Book, /1.0/Authors)
+				MeadowEndpoints: true
+			}
 	});
 
 class RetoldDataService extends libFableServiceProviderBase
@@ -35,7 +54,8 @@ class RetoldDataService extends libFableServiceProviderBase
 
         this.serviceType = 'RetoldDataService';
 
-		this.options = this.fable.Utility.extend(defaultDataServiceSettings, this.options);
+		// Re-apply defaults without mutating the module-level defaultDataServiceSettings object.
+		this.options = Object.assign({}, JSON.parse(JSON.stringify(defaultDataServiceSettings)), this.options);
 
 		// Add the restify server provider and orator base class to fable
 		this.fable.serviceManager.addServiceType('OratorServiceServer', libOratorServiceServerRestify);
@@ -47,23 +67,83 @@ class RetoldDataService extends libFableServiceProviderBase
 		// Initialize Orator, which will automatically use the default `OratorServiceServer` service we just instantiated
 		this.fable.serviceManager.instantiateServiceProvider('Orator', this.options);
 
-		// TODO: This code will be much cleaner with meadow and meadow-endpoints as services
-		this._Meadow = libMeadow.new(pFable);
+		// Register and instantiate the MeadowEndpoints service
+		this.fable.serviceManager.addServiceType('RetoldDataServiceMeadowEndpoints', libRetoldDataServiceMeadowEndpoints);
+		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceMeadowEndpoints',
+			{
+				StorageProvider: this.options.StorageProvider,
+				FullMeadowSchemaPath: this.options.FullMeadowSchemaPath,
+				FullMeadowSchemaFilename: this.options.FullMeadowSchemaFilename
+			});
 
-		// Create DAL objects for each table in the schema
-		// These will be unnecessary when meadow and meadow-endpoints are full fledged fable services
-		this._DAL = {};
-		this._MeadowEndpoints = {};
+		// Register and instantiate the ConnectionManager service
+		this.fable.serviceManager.addServiceType('RetoldDataServiceConnectionManager', libRetoldDataServiceConnectionManager);
+		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceConnectionManager');
 
-		// Decorate fable with the same -- this is a temporary hack until meadow and meadow-endpoints are full fledged fable services
+		// Register and instantiate the ModelManager service
+		this.fable.serviceManager.addServiceType('RetoldDataServiceModelManager', libRetoldDataServiceModelManager);
+		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceModelManager');
+
+		// Register and instantiate the Stricture service
+		this.fable.serviceManager.addServiceType('RetoldDataServiceStricture', libRetoldDataServiceStricture);
+		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceStricture');
+
+		// Register and instantiate the MeadowIntegration service
+		this.fable.serviceManager.addServiceType('RetoldDataServiceMeadowIntegration', libRetoldDataServiceMeadowIntegration);
+		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceMeadowIntegration');
+
+		// Expose the DAL and MeadowEndpoints from the service on this object and on fable for backward compatibility
+		this._DAL = this.fable.RetoldDataServiceMeadowEndpoints._DAL;
+		this._MeadowEndpoints = this.fable.RetoldDataServiceMeadowEndpoints._MeadowEndpoints;
 		this.fable.DAL = this._DAL;
 		this.fable.MeadowEndpoints = this._MeadowEndpoints;
 
-		// Storage for the model and entities
-		this.fullModel = false;
-		this.entityList = false;
-
 		this.serviceInitialized = false;
+	}
+
+	// Proxy accessors for model data that lives on the MeadowEndpoints service
+	get fullModel()
+	{
+		return this.fable.RetoldDataServiceMeadowEndpoints.fullModel;
+	}
+
+	get entityList()
+	{
+		return this.fable.RetoldDataServiceMeadowEndpoints.entityList;
+	}
+
+	get models()
+	{
+		return this.fable.RetoldDataServiceMeadowEndpoints.models;
+	}
+
+	loadModel(pModelName, pModelObject, pStorageProvider, fCallback)
+	{
+		return this.fable.RetoldDataServiceMeadowEndpoints.loadModel(pModelName, pModelObject, pStorageProvider, fCallback);
+	}
+
+	loadModelFromFile(pModelName, pModelPath, pModelFilename, fCallback)
+	{
+		return this.fable.RetoldDataServiceMeadowEndpoints.loadModelFromFile(pModelName, pModelPath, pModelFilename, fCallback);
+	}
+
+	/**
+	 * Check if an endpoint group is enabled in the Endpoints configuration.
+	 *
+	 * @param {string} pGroupName - The endpoint group name (e.g. 'ConnectionManager', 'Stricture')
+	 * @return {boolean} True if the group is enabled
+	 */
+	isEndpointGroupEnabled(pGroupName)
+	{
+		if (!this.options.Endpoints)
+		{
+			return false;
+		}
+		if (!this.options.Endpoints.hasOwnProperty(pGroupName))
+		{
+			return false;
+		}
+		return !!this.options.Endpoints[pGroupName];
 	}
 
 	onBeforeInitialize(fCallback)
@@ -83,57 +163,12 @@ class RetoldDataService extends libFableServiceProviderBase
 
 	initializePersistenceEngine(fCallback)
 	{
-		// TODO: Change this to an option (e.g. we might want to do ALASQL)
-		// Load the mysql connection for meadow if it doesn't exist yet
-		this.fable.serviceManager.addAndInstantiateServiceType(`Meadow${this.options.StorageProvider}Provider`, require(this.options.StorageProviderModule));
-		return fCallback();
-	}
-
-	initializeDataEndpoints(fCallback)
-	{
-		this.fable.log.info("Retold Data Service initializing Endpoints...");
-
-		// Create DAL objects for each table in the schema
-
-		// 1. Load full compiled schema of the model from stricture
-		this.fable.log.info(`...loading full model stricture schema...`);
-		this.fullModel = require (`${this.options.FullMeadowSchemaPath}${this.options.FullMeadowSchemaFilename}`);
-		this.fable.log.info(`...full model stricture schema loaded.`);
-
-		// 2. Extract an array of each table in the schema
-		this.fable.log.info(`...getting entity list...`);
-		this.entityList = Object.keys(this.fullModel.Tables);
-
-		// 3. Enumerate each entry in the compiled model and load a DAL for that table
-		this.fable.log.info(`...initializing ${this.entityList.length} DAL objects and corresponding Meadow Endpoints...`);
-		for (let i = 0; i < this.entityList.length; i++)
+		// Only instantiate a default provider if StorageProviderModule is configured.
+		// When launching with no model, ConnectionManager handles provider instantiation.
+		if (this.options.StorageProviderModule)
 		{
-			// 4. Create the DAL for each entry (e.g. it would be at _DAL.Movie for the Movie entity)
-			let tmpDALEntityName = this.entityList[i];
-			try
-			{
-				let tmpDALSchema = this.fullModel.Tables[tmpDALEntityName];
-				let tmpDALMeadowSchema = tmpDALSchema.MeadowSchema;
-
-				//let tmpDALPackageFile = `${this.options.DALMeadowSchemaPath}${this.options.DALMeadowSchemaPrefix}${tmpDALEntityName}${this.options.DALMeadowSchemaPostfix}.json`
-				//this.fable.log.info(`Initializing the ${tmpDALEntityName} DAL from [${tmpDALPackageFile}]...`);
-				this._DAL[tmpDALEntityName] = this._Meadow.loadFromPackageObject(tmpDALMeadowSchema);
-				// 5. Tell this DAL object to use the configured storage provider
-				this.fable.log.info(`...defaulting the ${tmpDALEntityName} DAL to use ${this.options.StorageProvider}`);
-				this._DAL[tmpDALEntityName].setProvider(this.options.StorageProvider);
-				// 6. Create a Meadow Endpoints class for this DAL
-				this.fable.log.info(`...initializing the ${tmpDALEntityName} Meadow Endpoints`);
-				this._MeadowEndpoints[tmpDALEntityName] = libMeadowEndpoints.new(this._DAL[tmpDALEntityName]);
-				// 8. Expose the meadow endpoints on Orator
-				this.fable.log.info(`...mapping the ${tmpDALEntityName} Meadow Endpoints to Orator`);
-				this._MeadowEndpoints[tmpDALEntityName].connectRoutes(this.fable.OratorServiceServer);				
-			}
-			catch (pError)
-			{
-				this.fable.log.error(`Error initializing DAL and Endpoints for entity [${tmpDALEntityName}]: ${pError}`);
-			}
+			this.fable.serviceManager.addAndInstantiateServiceType(`Meadow${this.options.StorageProvider}Provider`, require(this.options.StorageProviderModule));
 		}
-
 		return fCallback();
 	}
 
@@ -147,7 +182,29 @@ class RetoldDataService extends libFableServiceProviderBase
 		{
 			let tmpAnticipate = this.fable.newAnticipate();
 
-			this.fable.log.info(`The Retold Data Service is Auto Starting Orator`);
+			this.fable.log.info(`The Retold Data Service is initializing...`);
+
+			// Log endpoint configuration
+			let tmpGroupNames = ['ConnectionManager', 'ModelManagerWrite', 'Stricture', 'MeadowIntegration', 'MeadowEndpoints'];
+			let tmpEnabledGroups = [];
+			let tmpDisabledGroups = [];
+			for (let i = 0; i < tmpGroupNames.length; i++)
+			{
+				if (this.isEndpointGroupEnabled(tmpGroupNames[i]))
+				{
+					tmpEnabledGroups.push(tmpGroupNames[i]);
+				}
+				else
+				{
+					tmpDisabledGroups.push(tmpGroupNames[i]);
+				}
+			}
+			this.fable.log.info(`Endpoint groups enabled: [${tmpEnabledGroups.join(', ')}]`);
+			if (tmpDisabledGroups.length > 0)
+			{
+				this.fable.log.info(`Endpoint groups disabled: [${tmpDisabledGroups.join(', ')}]`);
+			}
+			this.fable.log.info(`Schema read endpoints are always enabled.`);
 
 			tmpAnticipate.anticipate(this.onBeforeInitialize.bind(this));
 
@@ -168,7 +225,60 @@ class RetoldDataService extends libFableServiceProviderBase
 
 			tmpAnticipate.anticipate(this.onInitialize.bind(this));
 
-			tmpAnticipate.anticipate(this.initializeDataEndpoints.bind(this));
+			// Wire endpoint routes based on the Endpoints allow-list configuration
+			tmpAnticipate.anticipate(
+				(fInitCallback) =>
+				{
+					// ConnectionManager routes (runtime connection hotloading)
+					if (this.isEndpointGroupEnabled('ConnectionManager'))
+					{
+						this.fable.RetoldDataServiceConnectionManager.connectRoutes(this.fable.OratorServiceServer);
+					}
+
+					// ModelManager schema READ routes are ALWAYS available
+					this.fable.RetoldDataServiceModelManager.connectReadRoutes(this.fable.OratorServiceServer);
+
+					// ModelManager WRITE routes (model upload, delete, connect)
+					if (this.isEndpointGroupEnabled('ModelManagerWrite'))
+					{
+						this.fable.RetoldDataServiceModelManager.connectWriteRoutes(this.fable.OratorServiceServer);
+					}
+
+					// Stricture routes (DDL compilation and code generation)
+					if (this.isEndpointGroupEnabled('Stricture'))
+					{
+						this.fable.RetoldDataServiceStricture.connectRoutes(this.fable.OratorServiceServer);
+					}
+
+					// MeadowIntegration routes (CSV/TSV/JSON data transformation)
+					if (this.isEndpointGroupEnabled('MeadowIntegration'))
+					{
+						this.fable.RetoldDataServiceMeadowIntegration.connectRoutes(this.fable.OratorServiceServer);
+					}
+
+					return fInitCallback();
+				});
+
+			// Only load the default model if MeadowEndpoints are enabled and a schema file is configured
+			tmpAnticipate.anticipate(
+				(fInitCallback) =>
+				{
+					if (!this.isEndpointGroupEnabled('MeadowEndpoints'))
+					{
+						this.fable.log.info('MeadowEndpoints are disabled in configuration; skipping data endpoint initialization.');
+						return fInitCallback();
+					}
+
+					if (this.options.FullMeadowSchemaFilename)
+					{
+						this.fable.RetoldDataServiceMeadowEndpoints.initializeDataEndpoints(fInitCallback);
+					}
+					else
+					{
+						this.fable.log.info('No default model configured; skipping data endpoint initialization. Use the Model and Connection management endpoints to add models at runtime.');
+						return fInitCallback();
+					}
+				});
 
 			tmpAnticipate.anticipate(this.onAfterInitialize.bind(this));
 
@@ -180,7 +290,6 @@ class RetoldDataService extends libFableServiceProviderBase
 						this.log.error(`Error initializing Retold Data Service: ${pError}`);
 						return fCallback(pError);
 					}
-					this.fable.Orator.startWebServer.bind(this.fable.Orator);
 					this.serviceInitialized = true;
 					return fCallback();
 				});
