@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retold Data Cloner</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
+h1 { margin-bottom: 20px; color: #1a1a1a; }
+h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px solid #ddd; padding-bottom: 6px; }
+
+.section { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9em; }
+input[type="text"], input[type="password"], input[type="number"] {
+	width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px;
+	font-size: 0.95em; margin-bottom: 10px;
+}
+input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus {
+	outline: none; border-color: #4a90d9;
+}
+
+button {
+	padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;
+	font-size: 0.9em; font-weight: 600; margin-right: 8px; margin-bottom: 8px;
+}
+button.primary { background: #4a90d9; color: #fff; }
+button.primary:hover { background: #357abd; }
+button.secondary { background: #6c757d; color: #fff; }
+button.secondary:hover { background: #5a6268; }
+button.danger { background: #dc3545; color: #fff; }
+button.danger:hover { background: #c82333; }
+button.success { background: #28a745; color: #fff; }
+button.success:hover { background: #218838; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.status { padding: 8px 12px; border-radius: 4px; margin-top: 10px; font-size: 0.9em; }
+.status.ok { background: #d4edda; color: #155724; }
+.status.error { background: #f8d7da; color: #721c24; }
+.status.info { background: #d1ecf1; color: #0c5460; }
+.status.warn { background: #fff3cd; color: #856404; }
+
+.table-list { max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 8px; margin: 10px 0; }
+.table-item { padding: 4px 8px; display: flex; align-items: center; }
+.table-item:hover { background: #f0f0f0; }
+.table-item input[type="checkbox"] { margin-right: 8px; width: auto; }
+.table-item label { display: inline; font-weight: normal; margin-bottom: 0; cursor: pointer; }
+
+.progress-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+.progress-table th { background: #f8f9fa; font-weight: 600; }
+
+.progress-bar-container { width: 120px; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
+.progress-bar-fill { height: 100%; background: #28a745; transition: width 0.3s; }
+
+.inline-group { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
+.inline-group > div { flex: 1; }
+
+a { color: #4a90d9; }
+
+select { background: #fff; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.8em; font-family: monospace; }
+.data-table th { background: #f8f9fa; font-weight: 600; text-align: left; padding: 4px 8px; border: 1px solid #ddd; white-space: nowrap; position: sticky; top: 0; }
+.data-table td { padding: 4px 8px; border: 1px solid #eee; white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+.data-table tr:nth-child(even) { background: #fafafa; }
+.data-table tr:hover { background: #f0f7ff; }
+</style>
+</head>
+<body>
+
+<h1>Retold Data Cloner</h1>
+
+<!-- ======== Section 1: Connection Management ======== -->
+<div class="section">
+	<h2>1. Database Connection</h2>
+	<p>Use the <a href="/meadow-migrationmanager/" target="_blank">Migration Manager UI</a> to configure and test database connections. The local SQLite database is pre-configured.</p>
+</div>
+
+<!-- ======== Section 2: Remote Session ======== -->
+<div class="section">
+	<h2>2. Remote Session</h2>
+
+	<div class="inline-group">
+		<div style="flex:2">
+			<label for="serverURL">Remote Server URL</label>
+			<input type="text" id="serverURL" placeholder="http://remote-server:8086" value="">
+		</div>
+		<div style="flex:1">
+			<label for="authMethod">Auth Method</label>
+			<input type="text" id="authMethod" placeholder="get" value="get">
+		</div>
+	</div>
+
+	<details style="margin-bottom:10px">
+		<summary style="cursor:pointer; font-size:0.9em; color:#666">Advanced Session Options</summary>
+		<div style="padding:10px 0">
+			<label for="authURI">Authentication URI Template (leave blank for default)</label>
+			<input type="text" id="authURI" placeholder="/1.0/Authenticate/{~D:Record.UserName~}/{~D:Record.Password~}">
+			<label for="checkURI">Check Session URI Template</label>
+			<input type="text" id="checkURI" placeholder="/1.0/CheckSession">
+			<label for="cookieName">Cookie Name</label>
+			<input type="text" id="cookieName" placeholder="SessionID" value="SessionID">
+			<label for="cookieValueAddr">Cookie Value Address</label>
+			<input type="text" id="cookieValueAddr" placeholder="SessionID" value="SessionID">
+			<label for="cookieValueTemplate">Cookie Value Template (overrides Address if set)</label>
+			<input type="text" id="cookieValueTemplate" placeholder="{~D:Record.SessionID~}">
+			<label for="loginMarker">Login Marker</label>
+			<input type="text" id="loginMarker" placeholder="LoggedIn" value="LoggedIn">
+		</div>
+	</details>
+
+	<button class="primary" onclick="configureSession()">Configure Session</button>
+	<div id="sessionConfigStatus"></div>
+
+	<hr style="margin:16px 0; border:none; border-top:1px solid #eee">
+
+	<div class="inline-group">
+		<div>
+			<label for="userName">Username</label>
+			<input type="text" id="userName" placeholder="username">
+		</div>
+		<div>
+			<label for="password">Password</label>
+			<input type="password" id="password" placeholder="password">
+		</div>
+	</div>
+
+	<button class="success" onclick="authenticate()">Authenticate</button>
+	<button class="secondary" onclick="checkSession()">Check Session</button>
+	<button class="danger" onclick="deauthenticate()">Deauthenticate</button>
+	<div id="sessionAuthStatus"></div>
+</div>
+
+<!-- ======== Section 3: Schema ======== -->
+<div class="section">
+	<h2>3. Remote Schema</h2>
+
+	<label for="schemaURL">Schema URL (leave blank for default: /1.0/Retold/Models)</label>
+	<input type="text" id="schemaURL" placeholder="http://remote-server:8086/1.0/Retold/Models">
+
+	<button class="primary" onclick="fetchSchema()">Fetch Schema</button>
+	<div id="schemaStatus"></div>
+
+	<div id="tableSelection" style="display:none">
+		<h3 style="margin:12px 0 8px; font-size:1em;">Select Tables</h3>
+		<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">
+			<input type="text" id="tableFilter" placeholder="Filter tables..." style="flex:1; margin-bottom:0" oninput="filterTableList()">
+			<button class="secondary" onclick="selectAllTables(true)" style="font-size:0.8em">Select All</button>
+			<button class="secondary" onclick="selectAllTables(false)" style="font-size:0.8em">Deselect All</button>
+			<span id="tableSelectionCount" style="font-size:0.85em; color:#666; white-space:nowrap"></span>
+		</div>
+		<div id="tableList" class="table-list"></div>
+	</div>
+</div>
+
+<!-- ======== Section 4: Deploy ======== -->
+<div class="section">
+	<h2>4. Deploy Schema</h2>
+	<p style="font-size:0.9em; color:#666; margin-bottom:10px">Creates the selected tables in the local SQLite database and sets up CRUD endpoints (e.g. GET /1.0/Documents).</p>
+	<button class="primary" onclick="deploySchema()">Deploy Selected Tables</button>
+	<button class="danger" onclick="resetDatabase()">Reset Database</button>
+	<div id="deployStatus"></div>
+</div>
+
+<!-- ======== Section 5: Sync ======== -->
+<!-- NOTE: Section 6 (View Data) is below the Sync section -->
+<div class="section">
+	<h2>5. Synchronize Data</h2>
+
+	<div class="inline-group">
+		<div style="flex:0 0 150px">
+			<label for="pageSize">Page Size</label>
+			<input type="number" id="pageSize" value="100" min="1" max="10000">
+		</div>
+		<div style="flex:1; display:flex; align-items:flex-end; gap:8px">
+			<button class="success" onclick="startSync()">Start Sync</button>
+			<button class="danger" onclick="stopSync()">Stop Sync</button>
+		</div>
+	</div>
+
+	<div id="syncStatus"></div>
+	<div id="syncProgress"></div>
+</div>
+
+<!-- ======== Section 6: View Data ======== -->
+<div class="section">
+	<h2>6. View Data</h2>
+	<div class="inline-group">
+		<div style="flex:1">
+			<label for="viewTable">Table</label>
+			<select id="viewTable" style="width:100%; padding:8px 12px; border:1px solid #ccc; border-radius:4px; font-size:0.95em; margin-bottom:10px;">
+				<option value="">— deploy tables first —</option>
+			</select>
+		</div>
+		<div style="flex:0 0 120px">
+			<label for="viewLimit">Max Rows</label>
+			<input type="number" id="viewLimit" value="100" min="1" max="10000">
+		</div>
+		<div style="flex:0 0 auto; display:flex; align-items:flex-end">
+			<button class="primary" onclick="loadTableData()">Load</button>
+		</div>
+	</div>
+	<div id="viewStatus"></div>
+	<div id="viewDataContainer" style="overflow-x:auto; margin-top:10px"></div>
+</div>
+
+<script>
+// ================================================================
+// LocalStorage Persistence
+// ================================================================
+
+var _PersistFields = [
+	'serverURL', 'authMethod', 'authURI', 'checkURI',
+	'cookieName', 'cookieValueAddr', 'cookieValueTemplate', 'loginMarker',
+	'userName', 'password', 'schemaURL', 'pageSize'
+];
+
+function saveField(pFieldId)
+{
+	var el = document.getElementById(pFieldId);
+	if (el)
+	{
+		localStorage.setItem('dataCloner_' + pFieldId, el.value);
+	}
+}
+
+function restoreFields()
+{
+	for (var i = 0; i < _PersistFields.length; i++)
+	{
+		var tmpId = _PersistFields[i];
+		var tmpSaved = localStorage.getItem('dataCloner_' + tmpId);
+		if (tmpSaved !== null)
+		{
+			var el = document.getElementById(tmpId);
+			if (el) el.value = tmpSaved;
+		}
+	}
+}
+
+// Attach change listeners to all persisted fields
+function initPersistence()
+{
+	restoreFields();
+	for (var i = 0; i < _PersistFields.length; i++)
+	{
+		(function(pId)
+		{
+			var el = document.getElementById(pId);
+			if (el)
+			{
+				el.addEventListener('input', function() { saveField(pId); });
+			}
+		})(_PersistFields[i]);
+	}
+}
+
+// ================================================================
+// API Helper
+// ================================================================
+
+function api(method, path, body)
+{
+	var opts = { method: method, headers: {} };
+	if (body)
+	{
+		opts.headers['Content-Type'] = 'application/json';
+		opts.body = JSON.stringify(body);
+	}
+	return fetch(path, opts).then(function(r) { return r.json(); });
+}
+
+function setStatus(elementId, message, type)
+{
+	var el = document.getElementById(elementId);
+	el.className = 'status ' + (type || 'info');
+	el.textContent = message;
+	el.style.display = 'block';
+}
+
+// ================================================================
+// Session Management
+// ================================================================
+
+function configureSession()
+{
+	var serverURL = document.getElementById('serverURL').value.trim();
+	if (!serverURL)
+	{
+		setStatus('sessionConfigStatus', 'Server URL is required.', 'error');
+		return;
+	}
+
+	var body = { ServerURL: serverURL };
+
+	var authMethod = document.getElementById('authMethod').value.trim();
+	if (authMethod) body.AuthenticationMethod = authMethod;
+
+	var authURI = document.getElementById('authURI').value.trim();
+	if (authURI) body.AuthenticationURITemplate = authURI;
+
+	var checkURI = document.getElementById('checkURI').value.trim();
+	if (checkURI) body.CheckSessionURITemplate = checkURI;
+
+	var cookieName = document.getElementById('cookieName').value.trim();
+	if (cookieName) body.CookieName = cookieName;
+
+	var cookieValueAddr = document.getElementById('cookieValueAddr').value.trim();
+	if (cookieValueAddr) body.CookieValueAddress = cookieValueAddr;
+
+	var cookieValueTemplate = document.getElementById('cookieValueTemplate').value.trim();
+	if (cookieValueTemplate) body.CookieValueTemplate = cookieValueTemplate;
+
+	var loginMarker = document.getElementById('loginMarker').value.trim();
+	if (loginMarker) body.CheckSessionLoginMarker = loginMarker;
+
+	setStatus('sessionConfigStatus', 'Configuring session...', 'info');
+
+	api('POST', '/clone/session/configure', body)
+		.then(function(data)
+		{
+			if (data.Success)
+			{
+				setStatus('sessionConfigStatus', 'Session configured for ' + data.ServerURL + ' (domain: ' + data.DomainMatch + ')', 'ok');
+			}
+			else
+			{
+				setStatus('sessionConfigStatus', 'Configuration failed: ' + (data.Error || 'Unknown error'), 'error');
+			}
+		})
+		.catch(function(err)
+		{
+			setStatus('sessionConfigStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+function authenticate()
+{
+	var userName = document.getElementById('userName').value.trim();
+	var password = document.getElementById('password').value.trim();
+
+	if (!userName || !password)
+	{
+		setStatus('sessionAuthStatus', 'Username and password are required.', 'error');
+		return;
+	}
+
+	setStatus('sessionAuthStatus', 'Authenticating...', 'info');
+
+	api('POST', '/clone/session/authenticate', { UserName: userName, Password: password })
+		.then(function(data)
+		{
+			if (data.Success && data.Authenticated)
+			{
+				setStatus('sessionAuthStatus', 'Authenticated successfully.', 'ok');
+			}
+			else
+			{
+				setStatus('sessionAuthStatus', 'Authentication failed: ' + (data.Error || 'Not authenticated'), 'error');
+			}
+		})
+		.catch(function(err)
+		{
+			setStatus('sessionAuthStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+function checkSession()
+{
+	setStatus('sessionAuthStatus', 'Checking session...', 'info');
+
+	api('GET', '/clone/session/check')
+		.then(function(data)
+		{
+			if (data.Authenticated)
+			{
+				setStatus('sessionAuthStatus', 'Session is active. Server: ' + (data.ServerURL || 'N/A'), 'ok');
+			}
+			else if (data.Configured)
+			{
+				setStatus('sessionAuthStatus', 'Session configured but not authenticated.', 'warn');
+			}
+			else
+			{
+				setStatus('sessionAuthStatus', 'No session configured.', 'warn');
+			}
+		})
+		.catch(function(err)
+		{
+			setStatus('sessionAuthStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+function deauthenticate()
+{
+	api('POST', '/clone/session/deauthenticate')
+		.then(function(data)
+		{
+			setStatus('sessionAuthStatus', 'Session deauthenticated.', 'info');
+		})
+		.catch(function(err)
+		{
+			setStatus('sessionAuthStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+// ================================================================
+// Schema Management
+// ================================================================
+
+var _FetchedTables = [];
+
+function fetchSchema()
+{
+	var schemaURL = document.getElementById('schemaURL').value.trim();
+	var body = {};
+	if (schemaURL) body.SchemaURL = schemaURL;
+
+	setStatus('schemaStatus', 'Fetching schema...', 'info');
+
+	api('POST', '/clone/schema/fetch', body)
+		.then(function(data)
+		{
+			if (data.Success)
+			{
+				_FetchedTables = data.Tables || [];
+				setStatus('schemaStatus', 'Fetched ' + data.TableCount + ' tables from ' + data.SchemaURL, 'ok');
+				renderTableList();
+			}
+			else
+			{
+				setStatus('schemaStatus', 'Fetch failed: ' + (data.Error || 'Unknown error'), 'error');
+			}
+		})
+		.catch(function(err)
+		{
+			setStatus('schemaStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+function loadSavedSelections()
+{
+	try
+	{
+		var tmpRaw = localStorage.getItem('dataCloner_selectedTables');
+		if (tmpRaw) return JSON.parse(tmpRaw);
+	}
+	catch (e) { /* ignore */ }
+	return null;
+}
+
+function saveSelections()
+{
+	var tmpSelected = getSelectedTables();
+	localStorage.setItem('dataCloner_selectedTables', JSON.stringify(tmpSelected));
+	updateSelectionCount();
+}
+
+function updateSelectionCount()
+{
+	var tmpCount = getSelectedTables().length;
+	var tmpEl = document.getElementById('tableSelectionCount');
+	if (tmpEl) tmpEl.textContent = tmpCount + ' / ' + _FetchedTables.length + ' selected';
+}
+
+function renderTableList()
+{
+	var container = document.getElementById('tableList');
+	container.innerHTML = '';
+
+	// Load previously saved selections; if none, default to none checked
+	var tmpSaved = loadSavedSelections();
+	var tmpSavedSet = null;
+	if (tmpSaved)
+	{
+		tmpSavedSet = {};
+		for (var s = 0; s < tmpSaved.length; s++) tmpSavedSet[tmpSaved[s]] = true;
+	}
+
+	for (var i = 0; i < _FetchedTables.length; i++)
+	{
+		var name = _FetchedTables[i];
+		var div = document.createElement('div');
+		div.className = 'table-item';
+		div.setAttribute('data-table', name.toLowerCase());
+
+		var checkbox = document.createElement('input');
+		checkbox.type = 'checkbox';
+		checkbox.id = 'tbl_' + name;
+		checkbox.value = name;
+		// If we have saved selections, restore them; otherwise default unchecked
+		checkbox.checked = tmpSavedSet ? (tmpSavedSet[name] === true) : false;
+		checkbox.addEventListener('change', saveSelections);
+
+		var label = document.createElement('label');
+		label.htmlFor = 'tbl_' + name;
+		label.textContent = name;
+
+		div.appendChild(checkbox);
+		div.appendChild(label);
+		container.appendChild(div);
+	}
+
+	document.getElementById('tableSelection').style.display = _FetchedTables.length > 0 ? 'block' : 'none';
+	document.getElementById('tableFilter').value = '';
+	updateSelectionCount();
+}
+
+function filterTableList()
+{
+	var tmpFilter = document.getElementById('tableFilter').value.toLowerCase().trim();
+	var tmpItems = document.getElementById('tableList').children;
+	for (var i = 0; i < tmpItems.length; i++)
+	{
+		var tmpName = tmpItems[i].getAttribute('data-table') || '';
+		tmpItems[i].style.display = (!tmpFilter || tmpName.indexOf(tmpFilter) >= 0) ? '' : 'none';
+	}
+}
+
+function selectAllTables(pChecked)
+{
+	// Only affect visible (non-filtered) items
+	var tmpFilter = document.getElementById('tableFilter').value.toLowerCase().trim();
+	for (var i = 0; i < _FetchedTables.length; i++)
+	{
+		var name = _FetchedTables[i];
+		if (tmpFilter && name.toLowerCase().indexOf(tmpFilter) < 0) continue;
+		var cb = document.getElementById('tbl_' + name);
+		if (cb) cb.checked = pChecked;
+	}
+	saveSelections();
+}
+
+function getSelectedTables()
+{
+	var selected = [];
+	for (var i = 0; i < _FetchedTables.length; i++)
+	{
+		var cb = document.getElementById('tbl_' + _FetchedTables[i]);
+		if (cb && cb.checked) selected.push(_FetchedTables[i]);
+	}
+	return selected;
+}
+
+// ================================================================
+// Deploy
+// ================================================================
+
+function deploySchema()
+{
+	var selectedTables = getSelectedTables();
+
+	if (selectedTables.length === 0)
+	{
+		setStatus('deployStatus', 'No tables selected. Fetch a schema and select tables first.', 'error');
+		return;
+	}
+
+	setStatus('deployStatus', 'Deploying ' + selectedTables.length + ' tables...', 'info');
+
+	api('POST', '/clone/schema/deploy', { Tables: selectedTables })
+		.then(function(data)
+		{
+			if (data.Success)
+			{
+				setStatus('deployStatus', data.Message, 'ok');
+				_DeployedTables = data.TablesDeployed || selectedTables;
+				saveDeployedTables();
+				populateViewTableDropdown();
+			}
+			else
+			{
+				setStatus('deployStatus', 'Deploy failed: ' + (data.Error || 'Unknown error'), 'error');
+			}
+		})
+		.catch(function(err)
+		{
+			setStatus('deployStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+function resetDatabase()
+{
+	if (!confirm('This will delete ALL data in the local SQLite database. Continue?'))
+	{
+		return;
+	}
+
+	setStatus('deployStatus', 'Resetting database...', 'info');
+
+	api('POST', '/clone/reset')
+		.then(function(data)
+		{
+			if (data.Success)
+			{
+				setStatus('deployStatus', data.Message, 'ok');
+				// Clear the sync progress display
+				document.getElementById('syncProgress').innerHTML = '';
+			}
+			else
+			{
+				setStatus('deployStatus', 'Reset failed: ' + (data.Error || 'Unknown error'), 'error');
+			}
+		})
+		.catch(function(err)
+		{
+			setStatus('deployStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+// ================================================================
+// Sync
+// ================================================================
+
+var _SyncPollTimer = null;
+
+function startSync()
+{
+	var selectedTables = getSelectedTables();
+	var pageSize = parseInt(document.getElementById('pageSize').value, 10) || 100;
+
+	if (selectedTables.length === 0)
+	{
+		setStatus('syncStatus', 'No tables selected for sync.', 'error');
+		return;
+	}
+
+	setStatus('syncStatus', 'Starting sync...', 'info');
+
+	api('POST', '/clone/sync/start', { Tables: selectedTables, PageSize: pageSize })
+		.then(function(data)
+		{
+			if (data.Success)
+			{
+				setStatus('syncStatus', 'Sync started for ' + data.Tables.length + ' tables.', 'ok');
+				startPolling();
+			}
+			else
+			{
+				setStatus('syncStatus', 'Sync start failed: ' + (data.Error || 'Unknown error'), 'error');
+			}
+		})
+		.catch(function(err)
+		{
+			setStatus('syncStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+function stopSync()
+{
+	api('POST', '/clone/sync/stop')
+		.then(function(data)
+		{
+			setStatus('syncStatus', 'Sync stop requested.', 'warn');
+		})
+		.catch(function(err)
+		{
+			setStatus('syncStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+function startPolling()
+{
+	if (_SyncPollTimer) clearInterval(_SyncPollTimer);
+	_SyncPollTimer = setInterval(pollSyncStatus, 2000);
+	pollSyncStatus();
+}
+
+function stopPolling()
+{
+	if (_SyncPollTimer)
+	{
+		clearInterval(_SyncPollTimer);
+		_SyncPollTimer = null;
+	}
+}
+
+function pollSyncStatus()
+{
+	api('GET', '/clone/sync/status')
+		.then(function(data)
+		{
+			renderSyncProgress(data);
+
+			if (!data.Running && !data.Stopping)
+			{
+				stopPolling();
+				if (Object.keys(data.Tables || {}).length > 0)
+				{
+					// Check if any tables had errors or partial sync
+					var tables = data.Tables || {};
+					var hasErrors = false;
+					var hasPartial = false;
+					var names = Object.keys(tables);
+					for (var i = 0; i < names.length; i++)
+					{
+						if (tables[names[i]].Status === 'Error') hasErrors = true;
+						if (tables[names[i]].Status === 'Partial') hasPartial = true;
+					}
+
+					if (hasErrors)
+					{
+						setStatus('syncStatus', 'Sync finished with errors. Check the table below for details.', 'error');
+					}
+					else if (hasPartial)
+					{
+						setStatus('syncStatus', 'Sync finished. Some records were skipped (GUID conflicts or permission issues).', 'warn');
+					}
+					else
+					{
+						setStatus('syncStatus', 'Sync complete.', 'ok');
+					}
+				}
+			}
+		})
+		.catch(function(err)
+		{
+			// Silently ignore poll errors
+		});
+}
+
+function renderSyncProgress(data)
+{
+	var container = document.getElementById('syncProgress');
+	var tables = data.Tables || {};
+	var tableNames = Object.keys(tables);
+
+	if (tableNames.length === 0)
+	{
+		container.innerHTML = '';
+		return;
+	}
+
+	var html = '<table class="progress-table">';
+	html += '<tr><th>Table</th><th>Status</th><th>Progress</th><th>Synced</th><th>Details</th></tr>';
+
+	for (var i = 0; i < tableNames.length; i++)
+	{
+		var name = tableNames[i];
+		var t = tables[name];
+
+		// Calculate percentage: if total is 0, show 100% (nothing to sync)
+		var pct = 0;
+		if (t.Total === 0 && (t.Status === 'Complete' || t.Status === 'Error'))
+		{
+			pct = 100;
+		}
+		else if (t.Total > 0)
+		{
+			pct = Math.round((t.Synced / t.Total) * 100);
+		}
+
+		// Color the progress bar based on status
+		var barColor = '#28a745'; // green
+		if (t.Status === 'Error') barColor = '#dc3545'; // red
+		else if (t.Status === 'Partial') barColor = '#ffc107'; // yellow
+		else if (t.Status === 'Syncing') barColor = '#4a90d9'; // blue
+
+		// Status badge
+		var statusBadge = t.Status;
+		if (t.Status === 'Complete' && t.Total === 0) statusBadge = 'Complete (empty)';
+		if (t.Status === 'Partial') statusBadge = 'Partial \u26A0';
+		if (t.Status === 'Error') statusBadge = 'Error \u2716';
+
+		// Details column
+		var details = '';
+		if (t.ErrorMessage) details = t.ErrorMessage;
+		else if (t.Skipped > 0) details = t.Skipped + ' record(s) skipped';
+		else if ((t.Errors || 0) > 0) details = t.Errors + ' error(s)';
+		else if (t.Status === 'Complete' && t.Total === 0) details = 'No records on server';
+		else if (t.Status === 'Complete') details = '\u2714 OK';
+
+		html += '<tr>';
+		html += '<td><strong>' + name + '</strong></td>';
+		html += '<td>' + statusBadge + '</td>';
+		html += '<td>';
+		html += '<div class="progress-bar-container"><div class="progress-bar-fill" style="width:' + pct + '%; background:' + barColor + '"></div></div>';
+		html += ' ' + pct + '%';
+		html += '</td>';
+		html += '<td>' + t.Synced + ' / ' + t.Total + '</td>';
+		html += '<td>' + details + '</td>';
+		html += '</tr>';
+	}
+
+	html += '</table>';
+	container.innerHTML = html;
+}
+
+// ================================================================
+// View Data
+// ================================================================
+
+var _DeployedTables = [];
+
+function populateViewTableDropdown()
+{
+	var tmpSelect = document.getElementById('viewTable');
+	var tmpCurrentValue = tmpSelect.value;
+
+	tmpSelect.innerHTML = '';
+
+	if (_DeployedTables.length === 0)
+	{
+		var opt = document.createElement('option');
+		opt.value = '';
+		opt.textContent = '— deploy tables first —';
+		tmpSelect.appendChild(opt);
+		return;
+	}
+
+	for (var i = 0; i < _DeployedTables.length; i++)
+	{
+		var opt = document.createElement('option');
+		opt.value = _DeployedTables[i];
+		opt.textContent = _DeployedTables[i];
+		tmpSelect.appendChild(opt);
+	}
+
+	// Restore previous selection if it exists
+	if (tmpCurrentValue)
+	{
+		tmpSelect.value = tmpCurrentValue;
+	}
+}
+
+function loadTableData()
+{
+	var tmpTable = document.getElementById('viewTable').value;
+	var tmpLimit = parseInt(document.getElementById('viewLimit').value, 10) || 100;
+
+	if (!tmpTable)
+	{
+		setStatus('viewStatus', 'Select a table first.', 'error');
+		return;
+	}
+
+	setStatus('viewStatus', 'Loading ' + tmpTable + '...', 'info');
+	document.getElementById('viewDataContainer').innerHTML = '';
+
+	// Use the standard Meadow CRUD list endpoint: /1.0/{Entity}s/0/{Cap}
+	api('GET', '/1.0/' + tmpTable + 's/0/' + tmpLimit)
+		.then(function(data)
+		{
+			if (!Array.isArray(data))
+			{
+				setStatus('viewStatus', 'Unexpected response (not an array). The table may not be deployed yet.', 'error');
+				return;
+			}
+
+			setStatus('viewStatus', data.length + ' row(s) returned' + (data.length >= tmpLimit ? ' (limit reached — increase Max Rows to see more)' : '') + '.', 'ok');
+			renderDataTable(data);
+		})
+		.catch(function(err)
+		{
+			setStatus('viewStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+function renderDataTable(pRows)
+{
+	var container = document.getElementById('viewDataContainer');
+
+	if (!pRows || pRows.length === 0)
+	{
+		container.innerHTML = '<p style="color:#666; font-size:0.9em; padding:8px">No rows.</p>';
+		return;
+	}
+
+	// Collect all column names from the first row
+	var tmpColumns = Object.keys(pRows[0]);
+
+	var html = '<table class="data-table">';
+	html += '<thead><tr>';
+	for (var c = 0; c < tmpColumns.length; c++)
+	{
+		html += '<th>' + escapeHtml(tmpColumns[c]) + '</th>';
+	}
+	html += '</tr></thead>';
+
+	html += '<tbody>';
+	for (var r = 0; r < pRows.length; r++)
+	{
+		html += '<tr>';
+		for (var c = 0; c < tmpColumns.length; c++)
+		{
+			var val = pRows[r][tmpColumns[c]];
+			var display = (val === null || val === undefined) ? '' : String(val);
+			html += '<td title="' + escapeHtml(display) + '">' + escapeHtml(display) + '</td>';
+		}
+		html += '</tr>';
+	}
+	html += '</tbody></table>';
+
+	container.innerHTML = html;
+}
+
+function escapeHtml(pStr)
+{
+	var div = document.createElement('div');
+	div.appendChild(document.createTextNode(pStr));
+	return div.innerHTML;
+}
+
+// ================================================================
+// Initialize
+// ================================================================
+
+// Persist deployed tables across page reload
+function saveDeployedTables()
+{
+	localStorage.setItem('dataCloner_deployedTables', JSON.stringify(_DeployedTables));
+}
+
+function restoreDeployedTables()
+{
+	try
+	{
+		var tmpRaw = localStorage.getItem('dataCloner_deployedTables');
+		if (tmpRaw)
+		{
+			_DeployedTables = JSON.parse(tmpRaw);
+			populateViewTableDropdown();
+		}
+	}
+	catch (e) { /* ignore */ }
+}
+
+initPersistence();
+restoreDeployedTables();
+</script>
+
+</body>
+</html>

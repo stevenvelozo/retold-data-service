@@ -189,7 +189,9 @@ suite
 										ModelManagerWrite: true,
 										Stricture: true,
 										MeadowIntegration: true,
-										MeadowEndpoints: true
+										MeadowEndpoints: true,
+										MigrationManager: true,
+										MigrationManagerWebUI: true
 									}
 							});
 
@@ -1419,6 +1421,8 @@ suite
 								Expect(tmpService2.isEndpointGroupEnabled('ModelManagerWrite')).to.equal(false);
 								Expect(tmpService2.isEndpointGroupEnabled('Stricture')).to.equal(false);
 								Expect(tmpService2.isEndpointGroupEnabled('MeadowIntegration')).to.equal(false);
+								Expect(tmpService2.isEndpointGroupEnabled('MigrationManager')).to.equal(false);
+								Expect(tmpService2.isEndpointGroupEnabled('MigrationManagerWebUI')).to.equal(false);
 
 								fDone();
 							});

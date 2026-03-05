@@ -15,6 +15,7 @@ const libRetoldDataServiceConnectionManager = require('./services/Retold-Data-Se
 const libRetoldDataServiceModelManager = require('./services/Retold-Data-Service-ModelManager.js');
 const libRetoldDataServiceStricture = require('./services/stricture/Retold-Data-Service-Stricture.js');
 const libRetoldDataServiceMeadowIntegration = require('./services/meadow-integration/Retold-Data-Service-MeadowIntegration.js');
+const libRetoldDataServiceMigrationManager = require('./services/migration-manager/Retold-Data-Service-MigrationManager.js');
 
 const defaultDataServiceSettings = (
 	{
@@ -40,7 +41,20 @@ const defaultDataServiceSettings = (
 				// CSV/TSV/JSON data transformation (/1.0/Retold/MeadowIntegration/*)
 				MeadowIntegration: false,
 				// Per-entity CRUD endpoints (e.g. /1.0/Book, /1.0/Authors)
-				MeadowEndpoints: true
+				MeadowEndpoints: true,
+				// Migration manager API endpoints (/api/*)
+				MigrationManager: false,
+				// Migration manager web UI (GET /, /lib/*)
+				MigrationManagerWebUI: false
+			},
+
+		// Migration manager configuration
+		MigrationManager:
+			{
+				// Directory containing .mddl/.ddl files to auto-import at startup
+				ModelPath: false,
+				// Route prefix for all migration manager endpoints (API + web UI)
+				RoutePrefix: '/meadow-migrationmanager'
 			}
 	});
 
@@ -91,6 +105,10 @@ class RetoldDataService extends libFableServiceProviderBase
 		// Register and instantiate the MeadowIntegration service
 		this.fable.serviceManager.addServiceType('RetoldDataServiceMeadowIntegration', libRetoldDataServiceMeadowIntegration);
 		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceMeadowIntegration');
+
+		// Register and instantiate the MigrationManager service
+		this.fable.serviceManager.addServiceType('RetoldDataServiceMigrationManager', libRetoldDataServiceMigrationManager);
+		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceMigrationManager');
 
 		// Expose the DAL and MeadowEndpoints from the service on this object and on fable for backward compatibility
 		this._DAL = this.fable.RetoldDataServiceMeadowEndpoints._DAL;
@@ -185,7 +203,7 @@ class RetoldDataService extends libFableServiceProviderBase
 			this.fable.log.info(`The Retold Data Service is initializing...`);
 
 			// Log endpoint configuration
-			let tmpGroupNames = ['ConnectionManager', 'ModelManagerWrite', 'Stricture', 'MeadowIntegration', 'MeadowEndpoints'];
+			let tmpGroupNames = ['ConnectionManager', 'ModelManagerWrite', 'Stricture', 'MeadowIntegration', 'MeadowEndpoints', 'MigrationManager', 'MigrationManagerWebUI'];
 			let tmpEnabledGroups = [];
 			let tmpDisabledGroups = [];
 			for (let i = 0; i < tmpGroupNames.length; i++)
@@ -256,7 +274,32 @@ class RetoldDataService extends libFableServiceProviderBase
 						this.fable.RetoldDataServiceMeadowIntegration.connectRoutes(this.fable.OratorServiceServer);
 					}
 
+					// MigrationManager API routes (/api/*)
+					if (this.isEndpointGroupEnabled('MigrationManager'))
+					{
+						this.fable.RetoldDataServiceMigrationManager.connectRoutes(this.fable.OratorServiceServer);
+					}
+
+					// MigrationManager Web UI routes (GET /, /lib/*)
+					if (this.isEndpointGroupEnabled('MigrationManagerWebUI'))
+					{
+						this.fable.RetoldDataServiceMigrationManager.connectWebUIRoutes(this.fable.OratorServiceServer);
+					}
+
 					return fInitCallback();
+				});
+
+			// Initialize MigrationManager (scan ModelPath, import DDL files, auto-compile)
+			// if either MigrationManager or MigrationManagerWebUI is enabled
+			tmpAnticipate.anticipate(
+				(fInitCallback) =>
+				{
+					if (!this.isEndpointGroupEnabled('MigrationManager') && !this.isEndpointGroupEnabled('MigrationManagerWebUI'))
+					{
+						return fInitCallback();
+					}
+
+					this.fable.RetoldDataServiceMigrationManager.initializeMigrationManager(fInitCallback);
 				});
 
 			// Only load the default model if MeadowEndpoints are enabled and a schema file is configured
