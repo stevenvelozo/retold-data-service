@@ -1,7 +1,7 @@
 {
 	"name": "retold-data-cloner",
 	"version": "1.0.0",
-	"description": "Data cloner example application.  Clones a remote retold database to a local SQLite database.",
+	"description": "Data cloner example application.  Clones a remote retold database to a local database.",
 	"main": "data-cloner.js",
 	"scripts": {
 		"start": "node data-cloner.js"
@@ -10,6 +10,13 @@
 	"license": "MIT",
 	"dependencies": {
 		"fable": "^3.0.0",
+		"bibliograph": "^0.1.4",
+		"meadow-connection-mongodb": "^1.0.2",
+		"meadow-connection-mssql": "^1.0.0",
+		"meadow-connection-mysql": "^1.0.0",
+		"meadow-connection-postgresql": "^1.0.2",
+		"meadow-connection-rocksdb": "^0.0.2",
+		"meadow-connection-solr": "^1.0.2",
 		"meadow-connection-sqlite": "^1.0.14",
 		"meadow-integration": "file:../../../meadow-integration",
 		"pict": "^1.0.356",

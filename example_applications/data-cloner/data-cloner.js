@@ -6,13 +6,17 @@
  * (clone sync services), and meadow-migrationmanager working together.
  *
  * Flow:
- *   1. Configure and authenticate a remote session (cookie mode)
- *   2. Fetch the remote schema (model definition)
- *   3. Deploy selected tables to local SQLite
- *   4. Synchronize data via meadow-integration's MeadowSync
+ *   1. Configure the local database connection (SQLite default, or MySQL/MSSQL)
+ *   2. Configure and authenticate a remote session (cookie mode)
+ *   3. Fetch the remote schema (model definition)
+ *   4. Deploy selected tables to the local database
+ *   5. Synchronize data via meadow-integration's MeadowSync
  *
  * Available endpoints:
  *   /clone/                                 Web UI
+ *   /clone/connection/configure   POST     Configure local database connection
+ *   /clone/connection/test        POST     Test a database connection
+ *   /clone/connection/status      GET      Get current connection status
  *   /clone/session/configure       POST     Configure remote session
  *   /clone/session/authenticate    POST     Authenticate
  *   /clone/session/check           GET      Check session
@@ -102,6 +106,11 @@ _Pict.serviceManager.instantiateServiceProvider('SessionManager');
 
 let _CloneState = (
 	{
+		// Local database connection
+		ConnectionProvider: 'SQLite',
+		ConnectionConnected: false,
+		ConnectionConfig: {},
+
 		// Remote session configuration
 		SessionConfigured: false,
 		SessionAuthenticated: false,
@@ -115,13 +124,80 @@ let _CloneState = (
 		SyncRunning: false,
 		SyncStopping: false,
 		SyncProgress: {},
+		SyncDeletedRecords: false,
 
 		// Per-table REST error counters (set up during sync)
 		SyncRESTErrors: {}
 	});
 
 // ================================================================
-// SQLite Setup
+// Provider Registry — maps provider names to module names and fable service names
+// ================================================================
+
+const _ProviderRegistry = {
+	SQLite: { moduleName: 'meadow-connection-sqlite', serviceName: 'MeadowSQLiteProvider', configKey: 'SQLite' },
+	MySQL: { moduleName: 'meadow-connection-mysql', serviceName: 'MeadowMySQLProvider', configKey: 'MySQL' },
+	MSSQL: { moduleName: 'meadow-connection-mssql', serviceName: 'MeadowMSSQLProvider', configKey: 'MSSQL' },
+	PostgreSQL: { moduleName: 'meadow-connection-postgresql', serviceName: 'MeadowConnectionPostgreSQL', configKey: 'PostgreSQL' },
+	Solr: { moduleName: 'meadow-connection-solr', serviceName: 'MeadowConnectionSolr', configKey: 'Solr' },
+	MongoDB: { moduleName: 'meadow-connection-mongodb', serviceName: 'MeadowConnectionMongoDB', configKey: 'MongoDB' },
+	RocksDB: { moduleName: 'meadow-connection-rocksdb', serviceName: 'MeadowConnectionRocksDB', configKey: 'RocksDB' },
+	Bibliograph: { moduleName: 'bibliograph', serviceName: 'Bibliograph', configKey: 'Bibliograph' },
+};
+
+/**
+ * Connect a meadow-connection provider to fable.
+ * Registers the service type, sets the configuration, instantiates the provider, and calls connectAsync.
+ *
+ * @param {string} pProviderName - Provider name (e.g. 'SQLite', 'MySQL', 'MSSQL')
+ * @param {object} pConfig - Provider configuration (e.g. { server: '...', port: 3306, ... })
+ * @param {function} fCallback - (pError)
+ */
+function fConnectProvider(pProviderName, pConfig, fCallback)
+{
+	let tmpRegistryEntry = _ProviderRegistry[pProviderName];
+	if (!tmpRegistryEntry)
+	{
+		return fCallback(new Error(`Unknown provider: ${pProviderName}. Supported providers: ${Object.keys(_ProviderRegistry).join(', ')}`));
+	}
+
+	let tmpModule;
+	try
+	{
+		tmpModule = require(tmpRegistryEntry.moduleName);
+	}
+	catch (pRequireError)
+	{
+		return fCallback(new Error(`Could not load module "${tmpRegistryEntry.moduleName}": ${pRequireError.message}. Run: npm install ${tmpRegistryEntry.moduleName}`));
+	}
+
+	// Set the provider configuration on fable settings
+	_Fable.settings[tmpRegistryEntry.configKey] = pConfig;
+
+	// Register and instantiate the provider if not already present
+	if (!_Fable[tmpRegistryEntry.serviceName])
+	{
+		_Fable.serviceManager.addServiceType(tmpRegistryEntry.serviceName, tmpModule);
+		_Fable.serviceManager.instantiateServiceProvider(tmpRegistryEntry.serviceName);
+	}
+
+	_Fable[tmpRegistryEntry.serviceName].connectAsync(
+		(pError) =>
+		{
+			if (pError)
+			{
+				return fCallback(pError);
+			}
+			_Fable.settings.MeadowProvider = pProviderName;
+			_CloneState.ConnectionProvider = pProviderName;
+			_CloneState.ConnectionConnected = true;
+			_CloneState.ConnectionConfig = pConfig;
+			return fCallback();
+		});
+}
+
+// ================================================================
+// SQLite Setup (default — connects automatically)
 // ================================================================
 
 _Fable.serviceManager.addServiceType('MeadowSQLiteProvider', libMeadowConnectionSQLite);
@@ -139,6 +215,9 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 		// Set default Meadow provider to SQLite so all Meadow DAL instances
 		// created by MeadowSync will use the SQLite connection automatically.
 		_Fable.settings.MeadowProvider = 'SQLite';
+		_CloneState.ConnectionProvider = 'SQLite';
+		_CloneState.ConnectionConnected = true;
+		_CloneState.ConnectionConfig = _Settings.SQLite;
 
 		// Register meadow-integration services for clone sync
 		_Fable.serviceManager.addServiceType('MeadowCloneRestClient', libMeadowCloneRestClient);
@@ -204,6 +283,130 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 				(pRequest, pResponse, fNext) =>
 				{
 					pResponse.redirect('/clone/', fNext);
+				});
+
+			// ---- Connection Management ----
+
+			// GET /clone/connection/status
+			tmpServer.get('/clone/connection/status',
+				(pRequest, pResponse, fNext) =>
+				{
+					pResponse.send(200,
+						{
+							Provider: _CloneState.ConnectionProvider,
+							Connected: _CloneState.ConnectionConnected,
+							Config: _CloneState.ConnectionConfig
+						});
+					return fNext();
+				});
+
+			// POST /clone/connection/configure — Switch the local database provider
+			tmpServer.post('/clone/connection/configure',
+				(pRequest, pResponse, fNext) =>
+				{
+					let tmpBody = pRequest.body || {};
+					let tmpProvider = tmpBody.Provider;
+					let tmpConfig = tmpBody.Config || {};
+
+					if (!tmpProvider)
+					{
+						pResponse.send(400, { Success: false, Error: 'Provider is required (e.g. SQLite, MySQL, MSSQL).' });
+						return fNext();
+					}
+
+					_Fable.log.info(`Data Cloner: Configuring ${tmpProvider} connection...`);
+
+					fConnectProvider(tmpProvider, tmpConfig,
+						(pConnectError) =>
+						{
+							if (pConnectError)
+							{
+								_Fable.log.error(`Data Cloner: Connection error: ${pConnectError.message}`);
+								pResponse.send(500, { Success: false, Error: `Connection failed: ${pConnectError.message}` });
+								return fNext();
+							}
+
+							_Fable.log.info(`Data Cloner: ${tmpProvider} connection established.`);
+							pResponse.send(200,
+								{
+									Success: true,
+									Provider: tmpProvider,
+									Message: `${tmpProvider} connection established and set as active provider.`
+								});
+							return fNext();
+						});
+				});
+
+			// POST /clone/connection/test — Test a connection without making it permanent
+			tmpServer.post('/clone/connection/test',
+				(pRequest, pResponse, fNext) =>
+				{
+					let tmpBody = pRequest.body || {};
+					let tmpProvider = tmpBody.Provider;
+					let tmpConfig = tmpBody.Config || {};
+
+					if (!tmpProvider)
+					{
+						pResponse.send(400, { Success: false, Error: 'Provider is required.' });
+						return fNext();
+					}
+
+					let tmpRegistryEntry = _ProviderRegistry[tmpProvider];
+					if (!tmpRegistryEntry)
+					{
+						pResponse.send(400, { Success: false, Error: `Unknown provider: ${tmpProvider}` });
+						return fNext();
+					}
+
+					_Fable.log.info(`Data Cloner: Testing ${tmpProvider} connection...`);
+
+					let tmpModule;
+					try
+					{
+						tmpModule = require(tmpRegistryEntry.moduleName);
+					}
+					catch (pRequireError)
+					{
+						pResponse.send(500, { Success: false, Error: `Module not installed: ${tmpRegistryEntry.moduleName}. Run: npm install ${tmpRegistryEntry.moduleName}` });
+						return fNext();
+					}
+
+					// Create a temporary fable instance for the test
+					let tmpTestFable = new libFable(
+						{
+							Product: 'DataClonerConnectionTest',
+							LogStreams: [{ streamtype: 'console' }],
+							[tmpRegistryEntry.configKey]: tmpConfig
+						});
+
+					tmpTestFable.serviceManager.addServiceType(tmpRegistryEntry.serviceName, tmpModule);
+					tmpTestFable.serviceManager.instantiateServiceProvider(tmpRegistryEntry.serviceName);
+
+					tmpTestFable[tmpRegistryEntry.serviceName].connectAsync(
+						(pTestError) =>
+						{
+							if (pTestError)
+							{
+								_Fable.log.warn(`Data Cloner: Test connection failed: ${pTestError.message || pTestError}`);
+								pResponse.send(200,
+									{
+										Success: false,
+										Provider: tmpProvider,
+										Error: `Connection failed: ${pTestError.message || pTestError}`
+									});
+							}
+							else
+							{
+								_Fable.log.info(`Data Cloner: Test connection to ${tmpProvider} succeeded.`);
+								pResponse.send(200,
+									{
+										Success: true,
+										Provider: tmpProvider,
+										Message: `${tmpProvider} connection test successful.`
+									});
+							}
+							return fNext();
+						});
 				});
 
 			// ---- Session Management ----
@@ -608,7 +811,7 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 					let tmpModelObject = { Tables: tmpFilteredTables, TablesSequence: tmpFilteredSequence };
 
 					let tmpTableNames = Object.keys(tmpModelObject.Tables || {});
-					_Fable.log.info(`Data Cloner: Deploying ${tmpTableNames.length} tables to local SQLite: [${tmpTableNames.join(', ')}]`);
+					_Fable.log.info(`Data Cloner: Deploying ${tmpTableNames.length} tables to local ${_CloneState.ConnectionProvider}: [${tmpTableNames.join(', ')}]`);
 
 					// ---- Set up MeadowCloneRestClient ----
 					// Bridge remote data fetching to pict-sessionmanager's
@@ -688,7 +891,8 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 					_Fable.serviceManager.instantiateServiceProvider('MeadowSync',
 						{
 							SyncEntityList: tmpTableNames,
-							PageSize: 100
+							PageSize: 100,
+							SyncDeletedRecords: _CloneState.SyncDeletedRecords
 						});
 
 					// Load the schema into MeadowSync — this creates a
@@ -755,13 +959,33 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 												return fCallback(pError, pQuery, pRecord);
 											});
 									};
+
+									// Wrap doUpdate for delete sync tracking
+									let tmpOriginalDoUpdate = tmpEntityMeadow.doUpdate.bind(tmpEntityMeadow);
+									tmpEntityMeadow.doUpdate = (pQuery, fCallback) =>
+									{
+										tmpOriginalDoUpdate(pQuery,
+											(pError, pQuery, pRecord) =>
+											{
+												if (pError)
+												{
+													_Fable.log.info(`Data Cloner: [DAL] doUpdate ${tmpEntityName}: ERROR ${pError}`);
+												}
+												else
+												{
+													let tmpID = pRecord ? pRecord[tmpSyncEntity.DefaultIdentifier] : '?';
+													_Fable.log.info(`Data Cloner: [DAL] doUpdate ${tmpEntityName}: success ID=${tmpID}`);
+												}
+												return fCallback(pError, pQuery, pRecord);
+											});
+									};
 								}
 							}
 
 							_Fable.log.info(`Data Cloner: Loading model for CRUD endpoints...`);
 
 							// Load the filtered model so CRUD endpoints are available
-							_Fable.RetoldDataServiceMeadowEndpoints.loadModel('RemoteClone', tmpModelObject, 'SQLite',
+							_Fable.RetoldDataServiceMeadowEndpoints.loadModel('RemoteClone', tmpModelObject, _CloneState.ConnectionProvider,
 								(pLoadError) =>
 								{
 									if (pLoadError)
@@ -812,6 +1036,18 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 					let tmpBody = pRequest.body || {};
 					let tmpSelectedTables = tmpBody.Tables || [];
 
+					// Update SyncDeletedRecords from request if provided
+					if (tmpBody.hasOwnProperty('SyncDeletedRecords'))
+					{
+						_CloneState.SyncDeletedRecords = !!tmpBody.SyncDeletedRecords;
+						// Update the setting on existing sync entities
+						let tmpEntityNames = Object.keys(_Fable.MeadowSync.MeadowSyncEntities);
+						for (let i = 0; i < tmpEntityNames.length; i++)
+						{
+							_Fable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].SyncDeletedRecords = _CloneState.SyncDeletedRecords;
+						}
+					}
+
 					// If no tables specified, sync all entities that MeadowSync knows about
 					if (tmpSelectedTables.length === 0)
 					{
@@ -824,7 +1060,7 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 						return fNext();
 					}
 
-					_Fable.log.info(`Data Cloner: Starting sync for ${tmpSelectedTables.length} tables via meadow-integration`);
+					_Fable.log.info(`Data Cloner: Starting sync for ${tmpSelectedTables.length} tables via meadow-integration (SyncDeletedRecords: ${_CloneState.SyncDeletedRecords})`);
 
 					// Initialize progress tracking
 					_CloneState.SyncRunning = true;
@@ -853,6 +1089,7 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 						{
 							Success: true,
 							Tables: tmpSelectedTables,
+							SyncDeletedRecords: _CloneState.SyncDeletedRecords,
 							Message: 'Sync started via meadow-integration.'
 						});
 					return fNext();
@@ -932,6 +1169,7 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 		 *   - Paginated downloads via MeadowCloneRestClient
 		 *   - Record marshaling (objects→JSON, DateTime normalization, etc.)
 		 *   - Writing via Meadow DAL (doCreate with identity insert)
+		 *   - (When SyncDeletedRecords enabled) Syncing deleted records
 		 *
 		 * @param {Array<string>} pTables - Table names to sync
 		 */

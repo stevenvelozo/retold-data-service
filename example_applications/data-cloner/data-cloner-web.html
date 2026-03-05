@@ -59,23 +59,227 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 a { color: #4a90d9; }
 
-select { background: #fff; }
+select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95em; margin-bottom: 10px; }
 
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.8em; font-family: monospace; }
 .data-table th { background: #f8f9fa; font-weight: 600; text-align: left; padding: 4px 8px; border: 1px solid #ddd; white-space: nowrap; position: sticky; top: 0; }
 .data-table td { padding: 4px 8px; border: 1px solid #eee; white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
 .data-table tr:nth-child(even) { background: #fafafa; }
 .data-table tr:hover { background: #f0f7ff; }
+
+.checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.checkbox-row input[type="checkbox"] { width: auto; margin: 0; }
+.checkbox-row label { display: inline; margin: 0; font-weight: normal; cursor: pointer; }
 </style>
 </head>
 <body>
 
 <h1>Retold Data Cloner</h1>
 
-<!-- ======== Section 1: Connection Management ======== -->
+<!-- ======== Section 1: Database Connection ======== -->
 <div class="section">
 	<h2>1. Database Connection</h2>
-	<p>Use the <a href="/meadow-migrationmanager/" target="_blank">Migration Manager UI</a> to configure and test database connections. The local SQLite database is pre-configured.</p>
+	<p style="font-size:0.9em; color:#666; margin-bottom:10px">Configure the local database where cloned data will be stored. SQLite is connected by default.</p>
+
+	<div class="inline-group">
+		<div style="flex:0 0 200px">
+			<label for="connProvider">Provider</label>
+			<select id="connProvider" onchange="onProviderChange()">
+				<option value="SQLite" selected>SQLite</option>
+				<option value="MySQL">MySQL</option>
+				<option value="MSSQL">MSSQL</option>
+				<option value="PostgreSQL">PostgreSQL</option>
+				<option value="Solr">Solr</option>
+				<option value="MongoDB">MongoDB</option>
+				<option value="RocksDB">RocksDB</option>
+				<option value="Bibliograph">Bibliograph</option>
+			</select>
+		</div>
+		<div style="flex:1; display:flex; align-items:flex-end; gap:8px">
+			<button class="primary" onclick="connectProvider()">Connect</button>
+			<button class="secondary" onclick="testConnection()">Test Connection</button>
+		</div>
+	</div>
+
+	<!-- SQLite Config -->
+	<div id="configSQLite">
+		<label for="sqliteFilePath">SQLite File Path</label>
+		<input type="text" id="sqliteFilePath" placeholder="data/cloned.sqlite" value="data/cloned.sqlite">
+	</div>
+
+	<!-- MySQL Config -->
+	<div id="configMySQL" style="display:none">
+		<div class="inline-group">
+			<div style="flex:2">
+				<label for="mysqlServer">Server</label>
+				<input type="text" id="mysqlServer" placeholder="127.0.0.1" value="127.0.0.1">
+			</div>
+			<div style="flex:1">
+				<label for="mysqlPort">Port</label>
+				<input type="number" id="mysqlPort" placeholder="3306" value="3306">
+			</div>
+		</div>
+		<div class="inline-group">
+			<div>
+				<label for="mysqlUser">User</label>
+				<input type="text" id="mysqlUser" placeholder="root" value="root">
+			</div>
+			<div>
+				<label for="mysqlPassword">Password</label>
+				<input type="password" id="mysqlPassword" placeholder="password">
+			</div>
+		</div>
+		<label for="mysqlDatabase">Database</label>
+		<input type="text" id="mysqlDatabase" placeholder="meadow_clone">
+		<div class="inline-group">
+			<div>
+				<label for="mysqlConnectionLimit">Connection Limit</label>
+				<input type="number" id="mysqlConnectionLimit" placeholder="20" value="20">
+			</div>
+			<div></div>
+		</div>
+	</div>
+
+	<!-- MSSQL Config -->
+	<div id="configMSSQL" style="display:none">
+		<div class="inline-group">
+			<div style="flex:2">
+				<label for="mssqlServer">Server</label>
+				<input type="text" id="mssqlServer" placeholder="127.0.0.1" value="127.0.0.1">
+			</div>
+			<div style="flex:1">
+				<label for="mssqlPort">Port</label>
+				<input type="number" id="mssqlPort" placeholder="1433" value="1433">
+			</div>
+		</div>
+		<div class="inline-group">
+			<div>
+				<label for="mssqlUser">User</label>
+				<input type="text" id="mssqlUser" placeholder="sa" value="sa">
+			</div>
+			<div>
+				<label for="mssqlPassword">Password</label>
+				<input type="password" id="mssqlPassword" placeholder="password">
+			</div>
+		</div>
+		<label for="mssqlDatabase">Database</label>
+		<input type="text" id="mssqlDatabase" placeholder="meadow_clone">
+		<div class="inline-group">
+			<div>
+				<label for="mssqlConnectionLimit">Connection Limit</label>
+				<input type="number" id="mssqlConnectionLimit" placeholder="20" value="20">
+			</div>
+			<div></div>
+		</div>
+	</div>
+
+	<!-- PostgreSQL Config -->
+	<div id="configPostgreSQL" style="display:none">
+		<div class="inline-group">
+			<div style="flex:2">
+				<label for="postgresqlHost">Host</label>
+				<input type="text" id="postgresqlHost" placeholder="127.0.0.1" value="127.0.0.1">
+			</div>
+			<div style="flex:1">
+				<label for="postgresqlPort">Port</label>
+				<input type="number" id="postgresqlPort" placeholder="5432" value="5432">
+			</div>
+		</div>
+		<div class="inline-group">
+			<div>
+				<label for="postgresqlUser">User</label>
+				<input type="text" id="postgresqlUser" placeholder="postgres" value="postgres">
+			</div>
+			<div>
+				<label for="postgresqlPassword">Password</label>
+				<input type="password" id="postgresqlPassword" placeholder="password">
+			</div>
+		</div>
+		<label for="postgresqlDatabase">Database</label>
+		<input type="text" id="postgresqlDatabase" placeholder="meadow_clone">
+		<div class="inline-group">
+			<div>
+				<label for="postgresqlConnectionLimit">Connection Pool Limit</label>
+				<input type="number" id="postgresqlConnectionLimit" placeholder="10" value="10">
+			</div>
+			<div></div>
+		</div>
+	</div>
+
+	<!-- Solr Config -->
+	<div id="configSolr" style="display:none">
+		<div class="inline-group">
+			<div style="flex:2">
+				<label for="solrHost">Host</label>
+				<input type="text" id="solrHost" placeholder="localhost" value="localhost">
+			</div>
+			<div style="flex:1">
+				<label for="solrPort">Port</label>
+				<input type="number" id="solrPort" placeholder="8983" value="8983">
+			</div>
+		</div>
+		<div class="inline-group">
+			<div style="flex:2">
+				<label for="solrCore">Core</label>
+				<input type="text" id="solrCore" placeholder="default" value="default">
+			</div>
+			<div style="flex:1">
+				<label for="solrPath">Path</label>
+				<input type="text" id="solrPath" placeholder="/solr" value="/solr">
+			</div>
+		</div>
+		<div class="checkbox-row">
+			<input type="checkbox" id="solrSecure">
+			<label for="solrSecure">Use HTTPS</label>
+		</div>
+	</div>
+
+	<!-- MongoDB Config -->
+	<div id="configMongoDB" style="display:none">
+		<div class="inline-group">
+			<div style="flex:2">
+				<label for="mongodbHost">Host</label>
+				<input type="text" id="mongodbHost" placeholder="127.0.0.1" value="127.0.0.1">
+			</div>
+			<div style="flex:1">
+				<label for="mongodbPort">Port</label>
+				<input type="number" id="mongodbPort" placeholder="27017" value="27017">
+			</div>
+		</div>
+		<div class="inline-group">
+			<div>
+				<label for="mongodbUser">User</label>
+				<input type="text" id="mongodbUser" placeholder="(optional)">
+			</div>
+			<div>
+				<label for="mongodbPassword">Password</label>
+				<input type="password" id="mongodbPassword" placeholder="(optional)">
+			</div>
+		</div>
+		<label for="mongodbDatabase">Database</label>
+		<input type="text" id="mongodbDatabase" placeholder="test" value="test">
+		<div class="inline-group">
+			<div>
+				<label for="mongodbConnectionLimit">Max Pool Size</label>
+				<input type="number" id="mongodbConnectionLimit" placeholder="10" value="10">
+			</div>
+			<div></div>
+		</div>
+	</div>
+
+	<!-- RocksDB Config -->
+	<div id="configRocksDB" style="display:none">
+		<label for="rocksdbFolder">RocksDB Folder Path</label>
+		<input type="text" id="rocksdbFolder" placeholder="data/rocksdb" value="data/rocksdb">
+	</div>
+
+	<!-- Bibliograph Config -->
+	<div id="configBibliograph" style="display:none">
+		<label for="bibliographFolder">Storage Folder Path</label>
+		<input type="text" id="bibliographFolder" placeholder="data/bibliograph" value="data/bibliograph">
+	</div>
+
+	<div id="connectionStatus"></div>
 </div>
 
 <!-- ======== Section 2: Remote Session ======== -->
@@ -158,7 +362,7 @@ select { background: #fff; }
 <!-- ======== Section 4: Deploy ======== -->
 <div class="section">
 	<h2>4. Deploy Schema</h2>
-	<p style="font-size:0.9em; color:#666; margin-bottom:10px">Creates the selected tables in the local SQLite database and sets up CRUD endpoints (e.g. GET /1.0/Documents).</p>
+	<p style="font-size:0.9em; color:#666; margin-bottom:10px">Creates the selected tables in the local database and sets up CRUD endpoints (e.g. GET /1.0/Documents).</p>
 	<button class="primary" onclick="deploySchema()">Deploy Selected Tables</button>
 	<button class="danger" onclick="resetDatabase()">Reset Database</button>
 	<div id="deployStatus"></div>
@@ -180,6 +384,11 @@ select { background: #fff; }
 		</div>
 	</div>
 
+	<div class="checkbox-row">
+		<input type="checkbox" id="syncDeletedRecords">
+		<label for="syncDeletedRecords">Sync deleted records (fetch records marked Deleted=1 on source and mirror locally)</label>
+	</div>
+
 	<div id="syncStatus"></div>
 	<div id="syncProgress"></div>
 </div>
@@ -190,7 +399,7 @@ select { background: #fff; }
 	<div class="inline-group">
 		<div style="flex:1">
 			<label for="viewTable">Table</label>
-			<select id="viewTable" style="width:100%; padding:8px 12px; border:1px solid #ccc; border-radius:4px; font-size:0.95em; margin-bottom:10px;">
+			<select id="viewTable">
 				<option value="">— deploy tables first —</option>
 			</select>
 		</div>
@@ -214,7 +423,15 @@ select { background: #fff; }
 var _PersistFields = [
 	'serverURL', 'authMethod', 'authURI', 'checkURI',
 	'cookieName', 'cookieValueAddr', 'cookieValueTemplate', 'loginMarker',
-	'userName', 'password', 'schemaURL', 'pageSize'
+	'userName', 'password', 'schemaURL', 'pageSize',
+	'connProvider', 'sqliteFilePath',
+	'mysqlServer', 'mysqlPort', 'mysqlUser', 'mysqlPassword', 'mysqlDatabase', 'mysqlConnectionLimit',
+	'mssqlServer', 'mssqlPort', 'mssqlUser', 'mssqlPassword', 'mssqlDatabase', 'mssqlConnectionLimit',
+	'postgresqlHost', 'postgresqlPort', 'postgresqlUser', 'postgresqlPassword', 'postgresqlDatabase', 'postgresqlConnectionLimit',
+	'solrHost', 'solrPort', 'solrCore', 'solrPath',
+	'mongodbHost', 'mongodbPort', 'mongodbUser', 'mongodbPassword', 'mongodbDatabase', 'mongodbConnectionLimit',
+	'rocksdbFolder',
+	'bibliographFolder'
 ];
 
 function saveField(pFieldId)
@@ -238,6 +455,18 @@ function restoreFields()
 			if (el) el.value = tmpSaved;
 		}
 	}
+
+	// Restore checkbox state
+	var tmpSyncDeleted = localStorage.getItem('dataCloner_syncDeletedRecords');
+	if (tmpSyncDeleted !== null)
+	{
+		document.getElementById('syncDeletedRecords').checked = tmpSyncDeleted === 'true';
+	}
+	var tmpSolrSecure = localStorage.getItem('dataCloner_solrSecure');
+	if (tmpSolrSecure !== null)
+	{
+		document.getElementById('solrSecure').checked = tmpSolrSecure === 'true';
+	}
 }
 
 // Attach change listeners to all persisted fields
@@ -252,9 +481,22 @@ function initPersistence()
 			if (el)
 			{
 				el.addEventListener('input', function() { saveField(pId); });
+				el.addEventListener('change', function() { saveField(pId); });
 			}
 		})(_PersistFields[i]);
 	}
+
+	// Persist sync deleted checkbox
+	document.getElementById('syncDeletedRecords').addEventListener('change', function()
+	{
+		localStorage.setItem('dataCloner_syncDeletedRecords', this.checked);
+	});
+
+	// Persist solr secure checkbox
+	document.getElementById('solrSecure').addEventListener('change', function()
+	{
+		localStorage.setItem('dataCloner_solrSecure', this.checked);
+	});
 }
 
 // ================================================================
@@ -278,6 +520,148 @@ function setStatus(elementId, message, type)
 	el.className = 'status ' + (type || 'info');
 	el.textContent = message;
 	el.style.display = 'block';
+}
+
+// ================================================================
+// Connection Management
+// ================================================================
+
+function onProviderChange()
+{
+	var provider = document.getElementById('connProvider').value;
+	var tmpProviders = ['SQLite', 'MySQL', 'MSSQL', 'PostgreSQL', 'Solr', 'MongoDB', 'RocksDB', 'Bibliograph'];
+	for (var i = 0; i < tmpProviders.length; i++)
+	{
+		var tmpEl = document.getElementById('config' + tmpProviders[i]);
+		if (tmpEl) tmpEl.style.display = (provider === tmpProviders[i]) ? '' : 'none';
+	}
+	saveField('connProvider');
+}
+
+function getProviderConfig()
+{
+	var provider = document.getElementById('connProvider').value;
+	var config = {};
+
+	if (provider === 'SQLite')
+	{
+		config.SQLiteFilePath = document.getElementById('sqliteFilePath').value.trim() || 'data/cloned.sqlite';
+	}
+	else if (provider === 'MySQL')
+	{
+		config.server = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
+		config.port = parseInt(document.getElementById('mysqlPort').value, 10) || 3306;
+		config.user = document.getElementById('mysqlUser').value.trim() || 'root';
+		config.password = document.getElementById('mysqlPassword').value;
+		config.database = document.getElementById('mysqlDatabase').value.trim();
+		config.connectionLimit = parseInt(document.getElementById('mysqlConnectionLimit').value, 10) || 20;
+	}
+	else if (provider === 'MSSQL')
+	{
+		config.server = document.getElementById('mssqlServer').value.trim() || '127.0.0.1';
+		config.port = parseInt(document.getElementById('mssqlPort').value, 10) || 1433;
+		config.user = document.getElementById('mssqlUser').value.trim() || 'sa';
+		config.password = document.getElementById('mssqlPassword').value;
+		config.database = document.getElementById('mssqlDatabase').value.trim();
+		config.connectionLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
+	}
+	else if (provider === 'PostgreSQL')
+	{
+		config.host = document.getElementById('postgresqlHost').value.trim() || '127.0.0.1';
+		config.port = parseInt(document.getElementById('postgresqlPort').value, 10) || 5432;
+		config.user = document.getElementById('postgresqlUser').value.trim() || 'postgres';
+		config.password = document.getElementById('postgresqlPassword').value;
+		config.database = document.getElementById('postgresqlDatabase').value.trim();
+		config.max = parseInt(document.getElementById('postgresqlConnectionLimit').value, 10) || 10;
+	}
+	else if (provider === 'Solr')
+	{
+		config.host = document.getElementById('solrHost').value.trim() || 'localhost';
+		config.port = parseInt(document.getElementById('solrPort').value, 10) || 8983;
+		config.core = document.getElementById('solrCore').value.trim() || 'default';
+		config.path = document.getElementById('solrPath').value.trim() || '/solr';
+		config.secure = document.getElementById('solrSecure').checked;
+	}
+	else if (provider === 'MongoDB')
+	{
+		config.host = document.getElementById('mongodbHost').value.trim() || '127.0.0.1';
+		config.port = parseInt(document.getElementById('mongodbPort').value, 10) || 27017;
+		config.user = document.getElementById('mongodbUser').value.trim();
+		config.password = document.getElementById('mongodbPassword').value;
+		config.database = document.getElementById('mongodbDatabase').value.trim() || 'test';
+		config.maxPoolSize = parseInt(document.getElementById('mongodbConnectionLimit').value, 10) || 10;
+	}
+	else if (provider === 'RocksDB')
+	{
+		config.RocksDBFolder = document.getElementById('rocksdbFolder').value.trim() || 'data/rocksdb';
+	}
+	else if (provider === 'Bibliograph')
+	{
+		config.StorageFolder = document.getElementById('bibliographFolder').value.trim() || 'data/bibliograph';
+	}
+
+	return { Provider: provider, Config: config };
+}
+
+function connectProvider()
+{
+	var connInfo = getProviderConfig();
+
+	setStatus('connectionStatus', 'Connecting to ' + connInfo.Provider + '...', 'info');
+
+	api('POST', '/clone/connection/configure', connInfo)
+		.then(function(data)
+		{
+			if (data.Success)
+			{
+				setStatus('connectionStatus', data.Message, 'ok');
+			}
+			else
+			{
+				setStatus('connectionStatus', 'Connection failed: ' + (data.Error || 'Unknown error'), 'error');
+			}
+		})
+		.catch(function(err)
+		{
+			setStatus('connectionStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+function testConnection()
+{
+	var connInfo = getProviderConfig();
+
+	setStatus('connectionStatus', 'Testing ' + connInfo.Provider + ' connection...', 'info');
+
+	api('POST', '/clone/connection/test', connInfo)
+		.then(function(data)
+		{
+			if (data.Success)
+			{
+				setStatus('connectionStatus', data.Message, 'ok');
+			}
+			else
+			{
+				setStatus('connectionStatus', 'Test failed: ' + (data.Error || 'Unknown error'), 'error');
+			}
+		})
+		.catch(function(err)
+		{
+			setStatus('connectionStatus', 'Request failed: ' + err.message, 'error');
+		});
+}
+
+function checkConnectionStatus()
+{
+	api('GET', '/clone/connection/status')
+		.then(function(data)
+		{
+			if (data.Connected)
+			{
+				setStatus('connectionStatus', 'Connected: ' + data.Provider, 'ok');
+			}
+		})
+		.catch(function() { /* ignore */ });
 }
 
 // ================================================================
@@ -620,6 +1004,7 @@ function startSync()
 {
 	var selectedTables = getSelectedTables();
 	var pageSize = parseInt(document.getElementById('pageSize').value, 10) || 100;
+	var syncDeletedRecords = document.getElementById('syncDeletedRecords').checked;
 
 	if (selectedTables.length === 0)
 	{
@@ -629,12 +1014,14 @@ function startSync()
 
 	setStatus('syncStatus', 'Starting sync...', 'info');
 
-	api('POST', '/clone/sync/start', { Tables: selectedTables, PageSize: pageSize })
+	api('POST', '/clone/sync/start', { Tables: selectedTables, PageSize: pageSize, SyncDeletedRecords: syncDeletedRecords })
 		.then(function(data)
 		{
 			if (data.Success)
 			{
-				setStatus('syncStatus', 'Sync started for ' + data.Tables.length + ' tables.', 'ok');
+				var msg = 'Sync started for ' + data.Tables.length + ' tables.';
+				if (data.SyncDeletedRecords) msg += ' (including deleted records)';
+				setStatus('syncStatus', msg, 'ok');
 				startPolling();
 			}
 			else
@@ -928,7 +1315,9 @@ function restoreDeployedTables()
 }
 
 initPersistence();
+onProviderChange();
 restoreDeployedTables();
+checkConnectionStatus();
 </script>
 
 </body>
