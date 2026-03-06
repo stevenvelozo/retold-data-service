@@ -51,6 +51,83 @@ const libFs = require('fs');
 const libPath = require('path');
 
 // ================================================================
+// CLI Arguments
+// ================================================================
+
+let _CLIConfig = null;
+let _CLIRunHeadless = false;
+
+// Parse --config <path>, --config-json <json>, and --run flags
+for (let i = 2; i < process.argv.length; i++)
+{
+	if ((process.argv[i] === '--config' || process.argv[i] === '-c') && process.argv[i + 1])
+	{
+		let tmpConfigPath = libPath.resolve(process.argv[i + 1]);
+		try
+		{
+			let tmpRaw = libFs.readFileSync(tmpConfigPath, 'utf8');
+			_CLIConfig = JSON.parse(tmpRaw);
+			console.log(`Data Cloner: Loaded config from ${tmpConfigPath}`);
+		}
+		catch (pConfigError)
+		{
+			console.error(`Data Cloner: Failed to load config from ${tmpConfigPath}: ${pConfigError.message}`);
+			process.exit(1);
+		}
+		i++; // skip the path argument
+	}
+	else if (process.argv[i] === '--config-json' && process.argv[i + 1])
+	{
+		try
+		{
+			_CLIConfig = JSON.parse(process.argv[i + 1]);
+			console.log('Data Cloner: Loaded config from inline JSON');
+		}
+		catch (pParseError)
+		{
+			console.error(`Data Cloner: Failed to parse inline JSON: ${pParseError.message}`);
+			process.exit(1);
+		}
+		i++;
+	}
+	else if (process.argv[i] === '--run' || process.argv[i] === '-r')
+	{
+		_CLIRunHeadless = true;
+	}
+	else if ((process.argv[i] === '--port' || process.argv[i] === '-p') && process.argv[i + 1])
+	{
+		// Will be applied to _Settings below
+		process.env.PORT = process.argv[i + 1];
+		i++;
+	}
+	else if (process.argv[i] === '--help' || process.argv[i] === '-h')
+	{
+		console.log(`
+Retold Data Cloner
+
+Usage:
+  node data-cloner.js                           Start web UI only
+  node data-cloner.js --config <path> --run      Headless clone from config file
+  node data-cloner.js --config-json '{}' --run   Headless clone from inline JSON
+
+Options:
+  --config, -c <path>      Path to a JSON config file (generate from the web UI)
+  --config-json <json>     Inline JSON config string (for one-liner commands)
+  --run, -r                Auto-run the clone pipeline (requires --config or --config-json)
+  --port, -p <port>        Override the API server port (default: 8095)
+  --help, -h               Show this help
+`);
+		process.exit(0);
+	}
+}
+
+if (_CLIRunHeadless && !_CLIConfig)
+{
+	console.error('Data Cloner: --run requires --config <path> or --config-json <json>');
+	process.exit(1);
+}
+
+// ================================================================
 // Configuration
 // ================================================================
 
@@ -119,12 +196,14 @@ let _CloneState = (
 		// Fetched remote schema
 		RemoteSchema: false,
 		RemoteModelObject: false,
+		DeployedModelObject: false,
 
 		// Sync progress
 		SyncRunning: false,
 		SyncStopping: false,
 		SyncProgress: {},
 		SyncDeletedRecords: false,
+		SyncMode: 'Initial',
 
 		// Per-table REST error counters (set up during sync)
 		SyncRESTErrors: {}
@@ -831,11 +910,16 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 
 					// Override getJSON to delegate through pict-sessionmanager's
 					// RestClient, which already handles cookie injection & domain matching.
-					// Also adds debug logging and error tracking per entity.
+					// Also tracks per-entity REST errors for sync status reporting.
+
+					// Increase the default request timeout for slow remote queries
+					// (Node's https.globalAgent defaults to 5000ms which is too short
+					// for MAX(ID) queries on large tables in old MySQL installations)
+					let libHttps = require('https');
+					libHttps.globalAgent.options.timeout = 120000; // 2 minutes
 					_Fable.MeadowCloneRestClient.getJSON = (pURL, fCallback) =>
 					{
 						let tmpFullURL = _Fable.MeadowCloneRestClient.serverURL + pURL;
-						_Fable.log.trace(`Data Cloner: [REST] GET ${tmpFullURL}`);
 
 						// Extract the entity name from the URL for error tracking
 						// URLs look like: "Customer/Max/IDCustomer" or "Customers/FilteredTo/..."
@@ -846,7 +930,7 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 							{
 								if (pError)
 								{
-									_Fable.log.error(`Data Cloner: [REST] Error for ${pURL}: ${pError}`);
+									_Fable.log.error(`Data Cloner: REST error for ${pURL}: ${pError}`);
 									if (_CloneState.SyncRESTErrors[tmpEntityHint] !== undefined)
 									{
 										_CloneState.SyncRESTErrors[tmpEntityHint]++;
@@ -854,15 +938,11 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 								}
 								else
 								{
-									let tmpIsArray = Array.isArray(pBody);
-									let tmpPreview = tmpIsArray ? `Array[${pBody.length}]` : (pBody ? `${typeof(pBody)}:${JSON.stringify(pBody).substring(0, 200)}` : 'null/undefined');
-									_Fable.log.info(`Data Cloner: [REST] Response for ${pURL}: ${tmpPreview}`);
-
 									// Track when the server returns a non-array for list endpoints
 									// (FilteredTo, Count, etc.) — this usually indicates an auth or permission error
-									if (pURL.indexOf('FilteredTo') > -1 && !tmpIsArray)
+									if (pURL.indexOf('FilteredTo') > -1 && !Array.isArray(pBody))
 									{
-										_Fable.log.warn(`Data Cloner: [REST] FilteredTo response for ${tmpEntityHint} is NOT an array — expected Array, got ${typeof(pBody)}`);
+										_Fable.log.warn(`Data Cloner: FilteredTo response for ${tmpEntityHint} is not an array — possible auth/permission error`);
 										if (_CloneState.SyncRESTErrors[tmpEntityHint] !== undefined)
 										{
 											_CloneState.SyncRESTErrors[tmpEntityHint]++;
@@ -909,78 +989,8 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 							let tmpInitializedEntities = Object.keys(_Fable.MeadowSync.MeadowSyncEntities);
 							_Fable.log.info(`Data Cloner: MeadowSync initialized ${tmpInitializedEntities.length} sync entities: [${tmpInitializedEntities.join(', ')}]`);
 
-							// ---- Instrument sync entity DAL operations ----
-							// Wrap each entity's Meadow doRead/doCreate so we can trace
-							// exactly what happens to each record during sync.
-							for (let e = 0; e < tmpInitializedEntities.length; e++)
-							{
-								let tmpEntityName = tmpInitializedEntities[e];
-								let tmpSyncEntity = _Fable.MeadowSync.MeadowSyncEntities[tmpEntityName];
-
-								if (tmpSyncEntity && tmpSyncEntity.Meadow)
-								{
-									let tmpEntityMeadow = tmpSyncEntity.Meadow;
-
-									// Wrap doRead
-									let tmpOriginalDoRead = tmpEntityMeadow.doRead.bind(tmpEntityMeadow);
-									tmpEntityMeadow.doRead = (pQuery, fCallback) =>
-									{
-										tmpOriginalDoRead(pQuery,
-											(pError, pQuery, pRecord) =>
-											{
-												if (pError)
-												{
-													_Fable.log.info(`Data Cloner: [DAL] doRead ${tmpEntityName}: ERROR ${pError}`);
-												}
-												else
-												{
-													_Fable.log.info(`Data Cloner: [DAL] doRead ${tmpEntityName}: found=${!!pRecord} (type=${typeof(pRecord)})`);
-												}
-												return fCallback(pError, pQuery, pRecord);
-											});
-									};
-
-									// Wrap doCreate
-									let tmpOriginalDoCreate = tmpEntityMeadow.doCreate.bind(tmpEntityMeadow);
-									tmpEntityMeadow.doCreate = (pQuery, fCallback) =>
-									{
-										tmpOriginalDoCreate(pQuery,
-											(pError, pQuery, pRecord) =>
-											{
-												if (pError)
-												{
-													_Fable.log.info(`Data Cloner: [DAL] doCreate ${tmpEntityName}: ERROR ${pError}`);
-												}
-												else
-												{
-													let tmpID = pRecord ? pRecord[tmpSyncEntity.DefaultIdentifier] : '?';
-													_Fable.log.info(`Data Cloner: [DAL] doCreate ${tmpEntityName}: success ID=${tmpID}`);
-												}
-												return fCallback(pError, pQuery, pRecord);
-											});
-									};
-
-									// Wrap doUpdate for delete sync tracking
-									let tmpOriginalDoUpdate = tmpEntityMeadow.doUpdate.bind(tmpEntityMeadow);
-									tmpEntityMeadow.doUpdate = (pQuery, fCallback) =>
-									{
-										tmpOriginalDoUpdate(pQuery,
-											(pError, pQuery, pRecord) =>
-											{
-												if (pError)
-												{
-													_Fable.log.info(`Data Cloner: [DAL] doUpdate ${tmpEntityName}: ERROR ${pError}`);
-												}
-												else
-												{
-													let tmpID = pRecord ? pRecord[tmpSyncEntity.DefaultIdentifier] : '?';
-													_Fable.log.info(`Data Cloner: [DAL] doUpdate ${tmpEntityName}: success ID=${tmpID}`);
-												}
-												return fCallback(pError, pQuery, pRecord);
-											});
-									};
-								}
-							}
+							// Store the deployed model so sync mode switches can re-create entities
+							_CloneState.DeployedModelObject = tmpModelObject;
 
 							_Fable.log.info(`Data Cloner: Loading model for CRUD endpoints...`);
 
@@ -1035,6 +1045,7 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 
 					let tmpBody = pRequest.body || {};
 					let tmpSelectedTables = tmpBody.Tables || [];
+					let tmpRequestedMode = tmpBody.SyncMode || 'Initial';
 
 					// Update SyncDeletedRecords from request if provided
 					if (tmpBody.hasOwnProperty('SyncDeletedRecords'))
@@ -1060,39 +1071,80 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 						return fNext();
 					}
 
-					_Fable.log.info(`Data Cloner: Starting sync for ${tmpSelectedTables.length} tables via meadow-integration (SyncDeletedRecords: ${_CloneState.SyncDeletedRecords})`);
-
-					// Initialize progress tracking
-					_CloneState.SyncRunning = true;
-					_CloneState.SyncStopping = false;
-					_CloneState.SyncProgress = {};
-					_CloneState.SyncRESTErrors = {};
-
-					for (let i = 0; i < tmpSelectedTables.length; i++)
+					// ---- Handle Sync Mode switching ----
+					// If the requested mode differs from the current mode, re-create
+					// sync entities using loadMeadowSchema so the correct entity class
+					// (MeadowSyncEntityInitial vs MeadowSyncEntityOngoing) is used.
+					let fStartSync = () =>
 					{
-						_CloneState.SyncProgress[tmpSelectedTables[i]] = (
-							{
-								Status: 'Pending',
-								Total: 0,
-								Synced: 0,
-								Errors: 0,
-								StartTime: null,
-								EndTime: null
-							});
-						_CloneState.SyncRESTErrors[tmpSelectedTables[i]] = 0;
-					}
+						_Fable.log.info(`Data Cloner: Starting ${_CloneState.SyncMode} sync for ${tmpSelectedTables.length} tables via meadow-integration (SyncDeletedRecords: ${_CloneState.SyncDeletedRecords})`);
 
-					// Start the sync process asynchronously
-					fSyncTables(tmpSelectedTables);
+						// Initialize progress tracking
+						_CloneState.SyncRunning = true;
+						_CloneState.SyncStopping = false;
+						_CloneState.SyncProgress = {};
+						_CloneState.SyncRESTErrors = {};
 
-					pResponse.send(200,
+						for (let i = 0; i < tmpSelectedTables.length; i++)
 						{
-							Success: true,
-							Tables: tmpSelectedTables,
-							SyncDeletedRecords: _CloneState.SyncDeletedRecords,
-							Message: 'Sync started via meadow-integration.'
-						});
-					return fNext();
+							_CloneState.SyncProgress[tmpSelectedTables[i]] = (
+								{
+									Status: 'Pending',
+									Total: 0,
+									Synced: 0,
+									Errors: 0,
+									StartTime: null,
+									EndTime: null
+								});
+							_CloneState.SyncRESTErrors[tmpSelectedTables[i]] = 0;
+						}
+
+						// Start the sync process asynchronously
+						fSyncTables(tmpSelectedTables);
+
+						pResponse.send(200,
+							{
+								Success: true,
+								Tables: tmpSelectedTables,
+								SyncMode: _CloneState.SyncMode,
+								SyncDeletedRecords: _CloneState.SyncDeletedRecords,
+								Message: `${_CloneState.SyncMode} sync started via meadow-integration.`
+							});
+						return fNext();
+					};
+
+					if (tmpRequestedMode !== _CloneState.SyncMode && _CloneState.DeployedModelObject)
+					{
+						_Fable.log.info(`Data Cloner: Switching sync mode from ${_CloneState.SyncMode} to ${tmpRequestedMode} — re-creating sync entities...`);
+						_CloneState.SyncMode = tmpRequestedMode;
+						_Fable.MeadowSync.SyncMode = tmpRequestedMode;
+
+						// Re-create sync entities with the new mode.
+						// Tables already exist so initialize() is idempotent.
+						_Fable.MeadowSync.loadMeadowSchema(_CloneState.DeployedModelObject,
+							(pReinitError) =>
+							{
+								if (pReinitError)
+								{
+									_Fable.log.warn(`Data Cloner: Mode switch schema re-init warning: ${pReinitError}`);
+								}
+								let tmpReinitEntities = Object.keys(_Fable.MeadowSync.MeadowSyncEntities);
+								_Fable.log.info(`Data Cloner: Re-created ${tmpReinitEntities.length} sync entities in ${tmpRequestedMode} mode`);
+
+								// Update SyncDeletedRecords on new entities
+								for (let i = 0; i < tmpReinitEntities.length; i++)
+								{
+									_Fable.MeadowSync.MeadowSyncEntities[tmpReinitEntities[i]].SyncDeletedRecords = _CloneState.SyncDeletedRecords;
+								}
+
+								return fStartSync();
+							});
+					}
+					else
+					{
+						_CloneState.SyncMode = tmpRequestedMode;
+						return fStartSync();
+					}
 				});
 
 			// GET /clone/sync/status
@@ -1133,6 +1185,7 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 						{
 							Running: _CloneState.SyncRunning,
 							Stopping: _CloneState.SyncStopping,
+							SyncMode: _CloneState.SyncMode,
 							Tables: _CloneState.SyncProgress
 						});
 					return fNext();
@@ -1281,5 +1334,299 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 				_Fable.log.info(`Data Cloner running on port ${_Settings.APIServerPort}`);
 				_Fable.log.info(`Web UI:          http://localhost:${_Settings.APIServerPort}/clone/`);
 				_Fable.log.info(`Migration Mgr:   http://localhost:${_Settings.APIServerPort}/meadow-migrationmanager/`);
+
+				// ---- Headless auto-run from config file ----
+				if (_CLIConfig && _CLIRunHeadless)
+				{
+					fRunHeadless(_CLIConfig);
+				}
 			});
 	});
+
+// ================================================================
+// Headless Pipeline (--config + --run)
+// ================================================================
+
+/**
+ * Run the full clone pipeline non-interactively from a config object.
+ * Steps: connect DB → configure session → authenticate → fetch schema → deploy → sync.
+ *
+ * @param {object} pConfig - Parsed config from the JSON file
+ */
+function fRunHeadless(pConfig)
+{
+	_Fable.log.info('Data Cloner: Starting headless pipeline...');
+
+	let tmpHttp = require('http');
+	let tmpBaseURL = `http://localhost:${_Settings.APIServerPort}`;
+
+	// Simple helper to POST JSON to our own server
+	let fPost = (pPath, pBody, fCallback) =>
+	{
+		let tmpPayload = JSON.stringify(pBody);
+		let tmpURL = new URL(tmpBaseURL + pPath);
+		let tmpOpts = (
+			{
+				hostname: tmpURL.hostname,
+				port: tmpURL.port,
+				path: tmpURL.pathname,
+				method: 'POST',
+				headers:
+					{
+						'Content-Type': 'application/json',
+						'Content-Length': Buffer.byteLength(tmpPayload)
+					}
+			});
+
+		let tmpReq = tmpHttp.request(tmpOpts,
+			(pRes) =>
+			{
+				let tmpChunks = [];
+				pRes.on('data', (pChunk) => tmpChunks.push(pChunk));
+				pRes.on('end', () =>
+				{
+					try
+					{
+						let tmpData = JSON.parse(Buffer.concat(tmpChunks).toString());
+						return fCallback(null, tmpData);
+					}
+					catch (pParseError)
+					{
+						return fCallback(pParseError);
+					}
+				});
+			});
+		tmpReq.on('error', fCallback);
+		tmpReq.write(tmpPayload);
+		tmpReq.end();
+	};
+
+	// Simple helper to GET JSON from our own server
+	let fGet = (pPath, fCallback) =>
+	{
+		tmpHttp.get(tmpBaseURL + pPath,
+			(pRes) =>
+			{
+				let tmpChunks = [];
+				pRes.on('data', (pChunk) => tmpChunks.push(pChunk));
+				pRes.on('end', () =>
+				{
+					try
+					{
+						let tmpData = JSON.parse(Buffer.concat(tmpChunks).toString());
+						return fCallback(null, tmpData);
+					}
+					catch (pParseError)
+					{
+						return fCallback(pParseError);
+					}
+				});
+			}).on('error', fCallback);
+	};
+
+	// Step 1: Connect local database
+	let fStep1_ConnectDB = (fNext) =>
+	{
+		let tmpDB = pConfig.LocalDatabase;
+		if (!tmpDB || !tmpDB.Provider || tmpDB.Provider === 'SQLite')
+		{
+			_Fable.log.info('Headless: Using default SQLite connection.');
+			return fNext();
+		}
+
+		_Fable.log.info(`Headless: Connecting to ${tmpDB.Provider}...`);
+		fPost('/clone/connection/configure', { Provider: tmpDB.Provider, Config: tmpDB.Config },
+			(pError, pData) =>
+			{
+				if (pError || !pData || !pData.Success)
+				{
+					_Fable.log.error(`Headless: DB connection failed: ${pError || (pData && pData.Error) || 'Unknown error'}`);
+					return process.exit(1);
+				}
+				_Fable.log.info(`Headless: ${tmpDB.Provider} connected.`);
+				return fNext();
+			});
+	};
+
+	// Step 2: Configure remote session
+	let fStep2_ConfigureSession = (fNext) =>
+	{
+		let tmpSession = pConfig.RemoteSession;
+		if (!tmpSession || !tmpSession.ServerURL)
+		{
+			_Fable.log.error('Headless: RemoteSession.ServerURL is required in config.');
+			return process.exit(1);
+		}
+
+		_Fable.log.info(`Headless: Configuring session for ${tmpSession.ServerURL}...`);
+		fPost('/clone/session/configure', tmpSession,
+			(pError, pData) =>
+			{
+				if (pError || !pData || !pData.Success)
+				{
+					_Fable.log.error(`Headless: Session configure failed: ${pError || (pData && pData.Error) || 'Unknown error'}`);
+					return process.exit(1);
+				}
+				_Fable.log.info(`Headless: Session configured (domain: ${pData.DomainMatch}).`);
+				return fNext();
+			});
+	};
+
+	// Step 3: Authenticate
+	let fStep3_Authenticate = (fNext) =>
+	{
+		let tmpCreds = pConfig.Credentials;
+		if (!tmpCreds || !tmpCreds.UserName || !tmpCreds.Password)
+		{
+			_Fable.log.error('Headless: Credentials.UserName and Credentials.Password are required in config.');
+			return process.exit(1);
+		}
+
+		_Fable.log.info(`Headless: Authenticating as ${tmpCreds.UserName}...`);
+		fPost('/clone/session/authenticate', { UserName: tmpCreds.UserName, Password: tmpCreds.Password },
+			(pError, pData) =>
+			{
+				if (pError || !pData || !pData.Authenticated)
+				{
+					_Fable.log.error(`Headless: Authentication failed: ${pError || (pData && pData.Error) || 'Not authenticated'}`);
+					return process.exit(1);
+				}
+				_Fable.log.info('Headless: Authenticated.');
+				return fNext();
+			});
+	};
+
+	// Step 4: Fetch schema
+	let fStep4_FetchSchema = (fNext) =>
+	{
+		let tmpSchemaBody = {};
+		if (pConfig.SchemaURL) tmpSchemaBody.SchemaURL = pConfig.SchemaURL;
+
+		_Fable.log.info('Headless: Fetching remote schema...');
+		fPost('/clone/schema/fetch', tmpSchemaBody,
+			(pError, pData) =>
+			{
+				if (pError || !pData || !pData.Success)
+				{
+					_Fable.log.error(`Headless: Schema fetch failed: ${pError || (pData && pData.Error) || 'Unknown error'}`);
+					return process.exit(1);
+				}
+				_Fable.log.info(`Headless: Fetched ${pData.TableCount} tables.`);
+				return fNext();
+			});
+	};
+
+	// Step 5: Deploy tables
+	let fStep5_Deploy = (fNext) =>
+	{
+		let tmpTables = pConfig.Tables || [];
+		_Fable.log.info(`Headless: Deploying ${tmpTables.length > 0 ? tmpTables.length + ' selected' : 'all'} tables...`);
+		fPost('/clone/schema/deploy', { Tables: tmpTables },
+			(pError, pData) =>
+			{
+				if (pError || !pData || !pData.Success)
+				{
+					_Fable.log.error(`Headless: Deploy failed: ${pError || (pData && pData.Error) || 'Unknown error'}`);
+					return process.exit(1);
+				}
+				_Fable.log.info(`Headless: ${pData.Message}`);
+				return fNext();
+			});
+	};
+
+	// Step 6: Start sync
+	let fStep6_Sync = (fNext) =>
+	{
+		let tmpSync = pConfig.Sync || {};
+		let tmpSyncBody = (
+			{
+				Tables: pConfig.Tables || [],
+				SyncMode: tmpSync.Mode || 'Initial',
+				PageSize: tmpSync.PageSize || 100,
+				SyncDeletedRecords: !!tmpSync.SyncDeletedRecords
+			});
+
+		_Fable.log.info(`Headless: Starting ${tmpSyncBody.SyncMode} sync...`);
+		fPost('/clone/sync/start', tmpSyncBody,
+			(pError, pData) =>
+			{
+				if (pError || !pData || !pData.Success)
+				{
+					_Fable.log.error(`Headless: Sync start failed: ${pError || (pData && pData.Error) || 'Unknown error'}`);
+					return process.exit(1);
+				}
+				_Fable.log.info(`Headless: ${pData.Message}`);
+
+				// Poll for completion
+				let fPoll = () =>
+				{
+					fGet('/clone/sync/status',
+						(pPollError, pStatus) =>
+						{
+							if (pPollError)
+							{
+								_Fable.log.error(`Headless: Poll error: ${pPollError}`);
+								return setTimeout(fPoll, 5000);
+							}
+
+							if (pStatus.Running)
+							{
+								// Log a brief progress summary
+								let tmpTables = pStatus.Tables || {};
+								let tmpNames = Object.keys(tmpTables);
+								let tmpActive = tmpNames.filter((n) => tmpTables[n].Status === 'Syncing');
+								let tmpDone = tmpNames.filter((n) => tmpTables[n].Status === 'Complete' || tmpTables[n].Status === 'Error' || tmpTables[n].Status === 'Partial');
+								if (tmpActive.length > 0)
+								{
+									let tmpA = tmpTables[tmpActive[0]];
+									_Fable.log.info(`Headless: [${tmpDone.length}/${tmpNames.length}] Syncing ${tmpActive[0]}: ${tmpA.Synced}/${tmpA.Total}`);
+								}
+								return setTimeout(fPoll, 5000);
+							}
+
+							// Sync finished — report results
+							let tmpTables = pStatus.Tables || {};
+							let tmpNames = Object.keys(tmpTables);
+							let tmpErrors = tmpNames.filter((n) => tmpTables[n].Status === 'Error');
+							let tmpPartial = tmpNames.filter((n) => tmpTables[n].Status === 'Partial');
+							let tmpComplete = tmpNames.filter((n) => tmpTables[n].Status === 'Complete');
+
+							_Fable.log.info(`Headless: Sync finished. ${tmpComplete.length} complete, ${tmpPartial.length} partial, ${tmpErrors.length} errors (out of ${tmpNames.length} tables).`);
+
+							if (tmpErrors.length > 0)
+							{
+								for (let i = 0; i < tmpErrors.length; i++)
+								{
+									let tmpT = tmpTables[tmpErrors[i]];
+									_Fable.log.error(`Headless: FAILED ${tmpErrors[i]}: ${tmpT.ErrorMessage || 'Unknown error'}`);
+								}
+							}
+
+							return fNext();
+						});
+				};
+				setTimeout(fPoll, 3000);
+			});
+	};
+
+	// Execute pipeline
+	fStep1_ConnectDB(() =>
+	{
+		fStep2_ConfigureSession(() =>
+		{
+			fStep3_Authenticate(() =>
+			{
+				fStep4_FetchSchema(() =>
+				{
+					fStep5_Deploy(() =>
+					{
+						fStep6_Sync(() =>
+						{
+							_Fable.log.info('Headless: Pipeline complete. Server remains running for CRUD access.');
+						});
+					});
+				});
+			});
+		});
+	});
+}

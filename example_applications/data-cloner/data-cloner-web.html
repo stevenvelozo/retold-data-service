@@ -384,6 +384,20 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 		</div>
 	</div>
 
+	<div style="margin-bottom:10px">
+		<label style="margin-bottom:6px">Sync Mode</label>
+		<div style="display:flex; gap:16px; align-items:center">
+			<label style="font-weight:normal; margin:0; cursor:pointer">
+				<input type="radio" name="syncMode" id="syncModeInitial" value="Initial" checked> Initial
+				<span style="color:#888; font-size:0.85em">(full clone — download all records)</span>
+			</label>
+			<label style="font-weight:normal; margin:0; cursor:pointer">
+				<input type="radio" name="syncMode" id="syncModeOngoing" value="Ongoing"> Ongoing
+				<span style="color:#888; font-size:0.85em">(delta — only new/updated records since last sync)</span>
+			</label>
+		</div>
+	</div>
+
 	<div class="checkbox-row">
 		<input type="checkbox" id="syncDeletedRecords">
 		<label for="syncDeletedRecords">Sync deleted records (fetch records marked Deleted=1 on source and mirror locally)</label>
@@ -393,9 +407,30 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	<div id="syncProgress"></div>
 </div>
 
-<!-- ======== Section 6: View Data ======== -->
+<!-- ======== Section 6: Export Config ======== -->
 <div class="section">
-	<h2>6. View Data</h2>
+	<h2>6. Export Configuration</h2>
+	<p style="font-size:0.9em; color:#666; margin-bottom:10px">Generate a JSON config file from your current settings. Use it to run headless clones from the command line.</p>
+	<div style="display:flex; gap:8px; margin-bottom:10px">
+		<button class="primary" onclick="generateConfig()">Generate Config</button>
+		<button class="secondary" onclick="copyConfig()">Copy to Clipboard</button>
+		<button class="secondary" onclick="downloadConfig()">Download JSON</button>
+	</div>
+	<div id="configExportStatus"></div>
+	<div id="cliCommand" style="display:none; margin-bottom:10px">
+		<label style="margin-bottom:4px">CLI Command <span style="color:#888; font-weight:normal">(with config file)</span></label>
+		<div style="background:#1a1a1a; color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="copyCLI()" title="Click to copy"></div>
+	</div>
+	<div id="cliOneShot" style="display:none; margin-bottom:10px">
+		<label style="margin-bottom:4px">One-liner <span style="color:#888; font-weight:normal">(no config file needed)</span></label>
+		<div style="background:#1a1a1a; color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer; white-space:pre-wrap" onclick="copyOneShot()" title="Click to copy"></div>
+	</div>
+	<textarea id="configOutput" style="display:none; width:100%; min-height:300px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid #ccc; border-radius:4px; background:#fafafa; tab-size:4; resize:vertical" readonly></textarea>
+</div>
+
+<!-- ======== Section 7: View Data ======== -->
+<div class="section">
+	<h2>7. View Data</h2>
 	<div class="inline-group">
 		<div style="flex:1">
 			<label for="viewTable">Table</label>
@@ -462,6 +497,12 @@ function restoreFields()
 	{
 		document.getElementById('syncDeletedRecords').checked = tmpSyncDeleted === 'true';
 	}
+	// Restore sync mode
+	var tmpSyncMode = localStorage.getItem('dataCloner_syncMode');
+	if (tmpSyncMode === 'Ongoing')
+	{
+		document.getElementById('syncModeOngoing').checked = true;
+	}
 	var tmpSolrSecure = localStorage.getItem('dataCloner_solrSecure');
 	if (tmpSolrSecure !== null)
 	{
@@ -490,6 +531,15 @@ function initPersistence()
 	document.getElementById('syncDeletedRecords').addEventListener('change', function()
 	{
 		localStorage.setItem('dataCloner_syncDeletedRecords', this.checked);
+	});
+
+	// Persist sync mode radio
+	document.querySelectorAll('input[name="syncMode"]').forEach(function(pEl)
+	{
+		pEl.addEventListener('change', function()
+		{
+			localStorage.setItem('dataCloner_syncMode', this.value);
+		});
 	});
 
 	// Persist solr secure checkbox
@@ -549,7 +599,7 @@ function getProviderConfig()
 	}
 	else if (provider === 'MySQL')
 	{
-		config.server = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
+		config.host = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
 		config.port = parseInt(document.getElementById('mysqlPort').value, 10) || 3306;
 		config.user = document.getElementById('mysqlUser').value.trim() || 'root';
 		config.password = document.getElementById('mysqlPassword').value;
@@ -1005,6 +1055,7 @@ function startSync()
 	var selectedTables = getSelectedTables();
 	var pageSize = parseInt(document.getElementById('pageSize').value, 10) || 100;
 	var syncDeletedRecords = document.getElementById('syncDeletedRecords').checked;
+	var syncMode = document.querySelector('input[name="syncMode"]:checked').value;
 
 	if (selectedTables.length === 0)
 	{
@@ -1012,14 +1063,14 @@ function startSync()
 		return;
 	}
 
-	setStatus('syncStatus', 'Starting sync...', 'info');
+	setStatus('syncStatus', 'Starting ' + syncMode.toLowerCase() + ' sync...', 'info');
 
-	api('POST', '/clone/sync/start', { Tables: selectedTables, PageSize: pageSize, SyncDeletedRecords: syncDeletedRecords })
+	api('POST', '/clone/sync/start', { Tables: selectedTables, PageSize: pageSize, SyncDeletedRecords: syncDeletedRecords, SyncMode: syncMode })
 		.then(function(data)
 		{
 			if (data.Success)
 			{
-				var msg = 'Sync started for ' + data.Tables.length + ' tables.';
+				var msg = data.SyncMode + ' sync started for ' + data.Tables.length + ' tables.';
 				if (data.SyncDeletedRecords) msg += ' (including deleted records)';
 				setStatus('syncStatus', msg, 'ok');
 				startPolling();
@@ -1288,6 +1339,178 @@ function escapeHtml(pStr)
 	var div = document.createElement('div');
 	div.appendChild(document.createTextNode(pStr));
 	return div.innerHTML;
+}
+
+// ================================================================
+// Export Config
+// ================================================================
+
+function buildConfigObject()
+{
+	var provider = document.getElementById('connProvider').value;
+	var config = {};
+
+	// ---- Local Database ----
+	config.LocalDatabase = { Provider: provider, Config: {} };
+	var dbConfig = config.LocalDatabase.Config;
+
+	if (provider === 'SQLite')
+	{
+		dbConfig.SQLiteFilePath = document.getElementById('sqliteFilePath').value.trim() || 'data/cloned.sqlite';
+	}
+	else if (provider === 'MySQL')
+	{
+		dbConfig.host = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
+		dbConfig.port = parseInt(document.getElementById('mysqlPort').value, 10) || 3306;
+		dbConfig.user = document.getElementById('mysqlUser').value.trim() || 'root';
+		dbConfig.password = document.getElementById('mysqlPassword').value;
+		dbConfig.database = document.getElementById('mysqlDatabase').value.trim();
+		dbConfig.connectionLimit = parseInt(document.getElementById('mysqlConnectionLimit').value, 10) || 20;
+	}
+	else if (provider === 'MSSQL')
+	{
+		dbConfig.server = document.getElementById('mssqlServer').value.trim() || '127.0.0.1';
+		dbConfig.port = parseInt(document.getElementById('mssqlPort').value, 10) || 1433;
+		dbConfig.user = document.getElementById('mssqlUser').value.trim() || 'sa';
+		dbConfig.password = document.getElementById('mssqlPassword').value;
+		dbConfig.database = document.getElementById('mssqlDatabase').value.trim();
+		dbConfig.connectionLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
+	}
+	else if (provider === 'PostgreSQL')
+	{
+		dbConfig.host = document.getElementById('postgresqlHost').value.trim() || '127.0.0.1';
+		dbConfig.port = parseInt(document.getElementById('postgresqlPort').value, 10) || 5432;
+		dbConfig.user = document.getElementById('postgresqlUser').value.trim() || 'postgres';
+		dbConfig.password = document.getElementById('postgresqlPassword').value;
+		dbConfig.database = document.getElementById('postgresqlDatabase').value.trim();
+		dbConfig.max = parseInt(document.getElementById('postgresqlConnectionLimit').value, 10) || 10;
+	}
+
+	// ---- Remote Session ----
+	config.RemoteSession = {};
+	var serverURL = document.getElementById('serverURL').value.trim();
+	if (serverURL) config.RemoteSession.ServerURL = serverURL;
+
+	var authMethod = document.getElementById('authMethod').value.trim();
+	if (authMethod) config.RemoteSession.AuthenticationMethod = authMethod;
+
+	var authURI = document.getElementById('authURI').value.trim();
+	if (authURI) config.RemoteSession.AuthenticationURITemplate = authURI;
+
+	var checkURI = document.getElementById('checkURI').value.trim();
+	if (checkURI) config.RemoteSession.CheckSessionURITemplate = checkURI;
+
+	var cookieName = document.getElementById('cookieName').value.trim();
+	if (cookieName) config.RemoteSession.CookieName = cookieName;
+
+	var cookieValueAddr = document.getElementById('cookieValueAddr').value.trim();
+	if (cookieValueAddr) config.RemoteSession.CookieValueAddress = cookieValueAddr;
+
+	var cookieValueTemplate = document.getElementById('cookieValueTemplate').value.trim();
+	if (cookieValueTemplate) config.RemoteSession.CookieValueTemplate = cookieValueTemplate;
+
+	var loginMarker = document.getElementById('loginMarker').value.trim();
+	if (loginMarker) config.RemoteSession.CheckSessionLoginMarker = loginMarker;
+
+	// ---- Credentials ----
+	var userName = document.getElementById('userName').value.trim();
+	var password = document.getElementById('password').value;
+	if (userName || password)
+	{
+		config.Credentials = {};
+		if (userName) config.Credentials.UserName = userName;
+		if (password) config.Credentials.Password = password;
+	}
+
+	// ---- Schema ----
+	var schemaURL = document.getElementById('schemaURL').value.trim();
+	if (schemaURL) config.SchemaURL = schemaURL;
+
+	// ---- Tables ----
+	var selectedTables = getSelectedTables();
+	if (selectedTables.length > 0) config.Tables = selectedTables;
+
+	// ---- Sync Options ----
+	config.Sync = {};
+	config.Sync.Mode = document.querySelector('input[name="syncMode"]:checked').value;
+	config.Sync.PageSize = parseInt(document.getElementById('pageSize').value, 10) || 100;
+	config.Sync.SyncDeletedRecords = document.getElementById('syncDeletedRecords').checked;
+
+	return config;
+}
+
+function generateConfig()
+{
+	var config = buildConfigObject();
+	var json = JSON.stringify(config, null, '\t');
+
+	var textarea = document.getElementById('configOutput');
+	textarea.value = json;
+	textarea.style.display = '';
+
+	// Build CLI command (with config file)
+	var cliDiv = document.getElementById('cliCommand');
+	cliDiv.style.display = '';
+	cliDiv.querySelector('div').textContent = 'node data-cloner.js --config clone-config.json --run';
+
+	// Build one-liner (no config file needed) using --config-json
+	var oneShotDiv = document.getElementById('cliOneShot');
+	oneShotDiv.style.display = '';
+	var compactJSON = JSON.stringify(config);
+	// Escape single quotes for shell wrapping
+	var escapedJSON = compactJSON.replace(/'/g, "'\\''");
+	var oneShot = "node data-cloner.js --config-json '" + escapedJSON + "' --run";
+	oneShotDiv.querySelector('div').textContent = oneShot;
+
+	setStatus('configExportStatus', 'Config generated. Save as clone-config.json or copy the one-liner below.', 'ok');
+}
+
+function copyConfig()
+{
+	var textarea = document.getElementById('configOutput');
+	if (!textarea.value)
+	{
+		setStatus('configExportStatus', 'Generate a config first.', 'warn');
+		return;
+	}
+	navigator.clipboard.writeText(textarea.value).then(function()
+	{
+		setStatus('configExportStatus', 'Config copied to clipboard.', 'ok');
+	});
+}
+
+function copyCLI()
+{
+	var cmd = document.getElementById('cliCommand').querySelector('div').textContent;
+	navigator.clipboard.writeText(cmd).then(function()
+	{
+		setStatus('configExportStatus', 'CLI command copied to clipboard.', 'ok');
+	});
+}
+
+function copyOneShot()
+{
+	var cmd = document.getElementById('cliOneShot').querySelector('div').textContent;
+	navigator.clipboard.writeText(cmd).then(function()
+	{
+		setStatus('configExportStatus', 'One-liner copied to clipboard.', 'ok');
+	});
+}
+
+function downloadConfig()
+{
+	var textarea = document.getElementById('configOutput');
+	if (!textarea.value)
+	{
+		generateConfig();
+	}
+	var blob = new Blob([textarea.value], { type: 'application/json' });
+	var a = document.createElement('a');
+	a.href = URL.createObjectURL(blob);
+	a.download = 'clone-config.json';
+	a.click();
+	URL.revokeObjectURL(a.href);
+	setStatus('configExportStatus', 'Config downloaded as clone-config.json.', 'ok');
 }
 
 // ================================================================

@@ -9,11 +9,11 @@
 	"author": "Steven Velozo <steven@velozo.com>",
 	"license": "MIT",
 	"dependencies": {
-		"fable": "^3.0.0",
 		"bibliograph": "^0.1.4",
+		"fable": "^3.0.0",
 		"meadow-connection-mongodb": "^1.0.2",
 		"meadow-connection-mssql": "^1.0.0",
-		"meadow-connection-mysql": "^1.0.0",
+		"meadow-connection-mysql": "file:../../../meadow-connection-mysql",
 		"meadow-connection-postgresql": "^1.0.2",
 		"meadow-connection-rocksdb": "^0.0.2",
 		"meadow-connection-solr": "^1.0.2",
