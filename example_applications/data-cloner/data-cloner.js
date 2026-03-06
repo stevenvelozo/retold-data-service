@@ -899,7 +899,9 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 					{
 						_Fable.serviceManager.instantiateServiceProvider('MeadowCloneRestClient',
 							{
-								ServerURL: _CloneState.RemoteServerURL + '/1.0/'
+								ServerURL: _CloneState.RemoteServerURL + '/1.0/',
+								RequestTimeout: 60000, // 60 seconds for normal requests
+								MaxRequestTimeout: 300000 // 5 minutes for MAX(column) queries
 							});
 					}
 					else
@@ -912,11 +914,12 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 					// RestClient, which already handles cookie injection & domain matching.
 					// Also tracks per-entity REST errors for sync status reporting.
 
-					// Increase the default request timeout for slow remote queries
-					// (Node's https.globalAgent defaults to 5000ms which is too short
-					// for MAX(ID) queries on large tables in old MySQL installations)
+					// Set the global HTTPS agent socket timeout to the longer
+					// MaxRequestTimeout so MAX(column) queries aren't killed at
+					// the socket level.  Per-request timeouts are handled below
+					// by swapping globalAgent.options.timeout before each call.
 					let libHttps = require('https');
-					libHttps.globalAgent.options.timeout = 120000; // 2 minutes
+					libHttps.globalAgent.options.timeout = _Fable.MeadowCloneRestClient.maxRequestTimeout;
 					_Fable.MeadowCloneRestClient.getJSON = (pURL, fCallback) =>
 					{
 						let tmpFullURL = _Fable.MeadowCloneRestClient.serverURL + pURL;
@@ -924,6 +927,14 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 						// Extract the entity name from the URL for error tracking
 						// URLs look like: "Customer/Max/IDCustomer" or "Customers/FilteredTo/..."
 						let tmpEntityHint = pURL.split('/')[0].replace(/s$/, '');
+
+						// Use the longer timeout for MAX(column) queries only;
+						// everything else gets the normal 60-second timeout.
+						let tmpIsMaxRequest = (pURL.indexOf('/Max/') > -1);
+						let tmpPreviousTimeout = libHttps.globalAgent.options.timeout;
+						libHttps.globalAgent.options.timeout = tmpIsMaxRequest
+							? _Fable.MeadowCloneRestClient.maxRequestTimeout
+							: _Fable.MeadowCloneRestClient.requestTimeout;
 
 						_Pict.RestClient.getJSON(tmpFullURL,
 							(pError, pResponse, pBody) =>
@@ -949,7 +960,9 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 										}
 									}
 								}
-								return fCallback(pError, pResponse, pBody);
+								// Restore the previous global timeout for the next request
+							libHttps.globalAgent.options.timeout = tmpPreviousTimeout;
+							return fCallback(pError, pResponse, pBody);
 							});
 					};
 
