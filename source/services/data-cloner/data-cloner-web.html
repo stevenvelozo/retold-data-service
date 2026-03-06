@@ -301,9 +301,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 		<summary style="cursor:pointer; font-size:0.9em; color:#666">Advanced Session Options</summary>
 		<div style="padding:10px 0">
 			<label for="authURI">Authentication URI Template (leave blank for default)</label>
-			<input type="text" id="authURI" placeholder="/1.0/Authenticate/{~D:Record.UserName~}/{~D:Record.Password~}">
+			<input type="text" id="authURI" placeholder="Authenticate/{~D:Record.UserName~}/{~D:Record.Password~}">
 			<label for="checkURI">Check Session URI Template</label>
-			<input type="text" id="checkURI" placeholder="/1.0/CheckSession">
+			<input type="text" id="checkURI" placeholder="CheckSession">
 			<label for="cookieName">Cookie Name</label>
 			<input type="text" id="cookieName" placeholder="SessionID" value="SessionID">
 			<label for="cookieValueAddr">Cookie Value Address</label>
@@ -426,6 +426,21 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 		<div style="background:#1a1a1a; color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer; white-space:pre-wrap" onclick="copyOneShot()" title="Click to copy"></div>
 	</div>
 	<textarea id="configOutput" style="display:none; width:100%; min-height:300px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid #ccc; border-radius:4px; background:#fafafa; tab-size:4; resize:vertical" readonly></textarea>
+
+	<div id="mdwintExport" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid #eee">
+		<h3 style="margin:0 0 8px; font-size:1em">meadow-integration CLI <span style="color:#888; font-weight:normal; font-size:0.85em">(mdwint clone)</span></h3>
+		<p style="font-size:0.85em; color:#666; margin-bottom:8px">Save as <code>.meadow.config.json</code> in your project root, then run the command below. Requires a local Meadow extended schema JSON file.</p>
+		<div style="display:flex; gap:8px; margin-bottom:10px">
+			<button class="secondary" onclick="copyMdwintConfig()">Copy Config</button>
+			<button class="secondary" onclick="downloadMdwintConfig()">Download .meadow.config.json</button>
+		</div>
+		<div id="mdwintCLICommand" style="margin-bottom:10px">
+			<label style="margin-bottom:4px">CLI Command</label>
+			<div style="background:#1a1a1a; color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="copyMdwintCLI()" title="Click to copy"></div>
+		</div>
+		<div id="mdwintConfigStatus"></div>
+		<textarea id="mdwintConfigOutput" style="width:100%; min-height:250px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid #ccc; border-radius:4px; background:#fafafa; tab-size:4; resize:vertical" readonly></textarea>
+	</div>
 </div>
 
 <!-- ======== Section 7: View Data ======== -->
@@ -727,7 +742,7 @@ function configureSession()
 		return;
 	}
 
-	var body = { ServerURL: serverURL };
+	var body = { ServerURL: serverURL.replace(/\/+$/, '') + '/1.0/' };
 
 	var authMethod = document.getElementById('authMethod').value.trim();
 	if (authMethod) body.AuthenticationMethod = authMethod;
@@ -1389,7 +1404,7 @@ function buildConfigObject()
 	// ---- Remote Session ----
 	config.RemoteSession = {};
 	var serverURL = document.getElementById('serverURL').value.trim();
-	if (serverURL) config.RemoteSession.ServerURL = serverURL;
+	if (serverURL) config.RemoteSession.ServerURL = serverURL + '/1.0/';
 
 	var authMethod = document.getElementById('authMethod').value.trim();
 	if (authMethod) config.RemoteSession.AuthenticationMethod = authMethod;
@@ -1439,6 +1454,162 @@ function buildConfigObject()
 	return config;
 }
 
+function buildMeadowIntegrationConfig()
+{
+	var provider = document.getElementById('connProvider').value;
+	var config = {};
+
+	// ---- Source ----
+	var serverURL = document.getElementById('serverURL').value.trim();
+	config.Source = { ServerURL: serverURL ? serverURL + '/1.0/' : 'https://localhost:8080/1.0/' };
+	// When SessionManager handles auth, Source credentials are not needed
+	config.Source.UserID = false;
+	config.Source.Password = false;
+
+	// ---- Destination ----
+	// meadow-integration clone supports MySQL and MSSQL
+	config.Destination = {};
+	if (provider === 'MySQL')
+	{
+		config.Destination.Provider = 'MySQL';
+		config.Destination.MySQL = {};
+		config.Destination.MySQL.server = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
+		config.Destination.MySQL.port = parseInt(document.getElementById('mysqlPort').value, 10) || 3306;
+		config.Destination.MySQL.user = document.getElementById('mysqlUser').value.trim() || 'root';
+		config.Destination.MySQL.password = document.getElementById('mysqlPassword').value || '';
+		config.Destination.MySQL.database = document.getElementById('mysqlDatabase').value.trim() || 'meadow';
+		config.Destination.MySQL.connectionLimit = parseInt(document.getElementById('mysqlConnectionLimit').value, 10) || 20;
+	}
+	else if (provider === 'MSSQL')
+	{
+		config.Destination.Provider = 'MSSQL';
+		config.Destination.MSSQL = {};
+		config.Destination.MSSQL.server = document.getElementById('mssqlServer').value.trim() || '127.0.0.1';
+		config.Destination.MSSQL.port = parseInt(document.getElementById('mssqlPort').value, 10) || 1433;
+		config.Destination.MSSQL.user = document.getElementById('mssqlUser').value.trim() || 'sa';
+		config.Destination.MSSQL.password = document.getElementById('mssqlPassword').value || '';
+		config.Destination.MSSQL.database = document.getElementById('mssqlDatabase').value.trim() || 'meadow';
+		config.Destination.MSSQL.ConnectionPoolLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
+	}
+	else
+	{
+		// Default to MySQL placeholder for unsupported providers
+		config.Destination.Provider = 'MySQL';
+		config.Destination.MySQL = { server: '127.0.0.1', port: 3306, user: 'root', password: '', database: 'meadow', connectionLimit: 20 };
+	}
+
+	// ---- Schema ----
+	var schemaURL = document.getElementById('schemaURL').value.trim();
+	if (schemaURL)
+	{
+		config.SchemaURL = schemaURL;
+	}
+	else
+	{
+		config.SchemaPath = './schema/Model-Extended.json';
+	}
+
+	// ---- Sync ----
+	config.Sync = {};
+	config.Sync.DefaultSyncMode = document.querySelector('input[name="syncMode"]:checked').value;
+	config.Sync.PageSize = parseInt(document.getElementById('pageSize').value, 10) || 100;
+	var selectedTables = getSelectedTables();
+	config.Sync.SyncEntityList = selectedTables.length > 0 ? selectedTables : [];
+	config.Sync.SyncEntityOptions = {};
+
+	// ---- SessionManager ----
+	config.SessionManager = { Sessions: {} };
+
+	var sessionConfig = {};
+	sessionConfig.Type = 'Cookie';
+
+	// Authentication method
+	var authMethod = document.getElementById('authMethod').value.trim() || 'get';
+	sessionConfig.AuthenticationMethod = authMethod;
+
+	// Build the authentication URI template
+	var authURI = document.getElementById('authURI').value.trim();
+	if (authURI)
+	{
+		// If the URI is a relative path, prepend the server URL
+		if (authURI.charAt(0) === '/')
+		{
+			sessionConfig.AuthenticationURITemplate = (serverURL || '') + authURI;
+		}
+		else
+		{
+			sessionConfig.AuthenticationURITemplate = authURI;
+		}
+	}
+	else if (serverURL)
+	{
+		// Default: Meadow-style GET authentication
+		if (authMethod === 'post')
+		{
+			sessionConfig.AuthenticationURITemplate = serverURL + '/1.0/Authenticate';
+			sessionConfig.AuthenticationRequestBody = {
+				UserName: '{~D:Record.UserName~}',
+				Password: '{~D:Record.Password~}'
+			};
+		}
+		else
+		{
+			sessionConfig.AuthenticationURITemplate = serverURL + '/1.0/Authenticate/{~D:Record.UserName~}/{~D:Record.Password~}';
+		}
+	}
+
+	// Check session URI
+	var checkURI = document.getElementById('checkURI').value.trim();
+	if (checkURI)
+	{
+		sessionConfig.CheckSessionURITemplate = checkURI.charAt(0) === '/' ? (serverURL || '') + checkURI : checkURI;
+	}
+	else if (serverURL)
+	{
+		sessionConfig.CheckSessionURITemplate = serverURL + '/1.0/CheckSession';
+	}
+
+	// Login marker
+	var loginMarker = document.getElementById('loginMarker').value.trim();
+	sessionConfig.CheckSessionLoginMarkerType = 'boolean';
+	sessionConfig.CheckSessionLoginMarker = loginMarker || 'LoggedIn';
+
+	// Domain match — extract from server URL for auto-injection
+	if (serverURL)
+	{
+		try
+		{
+			var urlObj = new URL(serverURL);
+			sessionConfig.DomainMatch = urlObj.host;
+		}
+		catch (e)
+		{
+			sessionConfig.DomainMatch = serverURL;
+		}
+	}
+
+	// Cookie injection
+	var cookieName = document.getElementById('cookieName').value.trim();
+	sessionConfig.CookieName = cookieName || 'SessionID';
+
+	var cookieValueAddr = document.getElementById('cookieValueAddr').value.trim();
+	if (cookieValueAddr) sessionConfig.CookieValueAddress = cookieValueAddr;
+
+	var cookieValueTemplate = document.getElementById('cookieValueTemplate').value.trim();
+	if (cookieValueTemplate) sessionConfig.CookieValueTemplate = cookieValueTemplate;
+
+	// Credentials
+	var userName = document.getElementById('userName').value.trim();
+	var password = document.getElementById('password').value;
+	sessionConfig.Credentials = {};
+	if (userName) sessionConfig.Credentials.UserName = userName;
+	if (password) sessionConfig.Credentials.Password = password;
+
+	config.SessionManager.Sessions.SourceAPI = sessionConfig;
+
+	return config;
+}
+
 function generateConfig()
 {
 	var config = buildConfigObject();
@@ -1451,7 +1622,7 @@ function generateConfig()
 	// Build CLI command (with config file)
 	var cliDiv = document.getElementById('cliCommand');
 	cliDiv.style.display = '';
-	cliDiv.querySelector('div').textContent = 'node data-cloner.js --config clone-config.json --run';
+	cliDiv.querySelector('div').textContent = 'node data-cloner.js --config clone-config.json --run --log';
 
 	// Build one-liner (no config file needed) using --config-json
 	var oneShotDiv = document.getElementById('cliOneShot');
@@ -1459,8 +1630,34 @@ function generateConfig()
 	var compactJSON = JSON.stringify(config);
 	// Escape single quotes for shell wrapping
 	var escapedJSON = compactJSON.replace(/'/g, "'\\''");
-	var oneShot = "node data-cloner.js --config-json '" + escapedJSON + "' --run";
+	var oneShot = "node data-cloner.js --config-json '" + escapedJSON + "' --run --log";
 	oneShotDiv.querySelector('div').textContent = oneShot;
+
+	// ---- meadow-integration (mdwint clone) config ----
+	var mdwintConfig = buildMeadowIntegrationConfig();
+	var mdwintJSON = JSON.stringify(mdwintConfig, null, '\t');
+
+	var mdwintDiv = document.getElementById('mdwintExport');
+	mdwintDiv.style.display = '';
+
+	var mdwintTextarea = document.getElementById('mdwintConfigOutput');
+	mdwintTextarea.value = mdwintJSON;
+
+	// Build the mdwint CLI command
+	var mdwintCLI = 'mdwint clone --schema_path ./schema/Model-Extended.json';
+	var mdwintCLIDiv = document.getElementById('mdwintCLICommand');
+	mdwintCLIDiv.querySelector('div').textContent = mdwintCLI;
+
+	// Provider compatibility note
+	var provider = document.getElementById('connProvider').value;
+	if (provider !== 'MySQL' && provider !== 'MSSQL')
+	{
+		setStatus('mdwintConfigStatus', 'Note: mdwint clone only supports MySQL and MSSQL destinations. The config defaults to MySQL; update the Destination section for your target database.', 'warn');
+	}
+	else
+	{
+		setStatus('mdwintConfigStatus', '', '');
+	}
 
 	setStatus('configExportStatus', 'Config generated. Save as clone-config.json or copy the one-liner below.', 'ok');
 }
@@ -1511,6 +1708,45 @@ function downloadConfig()
 	a.click();
 	URL.revokeObjectURL(a.href);
 	setStatus('configExportStatus', 'Config downloaded as clone-config.json.', 'ok');
+}
+
+function copyMdwintConfig()
+{
+	var textarea = document.getElementById('mdwintConfigOutput');
+	if (!textarea.value)
+	{
+		setStatus('mdwintConfigStatus', 'Generate a config first.', 'warn');
+		return;
+	}
+	navigator.clipboard.writeText(textarea.value).then(function()
+	{
+		setStatus('mdwintConfigStatus', '.meadow.config.json copied to clipboard.', 'ok');
+	});
+}
+
+function copyMdwintCLI()
+{
+	var cmd = document.getElementById('mdwintCLICommand').querySelector('div').textContent;
+	navigator.clipboard.writeText(cmd).then(function()
+	{
+		setStatus('mdwintConfigStatus', 'mdwint CLI command copied to clipboard.', 'ok');
+	});
+}
+
+function downloadMdwintConfig()
+{
+	var textarea = document.getElementById('mdwintConfigOutput');
+	if (!textarea.value)
+	{
+		generateConfig();
+	}
+	var blob = new Blob([textarea.value], { type: 'application/json' });
+	var a = document.createElement('a');
+	a.href = URL.createObjectURL(blob);
+	a.download = '.meadow.config.json';
+	a.click();
+	URL.revokeObjectURL(a.href);
+	setStatus('mdwintConfigStatus', 'Config downloaded as .meadow.config.json.', 'ok');
 }
 
 // ================================================================

@@ -16,6 +16,7 @@ const libRetoldDataServiceModelManager = require('./services/Retold-Data-Service
 const libRetoldDataServiceStricture = require('./services/stricture/Retold-Data-Service-Stricture.js');
 const libRetoldDataServiceMeadowIntegration = require('./services/meadow-integration/Retold-Data-Service-MeadowIntegration.js');
 const libRetoldDataServiceMigrationManager = require('./services/migration-manager/Retold-Data-Service-MigrationManager.js');
+const libRetoldDataServiceDataCloner = require('./services/data-cloner/Retold-Data-Service-DataCloner.js');
 
 const defaultDataServiceSettings = (
 	{
@@ -45,7 +46,11 @@ const defaultDataServiceSettings = (
 				// Migration manager API endpoints (/api/*)
 				MigrationManager: false,
 				// Migration manager web UI (GET /, /lib/*)
-				MigrationManagerWebUI: false
+				MigrationManagerWebUI: false,
+				// Data cloner API endpoints (/clone/*)
+				DataCloner: false,
+				// Data cloner web UI (GET /clone/)
+				DataClonerWebUI: false
 			},
 
 		// Migration manager configuration
@@ -55,6 +60,13 @@ const defaultDataServiceSettings = (
 				ModelPath: false,
 				// Route prefix for all migration manager endpoints (API + web UI)
 				RoutePrefix: '/meadow-migrationmanager'
+			},
+
+		// Data cloner configuration
+		DataCloner:
+			{
+				// Route prefix for all data cloner endpoints (API + web UI)
+				RoutePrefix: '/clone'
 			}
 	});
 
@@ -109,6 +121,10 @@ class RetoldDataService extends libFableServiceProviderBase
 		// Register and instantiate the MigrationManager service
 		this.fable.serviceManager.addServiceType('RetoldDataServiceMigrationManager', libRetoldDataServiceMigrationManager);
 		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceMigrationManager');
+
+		// Register and instantiate the DataCloner service
+		this.fable.serviceManager.addServiceType('RetoldDataServiceDataCloner', libRetoldDataServiceDataCloner);
+		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceDataCloner');
 
 		// Expose the DAL and MeadowEndpoints from the service on this object and on fable for backward compatibility
 		this._DAL = this.fable.RetoldDataServiceMeadowEndpoints._DAL;
@@ -203,7 +219,7 @@ class RetoldDataService extends libFableServiceProviderBase
 			this.fable.log.info(`The Retold Data Service is initializing...`);
 
 			// Log endpoint configuration
-			let tmpGroupNames = ['ConnectionManager', 'ModelManagerWrite', 'Stricture', 'MeadowIntegration', 'MeadowEndpoints', 'MigrationManager', 'MigrationManagerWebUI'];
+			let tmpGroupNames = ['ConnectionManager', 'ModelManagerWrite', 'Stricture', 'MeadowIntegration', 'MeadowEndpoints', 'MigrationManager', 'MigrationManagerWebUI', 'DataCloner', 'DataClonerWebUI'];
 			let tmpEnabledGroups = [];
 			let tmpDisabledGroups = [];
 			for (let i = 0; i < tmpGroupNames.length; i++)
@@ -284,6 +300,18 @@ class RetoldDataService extends libFableServiceProviderBase
 					if (this.isEndpointGroupEnabled('MigrationManagerWebUI'))
 					{
 						this.fable.RetoldDataServiceMigrationManager.connectWebUIRoutes(this.fable.OratorServiceServer);
+					}
+
+					// DataCloner API routes (/clone/*)
+					if (this.isEndpointGroupEnabled('DataCloner'))
+					{
+						this.fable.RetoldDataServiceDataCloner.connectRoutes(this.fable.OratorServiceServer);
+					}
+
+					// DataCloner Web UI routes (GET /clone/)
+					if (this.isEndpointGroupEnabled('DataClonerWebUI'))
+					{
+						this.fable.RetoldDataServiceDataCloner.connectWebUIRoutes(this.fable.OratorServiceServer);
 					}
 
 					return fInitCallback();
