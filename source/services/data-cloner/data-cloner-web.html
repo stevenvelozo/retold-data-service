@@ -56,6 +56,24 @@ h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px soli
 .accordion-auto input[type="checkbox"] { width: auto; margin: 0 3px 0 0; cursor: pointer; vertical-align: -1px; }
 .accordion-auto:hover { color: #666; }
 
+/* Phase status indicator — sits between title and preview */
+.accordion-phase {
+	flex: 0 0 auto; display: none; align-items: center; justify-content: center;
+	font-size: 0.85em; line-height: 1;
+}
+.accordion-phase.visible { display: flex; }
+.accordion-phase-ok { color: #28a745; }
+.accordion-phase-error { color: #dc3545; }
+.accordion-phase-busy { color: #28a745; }
+.accordion-phase-busy .phase-spinner {
+	display: inline-block; width: 14px; height: 14px;
+	border: 2px solid #28a745; border-top-color: transparent; border-radius: 50%;
+	animation: phase-spin 0.8s linear infinite; vertical-align: middle;
+}
+@keyframes phase-spin {
+	to { transform: rotate(360deg); }
+}
+
 .accordion-controls {
 	display: flex; gap: 8px; margin-bottom: 12px; justify-content: flex-end;
 }
@@ -208,6 +226,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	<div class="accordion-card" id="section1" data-section="1">
 		<div class="accordion-header" onclick="toggleSection('section1')">
 			<div class="accordion-title">Database Connection</div>
+			<span class="accordion-phase" id="phase1"></span>
 			<div class="accordion-preview" id="preview1">SQLite at data/cloned.sqlite</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); goSection1()">go</span>
@@ -427,6 +446,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	<div class="accordion-card" id="section2" data-section="2">
 		<div class="accordion-header" onclick="toggleSection('section2')">
 			<div class="accordion-title">Remote Session</div>
+			<span class="accordion-phase" id="phase2"></span>
 			<div class="accordion-preview" id="preview2">Configure remote server URL and credentials</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); goSection2()">go</span>
@@ -494,6 +514,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	<div class="accordion-card" id="section3" data-section="3">
 		<div class="accordion-header" onclick="toggleSection('section3')">
 			<div class="accordion-title">Remote Schema</div>
+			<span class="accordion-phase" id="phase3"></span>
 			<div class="accordion-preview" id="preview3">Fetch and select tables from the remote server</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); goSection3()">go</span>
@@ -528,6 +549,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	<div class="accordion-card" id="section4" data-section="4">
 		<div class="accordion-header" onclick="toggleSection('section4')">
 			<div class="accordion-title">Deploy Schema</div>
+			<span class="accordion-phase" id="phase4"></span>
 			<div class="accordion-preview" id="preview4">Create selected tables in the local database</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); goSection4()">go</span>
@@ -550,6 +572,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	<div class="accordion-card" id="section5" data-section="5">
 		<div class="accordion-header" onclick="toggleSection('section5')">
 			<div class="accordion-title">Synchronize Data</div>
+			<span class="accordion-phase" id="phase5"></span>
 			<div class="accordion-preview" id="preview5">Initial sync, page size 100</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); goSection5()">go</span>
@@ -735,6 +758,43 @@ function collapseAllSections()
 	for (var i = 0; i < tmpCards.length; i++)
 	{
 		tmpCards[i].classList.remove('open');
+	}
+}
+
+// ================================================================
+// Phase status indicators — show check / x / spinner on each header
+// ================================================================
+
+/**
+ * Set the phase indicator for a section.
+ * @param {number} pSection — section number (1–5)
+ * @param {string} pState — 'ok' | 'error' | 'busy' | 'none'
+ */
+function setSectionPhase(pSection, pState)
+{
+	var tmpEl = document.getElementById('phase' + pSection);
+	if (!tmpEl) return;
+
+	tmpEl.className = 'accordion-phase';
+
+	if (pState === 'ok')
+	{
+		tmpEl.innerHTML = '&#10003;';
+		tmpEl.classList.add('visible', 'accordion-phase-ok');
+	}
+	else if (pState === 'error')
+	{
+		tmpEl.innerHTML = '&#10007;';
+		tmpEl.classList.add('visible', 'accordion-phase-error');
+	}
+	else if (pState === 'busy')
+	{
+		tmpEl.innerHTML = '<span class="phase-spinner"></span>';
+		tmpEl.classList.add('visible', 'accordion-phase-busy');
+	}
+	else
+	{
+		tmpEl.innerHTML = '';
 	}
 }
 
@@ -925,6 +985,7 @@ function goSection1() { connectProvider(); }
 function goSection2()
 {
 	// Two-step: configure session, then authenticate
+	setSectionPhase(2, 'busy');
 	configureSession();
 	setTimeout(function() { authenticate(); }, 1500);
 }
@@ -948,6 +1009,8 @@ function initAutoProcess()
 			if (pData.Phase === 'syncing' || pData.Phase === 'stopping')
 			{
 				_ServerBusyAtLoad = true;
+				setSectionPhase(5, 'busy');
+				startPolling();
 				return;
 			}
 			runAutoProcessChain();
@@ -1214,6 +1277,7 @@ function connectProvider()
 {
 	var connInfo = getProviderConfig();
 
+	setSectionPhase(1, 'busy');
 	setStatus('connectionStatus', 'Connecting to ' + connInfo.Provider + '...', 'info');
 
 	api('POST', '/clone/connection/configure', connInfo)
@@ -1222,15 +1286,18 @@ function connectProvider()
 			if (data.Success)
 			{
 				setStatus('connectionStatus', data.Message, 'ok');
+				setSectionPhase(1, 'ok');
 			}
 			else
 			{
 				setStatus('connectionStatus', 'Connection failed: ' + (data.Error || 'Unknown error'), 'error');
+				setSectionPhase(1, 'error');
 			}
 		})
 		.catch(function(err)
 		{
 			setStatus('connectionStatus', 'Request failed: ' + err.message, 'error');
+			setSectionPhase(1, 'error');
 		});
 }
 
@@ -1266,6 +1333,7 @@ function checkConnectionStatus()
 			if (data.Connected)
 			{
 				setStatus('connectionStatus', 'Connected: ' + data.Provider, 'ok');
+				setSectionPhase(1, 'ok');
 			}
 		})
 		.catch(function() { /* ignore */ });
@@ -1335,9 +1403,11 @@ function authenticate()
 	if (!userName || !password)
 	{
 		setStatus('sessionAuthStatus', 'Username and password are required.', 'error');
+		setSectionPhase(2, 'error');
 		return;
 	}
 
+	setSectionPhase(2, 'busy');
 	setStatus('sessionAuthStatus', 'Authenticating...', 'info');
 
 	api('POST', '/clone/session/authenticate', { UserName: userName, Password: password })
@@ -1346,15 +1416,18 @@ function authenticate()
 			if (data.Success && data.Authenticated)
 			{
 				setStatus('sessionAuthStatus', 'Authenticated successfully.', 'ok');
+				setSectionPhase(2, 'ok');
 			}
 			else
 			{
 				setStatus('sessionAuthStatus', 'Authentication failed: ' + (data.Error || 'Not authenticated'), 'error');
+				setSectionPhase(2, 'error');
 			}
 		})
 		.catch(function(err)
 		{
 			setStatus('sessionAuthStatus', 'Request failed: ' + err.message, 'error');
+			setSectionPhase(2, 'error');
 		});
 }
 
@@ -1409,6 +1482,7 @@ function fetchSchema()
 	var body = {};
 	if (schemaURL) body.SchemaURL = schemaURL;
 
+	setSectionPhase(3, 'busy');
 	setStatus('schemaStatus', 'Fetching schema...', 'info');
 
 	api('POST', '/clone/schema/fetch', body)
@@ -1418,16 +1492,19 @@ function fetchSchema()
 			{
 				_FetchedTables = data.Tables || [];
 				setStatus('schemaStatus', 'Fetched ' + data.TableCount + ' tables from ' + data.SchemaURL, 'ok');
+				setSectionPhase(3, 'ok');
 				renderTableList();
 			}
 			else
 			{
 				setStatus('schemaStatus', 'Fetch failed: ' + (data.Error || 'Unknown error'), 'error');
+				setSectionPhase(3, 'error');
 			}
 		})
 		.catch(function(err)
 		{
 			setStatus('schemaStatus', 'Request failed: ' + err.message, 'error');
+			setSectionPhase(3, 'error');
 		});
 }
 
@@ -1547,9 +1624,11 @@ function deploySchema()
 	if (selectedTables.length === 0)
 	{
 		setStatus('deployStatus', 'No tables selected. Fetch a schema and select tables first.', 'error');
+		setSectionPhase(4, 'error');
 		return;
 	}
 
+	setSectionPhase(4, 'busy');
 	setStatus('deployStatus', 'Deploying ' + selectedTables.length + ' tables...', 'info');
 
 	api('POST', '/clone/schema/deploy', { Tables: selectedTables })
@@ -1558,6 +1637,7 @@ function deploySchema()
 			if (data.Success)
 			{
 				setStatus('deployStatus', data.Message, 'ok');
+				setSectionPhase(4, 'ok');
 				_DeployedTables = data.TablesDeployed || selectedTables;
 				saveDeployedTables();
 				populateViewTableDropdown();
@@ -1566,11 +1646,13 @@ function deploySchema()
 			else
 			{
 				setStatus('deployStatus', 'Deploy failed: ' + (data.Error || 'Unknown error'), 'error');
+				setSectionPhase(4, 'error');
 			}
 		})
 		.catch(function(err)
 		{
 			setStatus('deployStatus', 'Request failed: ' + err.message, 'error');
+			setSectionPhase(4, 'error');
 		});
 }
 
@@ -1621,9 +1703,11 @@ function startSync()
 	if (selectedTables.length === 0)
 	{
 		setStatus('syncStatus', 'No tables selected for sync.', 'error');
+		setSectionPhase(5, 'error');
 		return;
 	}
 
+	setSectionPhase(5, 'busy');
 	setStatus('syncStatus', 'Starting ' + syncMode.toLowerCase() + ' sync...', 'info');
 
 	api('POST', '/clone/sync/start', { Tables: selectedTables, PageSize: pageSize, DateTimePrecisionMS: dateTimePrecisionMS, SyncDeletedRecords: syncDeletedRecords, SyncMode: syncMode })
@@ -1639,11 +1723,13 @@ function startSync()
 			else
 			{
 				setStatus('syncStatus', 'Sync start failed: ' + (data.Error || 'Unknown error'), 'error');
+				setSectionPhase(5, 'error');
 			}
 		})
 		.catch(function(err)
 		{
 			setStatus('syncStatus', 'Request failed: ' + err.message, 'error');
+			setSectionPhase(5, 'error');
 		});
 }
 
@@ -1702,14 +1788,17 @@ function pollSyncStatus()
 					if (hasErrors)
 					{
 						setStatus('syncStatus', 'Sync finished with errors. Check the table below for details.', 'error');
+						setSectionPhase(5, 'error');
 					}
 					else if (hasPartial)
 					{
 						setStatus('syncStatus', 'Sync finished. Some records were skipped (GUID conflicts or permission issues).', 'warn');
+						setSectionPhase(5, 'ok');
 					}
 					else
 					{
 						setStatus('syncStatus', 'Sync complete.', 'ok');
+						setSectionPhase(5, 'ok');
 					}
 
 					// Fetch the structured report
@@ -2599,7 +2688,6 @@ function restoreDeployedTables()
 initPersistence();
 onProviderChange();
 restoreDeployedTables();
-checkConnectionStatus();
 startLiveStatusPolling();
 
 // Accordion — start collapsed, wire previews, generate initial preview text
