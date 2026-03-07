@@ -1,0 +1,9 @@
+{
+	"Name": "Retold Data Cloner",
+	"Hash": "DataCloner",
+	"MainViewportViewIdentifier": "DataCloner-Layout",
+	"MainViewportDestinationAddress": "#DataCloner-Application-Container",
+	"MainViewportDefaultDataAddress": "AppData.DataCloner",
+	"pict_configuration": { "Product": "DataCloner" },
+	"AutoRenderMainViewportViewAfterInitialize": false
+}
