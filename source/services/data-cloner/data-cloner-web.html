@@ -53,7 +53,10 @@ h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px soli
 .accordion-auto {
 	font-size: 0.82em; color: #999; white-space: nowrap; cursor: pointer;
 }
-.accordion-auto input[type="checkbox"] { width: auto; margin: 0 3px 0 0; cursor: pointer; vertical-align: -1px; }
+.accordion-auto .auto-label { display: none; }
+.accordion-auto:hover .auto-label { display: inline; }
+.accordion-auto input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; vertical-align: middle; position: relative; top: 0px; opacity: 0.75; transition: opacity 0.15s; }
+.accordion-auto:hover input[type="checkbox"] { opacity: 1; }
 .accordion-auto:hover { color: #666; }
 
 /* Phase status indicator — sits between title and preview */
@@ -230,7 +233,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<div class="accordion-preview" id="preview1">SQLite at data/cloned.sqlite</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); goSection1()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> auto</label>
+				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
@@ -450,7 +453,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<div class="accordion-preview" id="preview2">Configure remote server URL and credentials</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); goSection2()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto2"> auto</label>
+				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto2"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
@@ -518,7 +521,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<div class="accordion-preview" id="preview3">Fetch and select tables from the remote server</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); goSection3()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto3"> auto</label>
+				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto3"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
@@ -553,7 +556,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<div class="accordion-preview" id="preview4">Create selected tables in the local database</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); goSection4()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto4"> auto</label>
+				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto4"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
@@ -576,7 +579,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<div class="accordion-preview" id="preview5">Initial sync, page size 100</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); goSection5()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto5"> auto</label>
+				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto5"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>

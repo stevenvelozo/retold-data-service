@@ -238,16 +238,10 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 			return fCallback();
 		};
 
-		// Update the DataCloner clone state with the SQLite connection info
+		// SQLite is available but don't presume it's the user's desired provider.
+		// The web UI will connect via the auto chain or manual "go" click.
 		tmpDataService.onAfterInitialize = (fCallback) =>
 		{
-			let tmpClonerService = _Fable.RetoldDataServiceDataCloner;
-			if (tmpClonerService)
-			{
-				tmpClonerService.cloneState.ConnectionProvider = 'SQLite';
-				tmpClonerService.cloneState.ConnectionConnected = true;
-				tmpClonerService.cloneState.ConnectionConfig = _Settings.SQLite;
-			}
 			return fCallback();
 		};
 
