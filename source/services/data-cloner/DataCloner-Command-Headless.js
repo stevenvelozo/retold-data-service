@@ -250,7 +250,8 @@ module.exports = (pDataClonerService, pConfig, pCLIOptions, fCallback) =>
 				SyncMode: tmpSync.Mode || 'Initial',
 				PageSize: tmpSync.PageSize || 100,
 				SyncDeletedRecords: !!tmpSync.SyncDeletedRecords,
-				MaxRecordsPerEntity: tmpMaxRecords || tmpSync.MaxRecordsPerEntity || 0
+				MaxRecordsPerEntity: tmpMaxRecords || tmpSync.MaxRecordsPerEntity || 0,
+				DateTimePrecisionMS: tmpSync.DateTimePrecisionMS
 			});
 
 		tmpFable.log.info(`Headless: Starting ${tmpSyncBody.SyncMode} sync...`);
@@ -290,25 +291,42 @@ module.exports = (pDataClonerService, pConfig, pCLIOptions, fCallback) =>
 								return setTimeout(fPoll, 5000);
 							}
 
-							// Sync finished — report results
-							let tmpTables = pStatus.Tables || {};
-							let tmpNames = Object.keys(tmpTables);
-							let tmpErrors = tmpNames.filter((n) => tmpTables[n].Status === 'Error');
-							let tmpPartial = tmpNames.filter((n) => tmpTables[n].Status === 'Partial');
-							let tmpComplete = tmpNames.filter((n) => tmpTables[n].Status === 'Complete');
-
-							tmpFable.log.info(`Headless: Sync finished. ${tmpComplete.length} complete, ${tmpPartial.length} partial, ${tmpErrors.length} errors (out of ${tmpNames.length} tables).`);
-
-							if (tmpErrors.length > 0)
-							{
-								for (let i = 0; i < tmpErrors.length; i++)
+							// Sync finished — fetch and write structured report
+							fGet(`${tmpPrefix}/sync/report`,
+								(pReportError, pReport) =>
 								{
-									let tmpT = tmpTables[tmpErrors[i]];
-									tmpFable.log.error(`Headless: FAILED ${tmpErrors[i]}: ${tmpT.ErrorMessage || 'Unknown error'}`);
-								}
-							}
+									if (!pReportError && pReport && pReport.ReportVersion)
+									{
+										// Write report JSON file
+										let tmpReportPath = (pCLIOptions && pCLIOptions.reportPath) || null;
 
-							return fNext();
+										// Auto-derive from log path if not explicitly set
+										if (!tmpReportPath && pCLIOptions && pCLIOptions.logPath)
+										{
+											let tmpLogBase = pCLIOptions.logPath.replace(/\.log$/, '');
+											tmpReportPath = `${tmpLogBase}-report.json`;
+										}
+
+										if (tmpReportPath)
+										{
+											try
+											{
+												libFs.writeFileSync(tmpReportPath, JSON.stringify(pReport, null, '\t'), 'utf8');
+												tmpFable.log.info(`Headless: Report written to ${tmpReportPath}`);
+											}
+											catch (pWriteError)
+											{
+												tmpFable.log.error(`Headless: Failed to write report: ${pWriteError.message}`);
+											}
+										}
+									}
+									else
+									{
+										tmpFable.log.warn(`Headless: Could not fetch sync report: ${pReportError || 'No report available'}`);
+									}
+
+									return fNext();
+								});
 						});
 				};
 				setTimeout(fPoll, 3000);

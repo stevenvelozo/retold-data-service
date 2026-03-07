@@ -32,6 +32,7 @@ let _CLIRunHeadless = false;
 let _CLILogPath = null;
 let _CLIMaxRecords = 0;
 let _CLISchemaPath = null;
+let _CLIReportPath = null;
 
 for (let i = 2; i < process.argv.length; i++)
 {
@@ -96,6 +97,18 @@ for (let i = 2; i < process.argv.length; i++)
 		_CLISchemaPath = libPath.resolve(process.argv[i + 1]);
 		i++;
 	}
+	else if (process.argv[i] === '--report')
+	{
+		if (process.argv[i + 1] && !process.argv[i + 1].startsWith('-'))
+		{
+			_CLIReportPath = libPath.resolve(process.argv[i + 1]);
+			i++;
+		}
+		else
+		{
+			_CLIReportPath = `${process.cwd()}/DataCloner-Report-${libFable.generateFileNameDateStamp()}.json`;
+		}
+	}
 	else if (process.argv[i] === '--help' || process.argv[i] === '-h')
 	{
 		console.log(`
@@ -114,6 +127,7 @@ Options:
   --log, -l [path]         Write log output to a file (default: ./DataCloner-Run-<timestamp>.log)
   --max, -m <n>            Limit sync to first n records per entity (for testing)
   --schema, -s <path>      Path to a local schema JSON file (skip remote schema fetch)
+  --report [path]          Write sync report JSON file (default: auto-named; auto-enabled with --log)
   --help, -h               Show this help
 `);
 		process.exit(0);
@@ -212,7 +226,8 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 						MigrationManager: true,
 						MigrationManagerWebUI: true,
 						DataCloner: true,
-						DataClonerWebUI: true
+						DataClonerWebUI: true,
+						IntegrationTelemetry: true
 					}
 			});
 
@@ -260,7 +275,8 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 							logPath: _CLILogPath,
 							maxRecords: _CLIMaxRecords,
 							schemaPath: _CLISchemaPath,
-							serverPort: _Settings.APIServerPort
+							serverPort: _Settings.APIServerPort,
+							reportPath: _CLIReportPath
 						},
 						(pPipelineError) =>
 						{

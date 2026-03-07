@@ -17,6 +17,7 @@ const libRetoldDataServiceStricture = require('./services/stricture/Retold-Data-
 const libRetoldDataServiceMeadowIntegration = require('./services/meadow-integration/Retold-Data-Service-MeadowIntegration.js');
 const libRetoldDataServiceMigrationManager = require('./services/migration-manager/Retold-Data-Service-MigrationManager.js');
 const libRetoldDataServiceDataCloner = require('./services/data-cloner/Retold-Data-Service-DataCloner.js');
+const libRetoldDataServiceIntegrationTelemetry = require('./services/integration-telemetry/Retold-Data-Service-IntegrationTelemetry.js');
 
 const defaultDataServiceSettings = (
 	{
@@ -50,7 +51,9 @@ const defaultDataServiceSettings = (
 				// Data cloner API endpoints (/clone/*)
 				DataCloner: false,
 				// Data cloner web UI (GET /clone/)
-				DataClonerWebUI: false
+				DataClonerWebUI: false,
+				// Integration telemetry API endpoints (/telemetry/*)
+				IntegrationTelemetry: false
 			},
 
 		// Migration manager configuration
@@ -67,6 +70,15 @@ const defaultDataServiceSettings = (
 			{
 				// Route prefix for all data cloner endpoints (API + web UI)
 				RoutePrefix: '/clone'
+			},
+
+		// Integration telemetry configuration
+		IntegrationTelemetry:
+			{
+				// Route prefix for all telemetry endpoints
+				RoutePrefix: '/telemetry',
+				// Default tenant identifier when none is provided
+				DefaultTenantID: 'default'
 			}
 	});
 
@@ -125,6 +137,10 @@ class RetoldDataService extends libFableServiceProviderBase
 		// Register and instantiate the DataCloner service
 		this.fable.serviceManager.addServiceType('RetoldDataServiceDataCloner', libRetoldDataServiceDataCloner);
 		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceDataCloner');
+
+		// Register and instantiate the IntegrationTelemetry service
+		this.fable.serviceManager.addServiceType('RetoldDataServiceIntegrationTelemetry', libRetoldDataServiceIntegrationTelemetry);
+		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceIntegrationTelemetry');
 
 		// Expose the DAL and MeadowEndpoints from the service on this object and on fable for backward compatibility
 		this._DAL = this.fable.RetoldDataServiceMeadowEndpoints._DAL;
@@ -219,7 +235,7 @@ class RetoldDataService extends libFableServiceProviderBase
 			this.fable.log.info(`The Retold Data Service is initializing...`);
 
 			// Log endpoint configuration
-			let tmpGroupNames = ['ConnectionManager', 'ModelManagerWrite', 'Stricture', 'MeadowIntegration', 'MeadowEndpoints', 'MigrationManager', 'MigrationManagerWebUI', 'DataCloner', 'DataClonerWebUI'];
+			let tmpGroupNames = ['ConnectionManager', 'ModelManagerWrite', 'Stricture', 'MeadowIntegration', 'MeadowEndpoints', 'MigrationManager', 'MigrationManagerWebUI', 'DataCloner', 'DataClonerWebUI', 'IntegrationTelemetry'];
 			let tmpEnabledGroups = [];
 			let tmpDisabledGroups = [];
 			for (let i = 0; i < tmpGroupNames.length; i++)
@@ -312,6 +328,12 @@ class RetoldDataService extends libFableServiceProviderBase
 					if (this.isEndpointGroupEnabled('DataClonerWebUI'))
 					{
 						this.fable.RetoldDataServiceDataCloner.connectWebUIRoutes(this.fable.OratorServiceServer);
+					}
+
+					// IntegrationTelemetry API routes (/telemetry/*)
+					if (this.isEndpointGroupEnabled('IntegrationTelemetry'))
+					{
+						this.fable.RetoldDataServiceIntegrationTelemetry.connectRoutes(this.fable.OratorServiceServer);
 					}
 
 					return fInitCallback();

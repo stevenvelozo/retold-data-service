@@ -1,0 +1,11 @@
+{
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "data-cloner",
+			"runtimeExecutable": "node",
+			"runtimeArgs": ["bin/retold-data-service-clone.js"],
+			"port": 8095
+		}
+	]
+}

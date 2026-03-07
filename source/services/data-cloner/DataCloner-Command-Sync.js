@@ -61,6 +61,21 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 				}
 			}
 
+			// Update DateTimePrecisionMS on MeadowSync and all sync entities
+			if (tmpBody.hasOwnProperty('DateTimePrecisionMS'))
+			{
+				let tmpPrecision = parseInt(tmpBody.DateTimePrecisionMS, 10);
+				if (!isNaN(tmpPrecision))
+				{
+					tmpFable.MeadowSync.DateTimePrecisionMS = tmpPrecision;
+					let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
+					for (let i = 0; i < tmpEntityNames.length; i++)
+					{
+						tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].DateTimePrecisionMS = tmpPrecision;
+					}
+				}
+			}
+
 			// If no tables specified, sync all entities
 			if (tmpSelectedTables.length === 0)
 			{
@@ -191,6 +206,217 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 			return fNext();
 		});
 
+	// GET /clone/sync/live-status
+	// Returns a human-readable narrative of what the data cloner is doing right now.
+	pOratorServiceServer.get(`${tmpPrefix}/sync/live-status`,
+		(pRequest, pResponse, fNext) =>
+		{
+			let fFormatNumber = (pNum) =>
+			{
+				return pNum.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+			};
+
+			let fFormatDuration = (pMs) =>
+			{
+				let tmpSeconds = Math.floor(pMs / 1000);
+				if (tmpSeconds < 60) return `${tmpSeconds}s`;
+				let tmpMin = Math.floor(tmpSeconds / 60);
+				let tmpSec = tmpSeconds % 60;
+				if (tmpMin < 60) return `${tmpMin}m ${tmpSec}s`;
+				let tmpHr = Math.floor(tmpMin / 60);
+				tmpMin = tmpMin % 60;
+				return `${tmpHr}h ${tmpMin}m`;
+			};
+
+			// Determine overall phase
+			let tmpPhase = 'idle';
+			let tmpMessage = 'Idle';
+			let tmpActiveEntity = null;
+			let tmpActiveProgress = null;
+			let tmpCompleted = [];
+			let tmpPending = [];
+			let tmpErrors = [];
+			let tmpTotalSynced = 0;
+			let tmpTotalRecords = 0;
+			let tmpElapsed = null;
+
+			if (!tmpCloneState.ConnectionConnected)
+			{
+				tmpPhase = 'disconnected';
+				tmpMessage = 'No database connected';
+			}
+			else if (!tmpCloneState.SessionAuthenticated && !tmpCloneState.SessionConfigured)
+			{
+				tmpPhase = 'idle';
+				tmpMessage = `Connected to ${tmpCloneState.ConnectionProvider} — waiting for remote session configuration`;
+			}
+			else if (tmpCloneState.SessionConfigured && !tmpCloneState.SessionAuthenticated)
+			{
+				tmpPhase = 'idle';
+				tmpMessage = `Connected to ${tmpCloneState.ConnectionProvider} — waiting for authentication`;
+			}
+			else if (tmpCloneState.SyncStopping)
+			{
+				tmpPhase = 'stopping';
+				tmpMessage = 'Stopping sync...';
+			}
+			else if (tmpCloneState.SyncRunning)
+			{
+				tmpPhase = 'syncing';
+
+				// Update progress from MeadowSync operation trackers (same as /sync/status)
+				if (tmpFable.MeadowSync && tmpFable.MeadowSync.MeadowSyncEntities)
+				{
+					let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
+					for (let i = 0; i < tmpEntityNames.length; i++)
+					{
+						let tmpEntityName = tmpEntityNames[i];
+						let tmpProgress = tmpCloneState.SyncProgress[tmpEntityName];
+						if (tmpProgress && (tmpProgress.Status === 'Syncing' || tmpProgress.Status === 'Pending'))
+						{
+							let tmpSyncEntity = tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityName];
+							if (tmpSyncEntity && tmpSyncEntity.operation)
+							{
+								let tmpTracker = tmpSyncEntity.operation.progressTrackers[`FullSync-${tmpEntityName}`];
+								if (tmpTracker)
+								{
+									tmpProgress.Total = tmpTracker.TotalCount || 0;
+									tmpProgress.Synced = Math.max(tmpTracker.CurrentCount || 0, 0);
+								}
+							}
+							let tmpRESTErrors = tmpCloneState.SyncRESTErrors[tmpEntityName] || 0;
+							if (tmpRESTErrors > 0)
+							{
+								tmpProgress.Errors = tmpRESTErrors;
+							}
+						}
+					}
+				}
+
+				// Categorize tables
+				let tmpTableNames = Object.keys(tmpCloneState.SyncProgress);
+				for (let i = 0; i < tmpTableNames.length; i++)
+				{
+					let tmpName = tmpTableNames[i];
+					let tmpP = tmpCloneState.SyncProgress[tmpName];
+					tmpTotalSynced += (tmpP.Synced || 0);
+					tmpTotalRecords += (tmpP.Total || 0);
+
+					if (tmpP.Status === 'Syncing')
+					{
+						tmpActiveEntity = tmpName;
+						tmpActiveProgress = tmpP;
+					}
+					else if (tmpP.Status === 'Complete' || tmpP.Status === 'Partial')
+					{
+						tmpCompleted.push({ Name: tmpName, Synced: tmpP.Synced || 0, Total: tmpP.Total || 0, Status: tmpP.Status });
+					}
+					else if (tmpP.Status === 'Error')
+					{
+						tmpErrors.push({ Name: tmpName, Error: tmpP.ErrorMessage || 'Unknown error' });
+					}
+					else if (tmpP.Status === 'Pending')
+					{
+						tmpPending.push(tmpName);
+					}
+				}
+
+				// Build elapsed time
+				if (tmpCloneState.SyncStartTime)
+				{
+					tmpElapsed = fFormatDuration(Date.now() - new Date(tmpCloneState.SyncStartTime).getTime());
+				}
+
+				// Build the narrative
+				let tmpParts = [];
+
+				if (tmpActiveEntity && tmpActiveProgress)
+				{
+					let tmpRecordProgress = '';
+					if (tmpActiveProgress.Total > 0)
+					{
+						tmpRecordProgress = ` — record ${fFormatNumber(tmpActiveProgress.Synced)} / ${fFormatNumber(tmpActiveProgress.Total)}`;
+					}
+					else
+					{
+						tmpRecordProgress = ' — counting records...';
+					}
+					tmpParts.push(`${tmpCloneState.SyncMode} sync: ${tmpActiveEntity}${tmpRecordProgress}`);
+				}
+				else
+				{
+					tmpParts.push(`${tmpCloneState.SyncMode} sync in progress`);
+				}
+
+				// Summarize completed tables
+				if (tmpCompleted.length > 0)
+				{
+					// Show a few completed entities by name, then summarize the rest
+					let tmpCompletedSummary = [];
+					let tmpShowCount = Math.min(3, tmpCompleted.length);
+					// Show the most recently completed (last in the list)
+					for (let i = tmpCompleted.length - tmpShowCount; i < tmpCompleted.length; i++)
+					{
+						let tmpC = tmpCompleted[i];
+						tmpCompletedSummary.push(`${tmpC.Name} (${fFormatNumber(tmpC.Synced)})`);
+					}
+					let tmpCompletedStr = tmpCompletedSummary.join(', ');
+					if (tmpCompleted.length > tmpShowCount)
+					{
+						tmpCompletedStr = `${tmpCompleted.length - tmpShowCount} others, ` + tmpCompletedStr;
+					}
+					tmpParts.push(`Synced: ${tmpCompletedStr}`);
+				}
+
+				if (tmpPending.length > 0)
+				{
+					tmpParts.push(`${tmpPending.length} table${tmpPending.length === 1 ? '' : 's'} remaining`);
+				}
+
+				if (tmpErrors.length > 0)
+				{
+					tmpParts.push(`${tmpErrors.length} error${tmpErrors.length === 1 ? '' : 's'}`);
+				}
+
+				tmpMessage = tmpParts.join('. ') + '.';
+			}
+			else if (tmpCloneState.SyncReport)
+			{
+				// Sync finished — show summary
+				tmpPhase = 'complete';
+				let tmpR = tmpCloneState.SyncReport;
+				tmpMessage = `Sync ${tmpR.Outcome.toLowerCase()}: ${fFormatNumber(tmpR.Summary.TotalSynced)} records across ${tmpR.Summary.TotalTables} tables`;
+				if (tmpR.RunTimestamps && tmpR.RunTimestamps.DurationSeconds)
+				{
+					tmpMessage += ` in ${fFormatDuration(tmpR.RunTimestamps.DurationSeconds * 1000)}`;
+				}
+				tmpTotalSynced = tmpR.Summary.TotalSynced;
+				tmpTotalRecords = tmpR.Summary.TotalRecords;
+			}
+			else if (tmpCloneState.SessionAuthenticated)
+			{
+				tmpPhase = 'ready';
+				tmpMessage = `Connected to ${tmpCloneState.ConnectionProvider}, authenticated to ${tmpCloneState.RemoteServerURL || 'remote'} — ready to sync`;
+			}
+
+			pResponse.send(200,
+				{
+					Phase: tmpPhase,
+					Message: tmpMessage,
+					ActiveEntity: tmpActiveEntity,
+					ActiveProgress: tmpActiveProgress ? { Synced: tmpActiveProgress.Synced, Total: tmpActiveProgress.Total } : null,
+					Completed: tmpCompleted.length,
+					Pending: tmpPending.length,
+					Errors: tmpErrors.length,
+					TotalTables: tmpCompleted.length + tmpPending.length + tmpErrors.length + (tmpActiveEntity ? 1 : 0),
+					TotalSynced: tmpTotalSynced,
+					TotalRecords: tmpTotalRecords,
+					Elapsed: tmpElapsed,
+					SyncMode: tmpCloneState.SyncMode
+				});
+			return fNext();
+		});
+
 	// POST /clone/sync/stop
 	pOratorServiceServer.post(`${tmpPrefix}/sync/stop`,
 		(pRequest, pResponse, fNext) =>
@@ -202,6 +428,21 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 			}
 
 			pResponse.send(200, { Success: true, Message: 'Sync stop requested.' });
+			return fNext();
+		});
+
+	// GET /clone/sync/report
+	pOratorServiceServer.get(`${tmpPrefix}/sync/report`,
+		(pRequest, pResponse, fNext) =>
+		{
+			if (tmpCloneState.SyncReport)
+			{
+				pResponse.send(200, tmpCloneState.SyncReport);
+			}
+			else
+			{
+				pResponse.send(200, { Success: false, Error: 'No report available. Run a sync first.' });
+			}
 			return fNext();
 		});
 };

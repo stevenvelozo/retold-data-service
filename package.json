@@ -1,6 +1,6 @@
 {
     "name": "retold-data-service",
-    "version": "2.0.14",
+    "version": "2.0.15",
     "description": "Serve up a whole model!",
     "main": "source/Retold-Data-Service.js",
     "bin": {
@@ -60,6 +60,7 @@
         "supertest": "^7.2.2"
     },
     "dependencies": {
+        "bibliograph": "^0.1.4",
         "fable": "^3.1.63",
         "fable-serviceproviderbase": "^3.0.19",
         "meadow": "^2.0.31",
@@ -68,7 +69,7 @@
         "orator": "^6.0.4",
         "orator-http-proxy": "^1.0.5",
         "orator-serviceserver-restify": "^2.0.9",
-        "meadow-integration": "^1.0.13",
+        "meadow-integration": "^1.0.14",
         "meadow-migrationmanager": "^0.0.4",
         "orator-static-server": "^2.0.4",
         "pict": "^1.0.357",
