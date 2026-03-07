@@ -239,6 +239,7 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 			let tmpTotalSynced = 0;
 			let tmpTotalRecords = 0;
 			let tmpElapsed = null;
+			let tmpETA = null;
 
 			if (!tmpCloneState.ConnectionConnected)
 			{
@@ -263,6 +264,33 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 			else if (tmpCloneState.SyncRunning)
 			{
 				tmpPhase = 'syncing';
+
+				// Check for pre-count phase
+				if (tmpCloneState.SyncPhase === 'counting')
+				{
+					let tmpPC = tmpCloneState.PreCountProgress || { Counted: 0, TotalTables: 0 };
+					tmpMessage = `Analyzing tables: counted ${tmpPC.Counted} / ${tmpPC.TotalTables}...`;
+
+					pResponse.send(200,
+						{
+							Phase: tmpPhase,
+							Message: tmpMessage,
+							ActiveEntity: null,
+							ActiveProgress: null,
+							Completed: 0,
+							Pending: tmpPC.TotalTables,
+							Errors: 0,
+							TotalTables: tmpPC.TotalTables,
+							TotalSynced: 0,
+							TotalRecords: 0,
+							Elapsed: null,
+							SyncMode: tmpCloneState.SyncMode,
+							ETA: null,
+							PreCountGrandTotal: 0,
+							PreCountProgress: tmpPC
+						});
+					return fNext();
+				}
 
 				// Update progress from MeadowSync operation trackers (same as /sync/status)
 				if (tmpFable.MeadowSync && tmpFable.MeadowSync.MeadowSyncEntities)
@@ -321,10 +349,23 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 					}
 				}
 
-				// Build elapsed time
+				// Build elapsed time and ETA
 				if (tmpCloneState.SyncStartTime)
 				{
-					tmpElapsed = fFormatDuration(Date.now() - new Date(tmpCloneState.SyncStartTime).getTime());
+					let tmpElapsedMs = Date.now() - new Date(tmpCloneState.SyncStartTime).getTime();
+					tmpElapsed = fFormatDuration(tmpElapsedMs);
+
+					// Compute ETA using pre-counted grand total (or running total) and records synced so far
+					let tmpETATotalRecords = tmpCloneState.PreCountGrandTotal || tmpTotalRecords;
+					if (tmpETATotalRecords > 0 && tmpTotalSynced > 0 && tmpElapsedMs > 5000)
+					{
+						let tmpRate = tmpTotalSynced / tmpElapsedMs; // records per ms
+						let tmpRemaining = tmpETATotalRecords - tmpTotalSynced;
+						if (tmpRate > 0 && tmpRemaining > 0)
+						{
+							tmpETA = fFormatDuration(tmpRemaining / tmpRate);
+						}
+					}
 				}
 
 				// Build the narrative
@@ -412,7 +453,9 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 					TotalSynced: tmpTotalSynced,
 					TotalRecords: tmpTotalRecords,
 					Elapsed: tmpElapsed,
-					SyncMode: tmpCloneState.SyncMode
+					SyncMode: tmpCloneState.SyncMode,
+					ETA: tmpETA,
+					PreCountGrandTotal: tmpCloneState.PreCountGrandTotal || 0
 				});
 			return fNext();
 		});

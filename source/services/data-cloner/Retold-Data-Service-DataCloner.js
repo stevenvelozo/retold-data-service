@@ -60,9 +60,14 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 				// Sync progress
 				SyncRunning: false,
 				SyncStopping: false,
+				SyncPhase: null,
 				SyncProgress: {},
 				SyncDeletedRecords: false,
 				SyncMode: 'Initial',
+
+				// Pre-count phase
+				PreCountProgress: null,
+				PreCountGrandTotal: 0,
 
 				// Per-table REST error counters
 				SyncRESTErrors: {},
@@ -509,6 +514,58 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 	}
 
 	/**
+	 * Pre-count phase — fetch record counts for all tables in parallel
+	 * before starting the actual sync. Populates SyncProgress[table].Total
+	 * and PreCountGrandTotal so the UI can show accurate overall progress.
+	 *
+	 * @param {Array<string>} pTables - Table names to count
+	 * @param {Function} fCallback - Called when counting is complete
+	 */
+	preCountTables(pTables, fCallback)
+	{
+		this._cloneState.SyncPhase = 'counting';
+		this._cloneState.PreCountProgress = { Counted: 0, TotalTables: pTables.length };
+		this._cloneState.PreCountGrandTotal = 0;
+
+		this.fable.log.info(`Data Cloner: Pre-counting records for ${pTables.length} tables...`);
+		this.logSyncEvent('PreCountStart', `Pre-counting ${pTables.length} tables`);
+
+		this.fable.Utility.eachLimit(pTables, 5,
+			(pTableName, fNext) =>
+			{
+				if (this._cloneState.SyncStopping)
+				{
+					return fNext();
+				}
+
+				let tmpCountURL = `${pTableName}s/Count`;
+				this.fable.MeadowCloneRestClient.getJSON(tmpCountURL,
+					(pError, pResponse, pBody) =>
+					{
+						let tmpCount = 0;
+						if (!pError && pBody && pBody.Count)
+						{
+							tmpCount = pBody.Count;
+						}
+						if (this._cloneState.SyncProgress[pTableName])
+						{
+							this._cloneState.SyncProgress[pTableName].Total = tmpCount;
+						}
+						this._cloneState.PreCountProgress.Counted++;
+						this._cloneState.PreCountGrandTotal += tmpCount;
+						return fNext();
+					});
+			},
+			(pError) =>
+			{
+				this._cloneState.SyncPhase = 'syncing';
+				this.fable.log.info(`Data Cloner: Pre-count complete — ${this._cloneState.PreCountGrandTotal} records across ${pTables.length} tables`);
+				this.logSyncEvent('PreCountComplete', `Pre-count: ${this._cloneState.PreCountGrandTotal} records across ${pTables.length} tables`);
+				return fCallback();
+			});
+	}
+
+	/**
 	 * The sync engine — synchronize data for a list of tables sequentially.
 	 *
 	 * @param {Array<string>} pTables - Table names to sync
@@ -637,7 +694,12 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 				});
 		};
 
-		fSyncNextTable();
+		// Pre-count all tables in parallel, then begin sequential sync
+		this.preCountTables(pTables,
+			() =>
+			{
+				fSyncNextTable();
+			});
 	}
 
 	// ================================================================

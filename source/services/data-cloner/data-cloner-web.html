@@ -2499,6 +2499,10 @@ function renderLiveStatus(pData)
 		{
 			tmpMetaParts.push('<span class="live-status-meta-item">\u23F1 ' + pData.Elapsed + '</span>');
 		}
+		if (pData.ETA)
+		{
+			tmpMetaParts.push('<span class="live-status-meta-item">~' + pData.ETA + ' remaining</span>');
+		}
 		if (pData.TotalTables > 0)
 		{
 			tmpMetaParts.push('<span class="live-status-meta-item"><strong>' + pData.Completed + '</strong> / ' + pData.TotalTables + ' tables</span>');
@@ -2506,7 +2510,24 @@ function renderLiveStatus(pData)
 		if (pData.TotalSynced > 0)
 		{
 			var tmpSynced = pData.TotalSynced.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-			tmpMetaParts.push('<span class="live-status-meta-item"><strong>' + tmpSynced + '</strong> records</span>');
+			if (pData.PreCountGrandTotal > 0)
+			{
+				var tmpGrandTotal = pData.PreCountGrandTotal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+				tmpMetaParts.push('<span class="live-status-meta-item"><strong>' + tmpSynced + '</strong> / ' + tmpGrandTotal + ' records</span>');
+			}
+			else
+			{
+				tmpMetaParts.push('<span class="live-status-meta-item"><strong>' + tmpSynced + '</strong> records</span>');
+			}
+		}
+		else if (pData.PreCountGrandTotal > 0)
+		{
+			var tmpGrandTotal = pData.PreCountGrandTotal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+			tmpMetaParts.push('<span class="live-status-meta-item">' + tmpGrandTotal + ' records to sync</span>');
+		}
+		if (pData.PreCountProgress && pData.PreCountProgress.Counted < pData.PreCountProgress.TotalTables)
+		{
+			tmpMetaParts.push('<span class="live-status-meta-item">counting: ' + pData.PreCountProgress.Counted + ' / ' + pData.PreCountProgress.TotalTables + '</span>');
 		}
 		if (pData.Errors > 0)
 		{
@@ -2525,9 +2546,14 @@ function renderLiveStatus(pData)
 
 	// Update progress bar
 	var tmpPct = 0;
-	if (pData.Phase === 'syncing' && pData.TotalTables > 0)
+	if (pData.Phase === 'syncing' && pData.PreCountGrandTotal > 0 && pData.TotalSynced > 0)
 	{
-		// Progress is based on completed tables + current entity progress
+		// Record-level progress using pre-counted grand total
+		tmpPct = Math.min((pData.TotalSynced / pData.PreCountGrandTotal) * 100, 99.9);
+	}
+	else if (pData.Phase === 'syncing' && pData.TotalTables > 0)
+	{
+		// Fallback: table-level progress + current entity progress
 		var tmpTablePct = (pData.Completed / pData.TotalTables) * 100;
 		if (pData.ActiveProgress && pData.ActiveProgress.Total > 0)
 		{
