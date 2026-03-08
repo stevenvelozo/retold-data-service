@@ -45,6 +45,37 @@ class DataClonerLayoutView extends libPictView
 			tmpCards[i].classList.remove('open');
 		}
 	}
+
+	toggleStatusDetail()
+	{
+		let tmpDetail = document.getElementById('liveStatusDetail');
+		let tmpMeta = document.getElementById('liveStatusMeta');
+		let tmpMessage = document.getElementById('liveStatusMessage');
+		let tmpToggle = document.getElementById('liveStatusToggle');
+		let tmpBar = document.getElementById('liveStatusBar');
+		if (!tmpDetail) return;
+
+		let tmpIsExpanded = tmpDetail.style.display !== 'none';
+
+		if (tmpIsExpanded)
+		{
+			tmpDetail.style.display = 'none';
+			tmpMeta.style.display = '';
+			tmpMessage.style.display = '';
+			tmpToggle.innerHTML = '&#9660;';
+			tmpBar.classList.remove('expanded');
+			this.pict.providers.DataCloner.onStatusDetailCollapsed();
+		}
+		else
+		{
+			tmpDetail.style.display = '';
+			tmpMeta.style.display = 'none';
+			tmpMessage.style.display = 'none';
+			tmpToggle.innerHTML = '&#9650;';
+			tmpBar.classList.add('expanded');
+			this.pict.providers.DataCloner.onStatusDetailExpanded();
+		}
+	}
 }
 
 module.exports = DataClonerLayoutView;
@@ -178,8 +209,8 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 
 /* Live Status Bar */
 .live-status-bar {
-	background: #fff; border-radius: 8px; padding: 14px 20px; margin-bottom: 16px;
-	box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 14px;
+	background: #fff; border-radius: 8px; margin-bottom: 16px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 	position: sticky; top: 0; z-index: 100; border-left: 4px solid #6c757d;
 }
 .live-status-bar.phase-idle { border-left-color: #6c757d; }
@@ -226,6 +257,88 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 .live-status-progress-fill {
 	height: 100%; background: #28a745; transition: width 1s ease;
 }
+/* Expandable status bar */
+.live-status-header {
+	display: flex; align-items: center; gap: 14px; cursor: pointer;
+	padding: 14px 20px; user-select: none;
+}
+.live-status-bar.expanded .live-status-header {
+	border-bottom: 1px solid #e9ecef; padding-bottom: 10px;
+}
+.live-status-expand-toggle {
+	flex: 0 0 20px; display: flex; align-items: center; justify-content: center;
+	font-size: 0.7em; color: #888; transition: transform 0.25s;
+}
+.live-status-bar.expanded .live-status-expand-toggle { transform: rotate(180deg); }
+
+.live-status-detail {
+	padding: 12px 20px 16px; max-height: 60vh; overflow-y: auto;
+}
+
+/* Status Detail Sections */
+.status-detail-section { margin-bottom: 14px; }
+.status-detail-section:last-child { margin-bottom: 0; }
+.status-detail-section-title {
+	font-size: 0.85em; font-weight: 600; color: #555; text-transform: uppercase;
+	letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 4px;
+	border-bottom: 1px solid #eee;
+}
+
+/* Running Operations */
+.running-op-row {
+	display: flex; align-items: center; gap: 12px; padding: 6px 0;
+	font-size: 0.9em;
+}
+.running-op-name { font-weight: 600; min-width: 180px; }
+.running-op-bar {
+	flex: 1; height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden;
+	min-width: 120px;
+}
+.running-op-bar-fill { height: 100%; background: #4a90d9; transition: width 0.5s ease; }
+.running-op-count { font-size: 0.85em; color: #666; white-space: nowrap; }
+.running-op-pending { color: #888; font-size: 0.85em; font-style: italic; padding: 4px 0; }
+
+/* Completed Operations */
+.completed-op-row { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.completed-op-row:last-child { border-bottom: none; }
+.completed-op-header {
+	display: flex; align-items: center; gap: 10px; font-size: 0.9em; margin-bottom: 4px;
+}
+.completed-op-name { font-weight: 600; }
+.completed-op-stats { color: #666; font-size: 0.85em; }
+.completed-op-checkmark { color: #28a745; }
+
+/* Ratio Bar */
+.ratio-bar-container {
+	display: flex; height: 10px; border-radius: 5px; overflow: hidden;
+	background: #e9ecef; margin: 4px 0;
+}
+.ratio-bar-segment { height: 100%; transition: width 0.5s ease; }
+.ratio-bar-segment.unchanged { background: #6c757d; }
+.ratio-bar-segment.new-records { background: #28a745; }
+.ratio-bar-segment.updated { background: #4a90d9; }
+.ratio-bar-segment.deleted { background: #dc3545; }
+.ratio-bar-legend {
+	display: flex; gap: 12px; font-size: 0.75em; color: #666; margin-top: 2px; flex-wrap: wrap;
+}
+.ratio-bar-legend-item { display: flex; align-items: center; gap: 4px; }
+.ratio-bar-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ratio-bar-legend-dot.unchanged-dot { background: #6c757d; }
+.ratio-bar-legend-dot.new-dot { background: #28a745; }
+.ratio-bar-legend-dot.updated-dot { background: #4a90d9; }
+.ratio-bar-legend-dot.deleted-dot { background: #dc3545; }
+
+/* Error Operations */
+.error-op-row { padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9em; }
+.error-op-row:last-child { border-bottom: none; }
+.error-op-header { display: flex; align-items: center; gap: 8px; }
+.error-op-name { font-weight: 600; color: #dc3545; }
+.error-op-status { font-size: 0.82em; color: #dc3545; }
+.error-op-message { font-size: 0.82em; color: #888; margin-top: 2px; padding-left: 18px; }
+.error-op-log-entries {
+	font-size: 0.78em; color: #888; margin-top: 4px; padding-left: 18px;
+	font-family: monospace; max-height: 80px; overflow-y: auto;
+}
 `,
 	Templates:
 	[
@@ -234,11 +347,18 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			Template: /*html*/`
 <h1>Retold Data Cloner</h1>
 
-<!-- Live Status Bar -->
+<!-- Live Status Bar (Expandable) -->
 <div id="liveStatusBar" class="live-status-bar phase-idle" style="position:relative">
-	<div class="live-status-dot"></div>
-	<div class="live-status-message" id="liveStatusMessage">Idle</div>
-	<div class="live-status-meta" id="liveStatusMeta"></div>
+	<div class="live-status-header" onclick="pict.views['DataCloner-Layout'].toggleStatusDetail()">
+		<div class="live-status-dot"></div>
+		<div class="live-status-message" id="liveStatusMessage">Idle</div>
+		<div class="live-status-meta" id="liveStatusMeta"></div>
+		<div class="live-status-expand-toggle" id="liveStatusToggle">&#9660;</div>
+	</div>
+	<div class="live-status-detail" id="liveStatusDetail" style="display:none">
+		<div id="DataCloner-Throughput-Histogram"></div>
+		<div id="DataCloner-StatusDetail-Container"></div>
+	</div>
 	<div class="live-status-progress-bar"><div class="live-status-progress-fill" id="liveStatusProgressFill" style="width:0%"></div></div>
 </div>
 

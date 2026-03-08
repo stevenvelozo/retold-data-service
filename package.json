@@ -7,7 +7,7 @@
         "retold-data-service-clone": "bin/retold-data-service-clone.js"
     },
     "scripts": {
-        "start": "node source/Retold-Data-Service.js",
+        "start": "node bin/retold-data-service-clone.js",
         "coverage": "npx quack coverage",
         "test": "npx quack test",
         "build": "npx quack build",
@@ -19,9 +19,13 @@
         "docker-service-build": "docker build ./ -f Dockerfile_Service -t retold-data-service-server-image:local",
         "docker-service-run-test": "docker run -it --init -d --name retold-data-service -p 8086:8086 -p 43306:3306 -v \"$(pwd):/retold-data-service:z\" -u \"$(id -u):$(id -g)\" retold-data-service-server-image:local",
         "docker-service-run": "docker run -it --init -d --name retold-data-service -p 8086:8086 -p 43306:3306 -v \"$(pwd):/retold-data-service:z\" retold-data-service-server-image:local",
-        "docker-service-shell": "docker exec -it retold-data-service /bin/bash"
+        "docker-service-shell": "docker exec -it retold-data-service /bin/bash",
+        "test:integration": "node test/run-integration-tests.js",
+        "test:integration:no-browser": "node test/run-integration-tests.js --skip-puppeteer",
+        "test:all": "npx quack test && node test/run-integration-tests.js --skip-puppeteer"
     },
     "mocha": {
+        "spec": "test/RetoldDataService_tests.js",
         "diff": true,
         "extension": [
             "js"
@@ -56,6 +60,7 @@
     "homepage": "https://github.com/stevenvelozo/retold-data-service",
     "devDependencies": {
         "meadow-connection-sqlite": "^1.0.18",
+        "puppeteer": "^24.38.0",
         "quackage": "^1.0.63",
         "stricture": "^4.0.2",
         "supertest": "^7.2.2"
@@ -64,16 +69,17 @@
         "bibliograph": "^0.1.4",
         "fable": "^3.1.63",
         "fable-serviceproviderbase": "^3.0.19",
-        "meadow": "^2.0.31",
+        "meadow": "^2.0.33",
         "meadow-connection-mysql": "^1.0.14",
         "meadow-endpoints": "^4.0.14",
+        "meadow-integration": "^1.0.14",
+        "meadow-migrationmanager": "^0.0.4",
         "orator": "^6.0.4",
         "orator-http-proxy": "^1.0.5",
         "orator-serviceserver-restify": "^2.0.9",
-        "meadow-integration": "^1.0.14",
-        "meadow-migrationmanager": "^0.0.4",
         "orator-static-server": "^2.0.4",
         "pict": "^1.0.357",
+        "pict-section-histogram": "^1.0.0",
         "pict-sessionmanager": "^1.0.2",
         "stricture": "^4.0.2"
     }

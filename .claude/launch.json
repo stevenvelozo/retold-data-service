@@ -3,8 +3,8 @@
 	"configurations": [
 		{
 			"name": "data-cloner",
-			"runtimeExecutable": "node",
-			"runtimeArgs": ["bin/retold-data-service-clone.js"],
+			"runtimeExecutable": "npm",
+			"runtimeArgs": ["start"],
 			"port": 8095
 		}
 	]

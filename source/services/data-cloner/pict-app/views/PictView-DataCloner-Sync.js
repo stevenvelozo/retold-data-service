@@ -15,6 +15,8 @@ class DataClonerSyncView extends libPictView
 		if (isNaN(tmpDateTimePrecisionMS)) tmpDateTimePrecisionMS = 1000;
 		let tmpSyncDeletedRecords = document.getElementById('syncDeletedRecords').checked;
 		let tmpSyncMode = document.querySelector('input[name="syncMode"]:checked').value;
+		let tmpMaxRecords = parseInt(document.getElementById('syncMaxRecords').value, 10) || 0;
+		let tmpLogToFile = document.getElementById('syncLogFile').checked;
 
 		if (tmpSelectedTables.length === 0)
 		{
@@ -27,7 +29,10 @@ class DataClonerSyncView extends libPictView
 		this.pict.providers.DataCloner.setStatus('syncStatus', 'Starting ' + tmpSyncMode.toLowerCase() + ' sync...', 'info');
 
 		let tmpSelf = this;
-		this.pict.providers.DataCloner.api('POST', '/clone/sync/start', { Tables: tmpSelectedTables, PageSize: tmpPageSize, DateTimePrecisionMS: tmpDateTimePrecisionMS, SyncDeletedRecords: tmpSyncDeletedRecords, SyncMode: tmpSyncMode })
+		let tmpPostBody = { Tables: tmpSelectedTables, PageSize: tmpPageSize, DateTimePrecisionMS: tmpDateTimePrecisionMS, SyncDeletedRecords: tmpSyncDeletedRecords, SyncMode: tmpSyncMode };
+		if (tmpMaxRecords > 0) tmpPostBody.MaxRecordsPerEntity = tmpMaxRecords;
+		if (tmpLogToFile) tmpPostBody.LogToFile = true;
+		this.pict.providers.DataCloner.api('POST', '/clone/sync/start', tmpPostBody)
 			.then(function(pData)
 			{
 				if (pData.Success)
@@ -285,58 +290,151 @@ class DataClonerSyncView extends libPictView
 			return;
 		}
 
-		let tmpHtml = '<table class="progress-table">';
-		tmpHtml += '<tr><th>Table</th><th>Status</th><th>Progress</th><th>Synced</th><th>Details</th></tr>';
+		// Categorize tables into sections, preserving original order for pending
+		let tmpSyncing = [];
+		let tmpPending = [];
+		let tmpCompleted = [];
+		let tmpErrors = [];
 
 		for (let i = 0; i < tmpTableNames.length; i++)
 		{
 			let tmpName = tmpTableNames[i];
 			let tmpTable = tmpTables[tmpName];
 
-			// Calculate percentage: if total is 0, show 100% (nothing to sync)
+			if (tmpTable.Status === 'Syncing')
+			{
+				tmpSyncing.push({ Name: tmpName, Data: tmpTable });
+			}
+			else if (tmpTable.Status === 'Pending')
+			{
+				tmpPending.push({ Name: tmpName, Data: tmpTable });
+			}
+			else if (tmpTable.Status === 'Complete')
+			{
+				tmpCompleted.push({ Name: tmpName, Data: tmpTable });
+			}
+			else
+			{
+				// Error, Partial, or anything else
+				tmpErrors.push({ Name: tmpName, Data: tmpTable });
+			}
+		}
+
+		let tmpHtml = '';
+		let tmpSelf = this;
+		let fRenderRow = (pName, pTable) =>
+		{
+			// Calculate percentage
 			let tmpPct = 0;
-			if (tmpTable.Total === 0 && (tmpTable.Status === 'Complete' || tmpTable.Status === 'Error'))
+			if (pTable.Total === 0 && (pTable.Status === 'Complete' || pTable.Status === 'Error'))
 			{
 				tmpPct = 100;
 			}
-			else if (tmpTable.Total > 0)
+			else if (pTable.Total > 0)
 			{
-				tmpPct = Math.round((tmpTable.Synced / tmpTable.Total) * 100);
+				tmpPct = Math.round((pTable.Synced / pTable.Total) * 100);
 			}
 
 			// Color the progress bar based on status
 			let tmpBarColor = '#28a745'; // green
-			if (tmpTable.Status === 'Error') tmpBarColor = '#dc3545'; // red
-			else if (tmpTable.Status === 'Partial') tmpBarColor = '#ffc107'; // yellow
-			else if (tmpTable.Status === 'Syncing') tmpBarColor = '#4a90d9'; // blue
+			if (pTable.Status === 'Error') tmpBarColor = '#dc3545';
+			else if (pTable.Status === 'Partial') tmpBarColor = '#ffc107';
+			else if (pTable.Status === 'Syncing') tmpBarColor = '#4a90d9';
+			else if (pTable.Status === 'Pending') tmpBarColor = '#adb5bd';
 
 			// Status badge
-			let tmpStatusBadge = tmpTable.Status;
-			if (tmpTable.Status === 'Complete' && tmpTable.Total === 0) tmpStatusBadge = 'Complete (empty)';
-			if (tmpTable.Status === 'Partial') tmpStatusBadge = 'Partial \u26A0';
-			if (tmpTable.Status === 'Error') tmpStatusBadge = 'Error \u2716';
+			let tmpStatusBadge = pTable.Status;
+			if (pTable.Status === 'Complete' && pTable.Total === 0) tmpStatusBadge = 'Complete (empty)';
+			if (pTable.Status === 'Partial') tmpStatusBadge = 'Partial \u26A0';
+			if (pTable.Status === 'Error') tmpStatusBadge = 'Error \u2716';
 
 			// Details column
 			let tmpDetails = '';
-			if (tmpTable.ErrorMessage) tmpDetails = tmpTable.ErrorMessage;
-			else if (tmpTable.Skipped > 0) tmpDetails = tmpTable.Skipped + ' record(s) skipped';
-			else if ((tmpTable.Errors || 0) > 0) tmpDetails = tmpTable.Errors + ' error(s)';
-			else if (tmpTable.Status === 'Complete' && tmpTable.Total === 0) tmpDetails = 'No records on server';
-			else if (tmpTable.Status === 'Complete') tmpDetails = '\u2714 OK';
+			if (pTable.ErrorMessage) tmpDetails = pTable.ErrorMessage;
+			else if (pTable.Skipped > 0) tmpDetails = pTable.Skipped + ' record(s) skipped';
+			else if ((pTable.Errors || 0) > 0) tmpDetails = pTable.Errors + ' error(s)';
+			else if (pTable.Status === 'Complete' && pTable.Total === 0) tmpDetails = 'No records on server';
+			else if (pTable.Status === 'Complete') tmpDetails = '\u2714 OK';
 
-			tmpHtml += '<tr>';
-			tmpHtml += '<td><strong>' + tmpName + '</strong></td>';
-			tmpHtml += '<td>' + tmpStatusBadge + '</td>';
-			tmpHtml += '<td>';
-			tmpHtml += '<div class="progress-bar-container"><div class="progress-bar-fill" style="width:' + tmpPct + '%; background:' + tmpBarColor + '"></div></div>';
-			tmpHtml += ' ' + tmpPct + '%';
-			tmpHtml += '</td>';
-			tmpHtml += '<td>' + tmpTable.Synced + ' / ' + tmpTable.Total + '</td>';
-			tmpHtml += '<td>' + tmpDetails + '</td>';
-			tmpHtml += '</tr>';
+			let tmpRow = '<tr>';
+			tmpRow += '<td><strong>' + pName + '</strong></td>';
+			tmpRow += '<td>' + tmpStatusBadge + '</td>';
+			tmpRow += '<td>';
+			tmpRow += '<div class="progress-bar-container"><div class="progress-bar-fill" style="width:' + tmpPct + '%; background:' + tmpBarColor + '"></div></div>';
+			tmpRow += ' ' + tmpPct + '%';
+			tmpRow += '</td>';
+			tmpRow += '<td>' + pTable.Synced + ' / ' + pTable.Total + '</td>';
+			tmpRow += '<td>' + tmpDetails + '</td>';
+			tmpRow += '</tr>';
+			return tmpRow;
+		};
+
+		// === SYNCING — currently active ===
+		if (tmpSyncing.length > 0)
+		{
+			tmpHtml += '<div class="sync-section-header">Syncing</div>';
+			tmpHtml += '<table class="progress-table">';
+			tmpHtml += '<tr><th>Table</th><th>Status</th><th>Progress</th><th>Synced</th><th>Details</th></tr>';
+			for (let i = 0; i < tmpSyncing.length; i++)
+			{
+				tmpHtml += fRenderRow(tmpSyncing[i].Name, tmpSyncing[i].Data);
+			}
+			tmpHtml += '</table>';
 		}
 
-		tmpHtml += '</table>';
+		// === NEXT UP — pending tables in queue order ===
+		if (tmpPending.length > 0)
+		{
+			tmpHtml += '<div class="sync-section-header">Next Up <span class="sync-section-count">' + tmpPending.length + '</span></div>';
+			// Show at most 8 upcoming; collapse the rest
+			let tmpShowCount = Math.min(8, tmpPending.length);
+			tmpHtml += '<table class="progress-table progress-table-muted">';
+			for (let i = 0; i < tmpShowCount; i++)
+			{
+				tmpHtml += '<tr><td>' + tmpPending[i].Name + '</td>';
+				if (tmpPending[i].Data.Total > 0)
+				{
+					tmpHtml += '<td class="sync-pending-count">' + tmpPending[i].Data.Total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' records</td>';
+				}
+				else
+				{
+					tmpHtml += '<td class="sync-pending-count">—</td>';
+				}
+				tmpHtml += '</tr>';
+			}
+			tmpHtml += '</table>';
+			if (tmpPending.length > tmpShowCount)
+			{
+				tmpHtml += '<div class="sync-section-overflow">+ ' + (tmpPending.length - tmpShowCount) + ' more table' + (tmpPending.length - tmpShowCount === 1 ? '' : 's') + '</div>';
+			}
+		}
+
+		// === ERRORS — failed or partial ===
+		if (tmpErrors.length > 0)
+		{
+			tmpHtml += '<div class="sync-section-header sync-section-header-error">Errors <span class="sync-section-count">' + tmpErrors.length + '</span></div>';
+			tmpHtml += '<table class="progress-table">';
+			tmpHtml += '<tr><th>Table</th><th>Status</th><th>Progress</th><th>Synced</th><th>Details</th></tr>';
+			for (let i = 0; i < tmpErrors.length; i++)
+			{
+				tmpHtml += fRenderRow(tmpErrors[i].Name, tmpErrors[i].Data);
+			}
+			tmpHtml += '</table>';
+		}
+
+		// === COMPLETED — successful tables ===
+		if (tmpCompleted.length > 0)
+		{
+			tmpHtml += '<div class="sync-section-header sync-section-header-ok">Completed <span class="sync-section-count">' + tmpCompleted.length + '</span></div>';
+			tmpHtml += '<table class="progress-table">';
+			tmpHtml += '<tr><th>Table</th><th>Status</th><th>Progress</th><th>Synced</th><th>Details</th></tr>';
+			for (let i = 0; i < tmpCompleted.length; i++)
+			{
+				tmpHtml += fRenderRow(tmpCompleted[i].Name, tmpCompleted[i].Data);
+			}
+			tmpHtml += '</table>';
+		}
+
 		tmpContainer.innerHTML = tmpHtml;
 	}
 }
@@ -349,11 +447,19 @@ module.exports.default_configuration =
 	DefaultRenderable: 'DataCloner-Sync',
 	DefaultDestinationAddress: '#DataCloner-Section-Sync',
 	CSS: /*css*/`
-.progress-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.progress-table { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 4px; }
 .progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; }
 .progress-table th { background: #f8f9fa; font-weight: 600; }
+.progress-table-muted td { color: #888; padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
 .progress-bar-container { width: 120px; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
 .progress-bar-fill { height: 100%; background: #28a745; transition: width 0.3s; }
+.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid #e0e0e0; }
+.sync-section-header:first-child { border-top: none; margin-top: 10px; }
+.sync-section-header-error { color: #dc3545; }
+.sync-section-header-ok { color: #28a745; }
+.sync-section-count { font-weight: 400; color: #999; font-size: 0.95em; }
+.sync-section-overflow { font-size: 0.8em; color: #aaa; padding: 2px 12px 6px; }
+.sync-pending-count { text-align: right; color: #aaa; font-size: 0.85em; }
 .report-card { background: #f8f9fa; border-radius: 8px; padding: 12px 16px; min-width: 140px; text-align: center; border: 1px solid #e9ecef; }
 .report-card .card-label { font-size: 0.8em; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .report-card .card-value { font-size: 1.4em; font-weight: 700; }
@@ -414,6 +520,19 @@ module.exports.default_configuration =
 			<div class="checkbox-row">
 				<input type="checkbox" id="syncDeletedRecords">
 				<label for="syncDeletedRecords">Sync deleted records (fetch records marked Deleted=1 on source and mirror locally)</label>
+			</div>
+
+			<div class="inline-group" style="margin-top:8px; margin-bottom:4px">
+				<div style="flex:0 0 200px">
+					<label for="syncMaxRecords">Max Records per Entity</label>
+					<input type="number" id="syncMaxRecords" value="" min="0" placeholder="0 = unlimited" style="margin-bottom:0">
+				</div>
+				<div style="flex:0 0 auto; display:flex; align-items:flex-end; padding-bottom:2px">
+					<div class="checkbox-row" style="margin-bottom:0">
+						<input type="checkbox" id="syncLogFile" checked>
+						<label for="syncLogFile">Write log file</label>
+					</div>
+				</div>
 			</div>
 
 			<div id="syncStatus"></div>

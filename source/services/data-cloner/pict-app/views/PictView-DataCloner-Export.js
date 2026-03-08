@@ -99,7 +99,7 @@ class DataClonerExportView extends libPictView
 		tmpConfig.Sync.SyncDeletedRecords = document.getElementById('syncDeletedRecords').checked;
 		let tmpPrecision = parseInt(document.getElementById('dateTimePrecisionMS').value, 10);
 		if (!isNaN(tmpPrecision) && tmpPrecision !== 1000) tmpConfig.Sync.DateTimePrecisionMS = tmpPrecision;
-		let tmpMaxRecords = parseInt(document.getElementById('exportMaxRecords').value, 10);
+		let tmpMaxRecords = parseInt(document.getElementById('syncMaxRecords').value, 10);
 		if (tmpMaxRecords > 0) tmpConfig.Sync.MaxRecords = tmpMaxRecords;
 
 		return tmpConfig;
@@ -273,9 +273,9 @@ class DataClonerExportView extends libPictView
 		tmpTextarea.style.display = '';
 
 		// Build CLI flags from export options
-		let tmpLogFlag = document.getElementById('exportLogFile').checked ? ' --log' : '';
+		let tmpLogFlag = document.getElementById('syncLogFile').checked ? ' --log' : '';
 		let tmpMaxFlag = '';
-		let tmpExportMax = parseInt(document.getElementById('exportMaxRecords').value, 10);
+		let tmpExportMax = parseInt(document.getElementById('syncMaxRecords').value, 10);
 		if (tmpExportMax > 0) tmpMaxFlag = ' --max ' + tmpExportMax;
 
 		// Build CLI command (with config file)
@@ -436,18 +436,6 @@ module.exports.default_configuration =
 		</div>
 		<div class="accordion-body">
 			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Generate a JSON config file from your current settings. Use it to run headless clones from the command line.</p>
-			<div class="inline-group">
-				<div style="flex:0 0 200px">
-					<label for="exportMaxRecords">Max Records per Entity</label>
-					<input type="number" id="exportMaxRecords" value="" min="0" placeholder="0 = unlimited">
-				</div>
-				<div style="flex:0 0 auto; display:flex; align-items:flex-end; padding-bottom:2px">
-					<div class="checkbox-row" style="margin-bottom:0">
-						<input type="checkbox" id="exportLogFile" checked>
-						<label for="exportLogFile">Write log file</label>
-					</div>
-				</div>
-			</div>
 			<div style="display:flex; gap:8px; margin-bottom:10px">
 				<button class="primary" onclick="pict.views['DataCloner-Export'].generateConfig()">Generate Config</button>
 				<button class="secondary" onclick="pict.views['DataCloner-Export'].copyConfig()">Copy to Clipboard</button>

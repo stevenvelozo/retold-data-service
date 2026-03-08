@@ -186,8 +186,8 @@ class DataClonerProvider extends libPictProvider
 		document.getElementById('preview5').textContent = tmpSyncPreview;
 
 		// Section 6 — Export Configuration
-		let tmpMaxRecords = document.getElementById('exportMaxRecords').value;
-		let tmpLogFile = document.getElementById('exportLogFile').checked;
+		let tmpMaxRecords = document.getElementById('syncMaxRecords').value;
+		let tmpLogFile = document.getElementById('syncLogFile').checked;
 		let tmpExportParts = [];
 		if (tmpMaxRecords && parseInt(tmpMaxRecords, 10) > 0) tmpExportParts.push('max ' + tmpMaxRecords + ' records');
 		if (tmpLogFile) tmpExportParts.push('log enabled');
@@ -221,7 +221,7 @@ class DataClonerProvider extends libPictProvider
 			'serverURL', 'userName',
 			'schemaURL',
 			'pageSize', 'dateTimePrecisionMS',
-			'exportMaxRecords',
+			'syncMaxRecords',
 			'viewTable', 'viewLimit'
 		];
 
@@ -238,7 +238,7 @@ class DataClonerProvider extends libPictProvider
 		}
 
 		// Checkboxes and radios
-		let tmpCheckboxes = ['syncDeletedRecords', 'exportLogFile'];
+		let tmpCheckboxes = ['syncDeletedRecords', 'syncLogFile'];
 		for (let i = 0; i < tmpCheckboxes.length; i++)
 		{
 			let tmpEl = document.getElementById(tmpCheckboxes[i]);
@@ -394,14 +394,19 @@ class DataClonerProvider extends libPictProvider
 
 	renderLiveStatus(pData)
 	{
+		// Cache the live status data for the detail view
+		this.pict.AppData.DataCloner.LastLiveStatus = pData;
+
 		let tmpBar = document.getElementById('liveStatusBar');
 		let tmpMsg = document.getElementById('liveStatusMessage');
 		let tmpMeta = document.getElementById('liveStatusMeta');
 		let tmpProgressFill = document.getElementById('liveStatusProgressFill');
 		if (!tmpBar) return;
 
-		// Update phase class
+		// Update phase class (preserve expanded class if present)
+		let tmpWasExpanded = tmpBar.classList.contains('expanded');
 		tmpBar.className = 'live-status-bar phase-' + (pData.Phase || 'idle');
+		if (tmpWasExpanded) tmpBar.classList.add('expanded');
 
 		// Update message
 		tmpMsg.textContent = pData.Message || 'Idle';
@@ -483,6 +488,399 @@ class DataClonerProvider extends libPictProvider
 			tmpPct = 100;
 		}
 		tmpProgressFill.style.width = Math.min(100, Math.round(tmpPct)) + '%';
+
+		// If the detail view is expanded, re-render it with fresh data
+		if (this.pict.AppData.DataCloner.StatusDetailExpanded)
+		{
+			this.renderStatusDetail();
+		}
+	}
+
+	// ================================================================
+	// Status Detail Expansion
+	// ================================================================
+
+	onStatusDetailExpanded()
+	{
+		let tmpAppData = this.pict.AppData.DataCloner;
+		tmpAppData.StatusDetailExpanded = true;
+
+		// Immediate render from whatever data we have
+		this.renderStatusDetail();
+
+		// Start detail polling (poll /sync/status for per-table data)
+		if (tmpAppData.StatusDetailTimer) clearInterval(tmpAppData.StatusDetailTimer);
+		let tmpSelf = this;
+		tmpAppData.StatusDetailTimer = setInterval(function() { tmpSelf.pollStatusDetail(); }, 2000);
+		this.pollStatusDetail();
+	}
+
+	onStatusDetailCollapsed()
+	{
+		let tmpAppData = this.pict.AppData.DataCloner;
+		tmpAppData.StatusDetailExpanded = false;
+
+		if (tmpAppData.StatusDetailTimer)
+		{
+			clearInterval(tmpAppData.StatusDetailTimer);
+			tmpAppData.StatusDetailTimer = null;
+		}
+	}
+
+	pollStatusDetail()
+	{
+		let tmpSelf = this;
+		this.api('GET', '/clone/sync/status')
+			.then(function(pData)
+			{
+				tmpSelf.pict.AppData.DataCloner.StatusDetailData = pData;
+				tmpSelf.renderStatusDetail();
+			})
+			.catch(function() { /* ignore poll errors */ });
+	}
+
+	renderStatusDetail()
+	{
+		let tmpContainer = document.getElementById('DataCloner-StatusDetail-Container');
+		if (!tmpContainer) return;
+
+		let tmpAppData = this.pict.AppData.DataCloner;
+		let tmpLiveStatus = tmpAppData.LastLiveStatus;
+		let tmpStatusData = tmpAppData.StatusDetailData;
+		let tmpReport = tmpAppData.LastReport;
+
+		// Determine data source: live during sync, report after sync
+		let tmpTables = {};
+		let tmpThroughputSamples = [];
+		let tmpEventLog = [];
+		let tmpIsLive = false;
+
+		if (tmpLiveStatus && (tmpLiveStatus.Phase === 'syncing' || tmpLiveStatus.Phase === 'stopping'))
+		{
+			tmpIsLive = true;
+			if (tmpStatusData && tmpStatusData.Tables) tmpTables = tmpStatusData.Tables;
+			if (tmpLiveStatus.ThroughputSamples) tmpThroughputSamples = tmpLiveStatus.ThroughputSamples;
+		}
+		else if (tmpReport && tmpReport.ReportVersion)
+		{
+			// Build tables object from report
+			for (let i = 0; i < tmpReport.Tables.length; i++)
+			{
+				let tmpT = tmpReport.Tables[i];
+				tmpTables[tmpT.Name] = tmpT;
+			}
+			tmpThroughputSamples = tmpReport.ThroughputSamples || [];
+			tmpEventLog = tmpReport.EventLog || [];
+		}
+		else if (tmpStatusData && tmpStatusData.Tables)
+		{
+			tmpTables = tmpStatusData.Tables;
+		}
+
+		// Categorize tables
+		let tmpRunning = [];
+		let tmpPending = [];
+		let tmpCompleted = [];
+		let tmpErrors = [];
+		let tmpTableNames = Object.keys(tmpTables);
+
+		for (let i = 0; i < tmpTableNames.length; i++)
+		{
+			let tmpName = tmpTableNames[i];
+			let tmpT = tmpTables[tmpName];
+			if (tmpT.Status === 'Syncing')
+			{
+				tmpRunning.push({ Name: tmpName, Data: tmpT });
+			}
+			else if (tmpT.Status === 'Pending')
+			{
+				tmpPending.push(tmpName);
+			}
+			else if (tmpT.Status === 'Complete')
+			{
+				tmpCompleted.push({ Name: tmpName, Data: tmpT });
+			}
+			else if (tmpT.Status === 'Error' || tmpT.Status === 'Partial')
+			{
+				tmpErrors.push({ Name: tmpName, Data: tmpT });
+			}
+		}
+
+		let tmpHtml = '';
+
+		// === Section 1: Running Operations ===
+		if (tmpRunning.length > 0 || tmpPending.length > 0)
+		{
+			tmpHtml += '<div class="status-detail-section">';
+			tmpHtml += '<div class="status-detail-section-title">Running</div>';
+			for (let i = 0; i < tmpRunning.length; i++)
+			{
+				let tmpOp = tmpRunning[i];
+				let tmpPct = tmpOp.Data.Total > 0 ? Math.round((tmpOp.Data.Synced / tmpOp.Data.Total) * 100) : 0;
+				let tmpSyncedFmt = this.formatNumber(tmpOp.Data.Synced || 0);
+				let tmpTotalFmt = this.formatNumber(tmpOp.Data.Total || 0);
+				tmpHtml += '<div class="running-op-row">';
+				tmpHtml += '  <div class="running-op-name">' + this.escapeHtml(tmpOp.Name) + '</div>';
+				tmpHtml += '  <div class="running-op-bar"><div class="running-op-bar-fill" style="width:' + tmpPct + '%"></div></div>';
+				tmpHtml += '  <div class="running-op-count">' + tmpSyncedFmt + ' / ' + tmpTotalFmt + ' (' + tmpPct + '%)</div>';
+				tmpHtml += '</div>';
+			}
+			if (tmpPending.length > 0)
+			{
+				tmpHtml += '<div class="running-op-pending">' + tmpPending.length + ' table' + (tmpPending.length === 1 ? '' : 's') + ' waiting</div>';
+			}
+			tmpHtml += '</div>';
+		}
+
+		// === Section 2: Completed Successful Operations ===
+		if (tmpCompleted.length > 0)
+		{
+			tmpHtml += '<div class="status-detail-section">';
+			tmpHtml += '<div class="status-detail-section-title">Completed (' + tmpCompleted.length + ')</div>';
+
+			for (let i = 0; i < tmpCompleted.length; i++)
+			{
+				tmpHtml += this.renderCompletedRow(tmpCompleted[i]);
+			}
+			tmpHtml += '</div>';
+		}
+
+		// === Section 3: Unsuccessful Operations ===
+		if (tmpErrors.length > 0)
+		{
+			tmpHtml += '<div class="status-detail-section">';
+			tmpHtml += '<div class="status-detail-section-title">Errors (' + tmpErrors.length + ')</div>';
+			for (let i = 0; i < tmpErrors.length; i++)
+			{
+				tmpHtml += this.renderErrorRow(tmpErrors[i], tmpEventLog);
+			}
+			tmpHtml += '</div>';
+		}
+
+		if (tmpHtml === '')
+		{
+			if (tmpIsLive)
+			{
+				tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">Sync in progress, waiting for table data\u2026</div>';
+			}
+			else
+			{
+				tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">No sync data available. Run a sync to see operation details here.</div>';
+			}
+		}
+
+		tmpContainer.innerHTML = tmpHtml;
+
+		// Update the throughput histogram via pict-section-histogram
+		this.updateThroughputHistogram(tmpThroughputSamples);
+	}
+
+	updateThroughputHistogram(pSamples)
+	{
+		let tmpHistContainer = document.getElementById('DataCloner-Throughput-Histogram');
+		if (!tmpHistContainer) return;
+
+		if (!pSamples || pSamples.length < 2)
+		{
+			tmpHistContainer.style.display = 'none';
+			return;
+		}
+
+		// --- Step 1: Compute raw deltas per 10s interval ---
+		let tmpRawDeltas = [];
+		for (let i = 1; i < pSamples.length; i++)
+		{
+			let tmpDelta = pSamples[i].synced - pSamples[i - 1].synced;
+			if (tmpDelta < 0) tmpDelta = 0;
+			tmpRawDeltas.push({ delta: tmpDelta, t: pSamples[i].t });
+		}
+
+		// --- Step 2: Downsample if there are too many bars ---
+		let tmpContainerWidth = tmpHistContainer.clientWidth || 800;
+		let tmpMaxBars = Math.max(20, Math.floor(tmpContainerWidth / 6));
+		let tmpAggregated = tmpRawDeltas;
+
+		if (tmpRawDeltas.length > tmpMaxBars)
+		{
+			let tmpBucketSize = Math.ceil(tmpRawDeltas.length / tmpMaxBars);
+			tmpAggregated = [];
+			for (let i = 0; i < tmpRawDeltas.length; i += tmpBucketSize)
+			{
+				let tmpSum = 0;
+				let tmpLastT = 0;
+				for (let j = i; j < Math.min(i + tmpBucketSize, tmpRawDeltas.length); j++)
+				{
+					tmpSum += tmpRawDeltas[j].delta;
+					tmpLastT = tmpRawDeltas[j].t;
+				}
+				tmpAggregated.push({ delta: tmpSum, t: tmpLastT });
+			}
+		}
+
+		// --- Step 3: Check for data ---
+		let tmpHasData = false;
+		for (let i = 0; i < tmpAggregated.length; i++)
+		{
+			if (tmpAggregated[i].delta > 0) { tmpHasData = true; break; }
+		}
+		if (!tmpHasData)
+		{
+			tmpHistContainer.style.display = 'none';
+			return;
+		}
+
+		// --- Step 4: Build bins for the histogram library ---
+		let tmpStartT = pSamples[0].t;
+		let tmpBins = [];
+		for (let i = 0; i < tmpAggregated.length; i++)
+		{
+			let tmpElapsedSec = Math.round((tmpAggregated[i].t - tmpStartT) / 1000);
+			tmpBins.push({
+				Label: this.formatElapsed(tmpElapsedSec),
+				Value: tmpAggregated[i].delta
+			});
+		}
+
+		// --- Step 5: Update the histogram view via the library ---
+		tmpHistContainer.style.display = '';
+		let tmpHistView = this.pict.views['DataCloner-StatusHistogram'];
+		if (tmpHistView)
+		{
+			tmpHistView.setBins(tmpBins);
+			tmpHistView.renderHistogram();
+		}
+	}
+
+	formatElapsed(pSec)
+	{
+		if (pSec < 60) return pSec + 's';
+		if (pSec < 3600)
+		{
+			let tmpM = Math.floor(pSec / 60);
+			let tmpS = pSec % 60;
+			return tmpM + ':' + (tmpS < 10 ? '0' : '') + tmpS;
+		}
+		let tmpH = Math.floor(pSec / 3600);
+		let tmpM = Math.floor((pSec % 3600) / 60);
+		return tmpH + 'h' + (tmpM < 10 ? '0' : '') + tmpM;
+	}
+
+	formatCompact(pNum)
+	{
+		if (pNum >= 1000000) return (pNum / 1000000).toFixed(1) + 'M';
+		if (pNum >= 10000) return (pNum / 1000).toFixed(0) + 'K';
+		if (pNum >= 1000) return (pNum / 1000).toFixed(1) + 'K';
+		return pNum.toString();
+	}
+
+	formatNumber(pNum)
+	{
+		return pNum.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+	}
+
+	renderCompletedRow(pOp)
+	{
+		let tmpNew = pOp.Data.New || 0;
+		let tmpUpdated = pOp.Data.Updated || 0;
+		let tmpUnchanged = pOp.Data.Unchanged || 0;
+		let tmpDeleted = pOp.Data.Deleted || 0;
+		let tmpServerTotal = pOp.Data.ServerTotal || 0;
+
+		// Grand total for the ratio bar: all records the adapter dealt with
+		let tmpGrandTotal = tmpUnchanged + tmpNew + tmpUpdated + tmpDeleted;
+		if (tmpGrandTotal === 0 && tmpServerTotal > 0)
+		{
+			tmpGrandTotal = tmpServerTotal;
+			tmpUnchanged = tmpServerTotal;
+		}
+
+		let tmpHtml = '<div class="completed-op-row">';
+		tmpHtml += '<div class="completed-op-header">';
+		tmpHtml += '  <span class="completed-op-checkmark">\u2713</span>';
+		tmpHtml += '  <span class="completed-op-name">' + this.escapeHtml(pOp.Name) + '</span>';
+		tmpHtml += '</div>';
+
+		// Ratio bar: Unchanged / New / Updated / Deleted
+		if (tmpGrandTotal > 0)
+		{
+			let tmpUnchangedPct = Math.round((tmpUnchanged / tmpGrandTotal) * 100);
+			let tmpNewPct = Math.round((tmpNew / tmpGrandTotal) * 100);
+			let tmpUpdatedPct = Math.round((tmpUpdated / tmpGrandTotal) * 100);
+			let tmpDeletedPct = Math.round((tmpDeleted / tmpGrandTotal) * 100);
+
+			// Ensure percentages sum to 100
+			let tmpPctSum = tmpUnchangedPct + tmpNewPct + tmpUpdatedPct + tmpDeletedPct;
+			if (tmpPctSum !== 100 && tmpPctSum > 0)
+			{
+				tmpUnchangedPct += (100 - tmpPctSum);
+				if (tmpUnchangedPct < 0) tmpUnchangedPct = 0;
+			}
+
+			tmpHtml += '<div class="ratio-bar-container">';
+			if (tmpUnchangedPct > 0) tmpHtml += '<div class="ratio-bar-segment unchanged" style="width:' + tmpUnchangedPct + '%" title="Unchanged: ' + this.formatNumber(tmpUnchanged) + '"></div>';
+			if (tmpNewPct > 0) tmpHtml += '<div class="ratio-bar-segment new-records" style="width:' + tmpNewPct + '%" title="New: ' + this.formatNumber(tmpNew) + '"></div>';
+			if (tmpUpdatedPct > 0) tmpHtml += '<div class="ratio-bar-segment updated" style="width:' + tmpUpdatedPct + '%" title="Updated: ' + this.formatNumber(tmpUpdated) + '"></div>';
+			if (tmpDeletedPct > 0) tmpHtml += '<div class="ratio-bar-segment deleted" style="width:' + tmpDeletedPct + '%" title="Deleted: ' + this.formatNumber(tmpDeleted) + '"></div>';
+			tmpHtml += '</div>';
+
+			tmpHtml += '<div class="ratio-bar-legend">';
+			if (tmpUnchanged > 0) tmpHtml += '<span class="ratio-bar-legend-item"><span class="ratio-bar-legend-dot unchanged-dot"></span> Unchanged (' + this.formatNumber(tmpUnchanged) + ')</span>';
+			if (tmpNew > 0) tmpHtml += '<span class="ratio-bar-legend-item"><span class="ratio-bar-legend-dot new-dot"></span> New (' + this.formatNumber(tmpNew) + ')</span>';
+			if (tmpUpdated > 0) tmpHtml += '<span class="ratio-bar-legend-item"><span class="ratio-bar-legend-dot updated-dot"></span> Updated (' + this.formatNumber(tmpUpdated) + ')</span>';
+			if (tmpDeleted > 0) tmpHtml += '<span class="ratio-bar-legend-item"><span class="ratio-bar-legend-dot deleted-dot"></span> Deleted (' + this.formatNumber(tmpDeleted) + ')</span>';
+			tmpHtml += '</div>';
+		}
+
+		tmpHtml += '</div>';
+		return tmpHtml;
+	}
+
+	renderErrorRow(pOp, pEventLog)
+	{
+		let tmpSynced = pOp.Data.Synced || 0;
+		let tmpTotal = pOp.Data.Total || 0;
+		let tmpSyncedFmt = this.formatNumber(tmpSynced);
+		let tmpTotalFmt = this.formatNumber(tmpTotal);
+
+		let tmpHtml = '<div class="error-op-row">';
+		tmpHtml += '<div class="error-op-header">';
+		tmpHtml += '  <span style="color:#dc3545">\u2717</span>';
+		tmpHtml += '  <span class="error-op-name">' + this.escapeHtml(pOp.Name) + '</span>';
+		tmpHtml += '  <span class="error-op-status">' + pOp.Data.Status + ' \u2014 ' + tmpSyncedFmt + ' / ' + tmpTotalFmt + '</span>';
+		tmpHtml += '</div>';
+
+		if (pOp.Data.ErrorMessage)
+		{
+			tmpHtml += '<div class="error-op-message">' + this.escapeHtml(pOp.Data.ErrorMessage) + '</div>';
+		}
+
+		// Extract relevant log entries from EventLog
+		if (pEventLog && pEventLog.length > 0)
+		{
+			let tmpRelevantLogs = [];
+			for (let j = 0; j < pEventLog.length; j++)
+			{
+				let tmpLog = pEventLog[j];
+				if (tmpLog.Data && tmpLog.Data.Table === pOp.Name &&
+					(tmpLog.Type === 'TableError' || tmpLog.Type === 'TablePartial'))
+				{
+					tmpRelevantLogs.push(tmpLog);
+				}
+			}
+			if (tmpRelevantLogs.length > 0)
+			{
+				tmpHtml += '<div class="error-op-log-entries">';
+				for (let j = 0; j < tmpRelevantLogs.length; j++)
+				{
+					let tmpTimestamp = tmpRelevantLogs[j].Timestamp.replace('T', ' ').replace(/\.\d+Z$/, '');
+					tmpHtml += '<div>' + this.escapeHtml(tmpTimestamp + ' ' + tmpRelevantLogs[j].Message) + '</div>';
+				}
+				tmpHtml += '</div>';
+			}
+		}
+
+		tmpHtml += '</div>';
+		return tmpHtml;
 	}
 
 	// ================================================================

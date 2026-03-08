@@ -1,0 +1,311 @@
+{
+	"timestamp": "2026-03-08T20:33:17.745Z",
+	"duration_ms": 54218,
+	"summary": {
+		"total": 35,
+		"passed": 32,
+		"failed": 0,
+		"skipped": 3
+	},
+	"storage_engines": {},
+	"suites": [
+		{
+			"name": "Data Cloner Integration",
+			"tests": [],
+			"duration_ms": 0
+		},
+		{
+			"name": "Connection Management",
+			"tests": [
+				{
+					"name": "Should show initial connection status",
+					"status": "pass",
+					"duration_ms": 1
+				},
+				{
+					"name": "Should connect SQLite via configure",
+					"status": "pass",
+					"duration_ms": 2
+				},
+				{
+					"name": "Should show connected after configure",
+					"status": "pass",
+					"duration_ms": 0
+				}
+			],
+			"duration_ms": 3
+		},
+		{
+			"name": "Session Configuration",
+			"tests": [
+				{
+					"name": "Should configure session with retold-harness URL",
+					"status": "pass",
+					"duration_ms": 1
+				},
+				{
+					"name": "Should show session as configured",
+					"status": "pass",
+					"duration_ms": 9
+				},
+				{
+					"name": "Should reject session configure without ServerURL",
+					"status": "pass",
+					"duration_ms": 1
+				}
+			],
+			"duration_ms": 11
+		},
+		{
+			"name": "Schema Fetch",
+			"tests": [
+				{
+					"name": "Should reconfigure session for fresh schema fetch",
+					"status": "pass",
+					"duration_ms": 1
+				},
+				{
+					"name": "Should fetch schema from retold-harness",
+					"status": "pass",
+					"duration_ms": 2
+				}
+			],
+			"duration_ms": 3
+		},
+		{
+			"name": "Schema Deploy",
+			"tests": [
+				{
+					"name": "Should deploy all tables",
+					"status": "pass",
+					"duration_ms": 25
+				}
+			],
+			"duration_ms": 25
+		},
+		{
+			"name": "Initial Sync (SQLite)",
+			"tests": [
+				{
+					"name": "Should start initial sync with record cap",
+					"status": "pass",
+					"duration_ms": 1007
+				},
+				{
+					"name": "All tables should have completed",
+					"status": "pass",
+					"duration_ms": 1
+				},
+				{
+					"name": "Should have a valid sync report",
+					"status": "pass",
+					"duration_ms": 3
+				},
+				{
+					"name": "Report tables should have timing data",
+					"status": "pass",
+					"duration_ms": 1
+				}
+			],
+			"duration_ms": 1012
+		},
+		{
+			"name": "Data Integrity",
+			"tests": [
+				{
+					"name": "Should fetch harness reference data",
+					"status": "pass",
+					"duration_ms": 9
+				},
+				{
+					"name": "Local book count should match sync (capped)",
+					"status": "pass",
+					"duration_ms": 2
+				},
+				{
+					"name": "Local Book 1 should match harness data",
+					"status": "pass",
+					"duration_ms": 1
+				},
+				{
+					"name": "Local author count should match sync (capped)",
+					"status": "pass",
+					"duration_ms": 0
+				}
+			],
+			"duration_ms": 12
+		},
+		{
+			"name": "Pre-Count and Live Status",
+			"tests": [
+				{
+					"name": "Should run a fresh pipeline and capture pre-count data",
+					"status": "pass",
+					"duration_ms": 7885
+				}
+			],
+			"duration_ms": 7885
+		},
+		{
+			"name": "Ongoing Sync",
+			"tests": [
+				{
+					"name": "Should run ongoing sync after initial",
+					"status": "pass",
+					"duration_ms": 1019
+				},
+				{
+					"name": "Ongoing sync report should show success",
+					"status": "pass",
+					"duration_ms": 1
+				}
+			],
+			"duration_ms": 1020
+		},
+		{
+			"name": "Stop Sync",
+			"tests": [
+				{
+					"name": "Should be able to stop a sync in progress",
+					"status": "pass",
+					"duration_ms": 4063
+				}
+			],
+			"duration_ms": 4063
+		},
+		{
+			"name": "Reset",
+			"tests": [
+				{
+					"name": "Should reset the database",
+					"status": "pass",
+					"duration_ms": 2
+				},
+				{
+					"name": "Connection should still work after reset",
+					"status": "pass",
+					"duration_ms": 1
+				}
+			],
+			"duration_ms": 3
+		},
+		{
+			"name": "Storage Engine: MySQL",
+			"tests": [
+				{
+					"name": "Should sync via MySQL",
+					"status": "skip",
+					"duration_ms": 0
+				}
+			],
+			"duration_ms": 0
+		},
+		{
+			"name": "Storage Engine: PostgreSQL",
+			"tests": [
+				{
+					"name": "Should sync via PostgreSQL",
+					"status": "skip",
+					"duration_ms": 0
+				}
+			],
+			"duration_ms": 0
+		},
+		{
+			"name": "Storage Engine: MSSQL",
+			"tests": [
+				{
+					"name": "Should sync via MSSQL",
+					"status": "skip",
+					"duration_ms": 0
+				}
+			],
+			"duration_ms": 0
+		}
+	],
+	"puppeteer": {
+		"available": true,
+		"suites": [
+			{
+				"name": "Data Cloner Web UI (Puppeteer)",
+				"tests": [],
+				"duration_ms": 0
+			},
+			{
+				"name": "Web UI Load",
+				"tests": [
+					{
+						"name": "Should load the data cloner page",
+						"status": "pass",
+						"duration_ms": 734
+					},
+					{
+						"name": "Should display 7 accordion sections",
+						"status": "pass",
+						"duration_ms": 15
+					},
+					{
+						"name": "Should show live status bar",
+						"status": "pass",
+						"duration_ms": 201
+					}
+				],
+				"duration_ms": 950
+			},
+			{
+				"name": "Connection Section",
+				"tests": [
+					{
+						"name": "Should connect to SQLite via go button",
+						"status": "pass",
+						"duration_ms": 2218
+					}
+				],
+				"duration_ms": 2218
+			},
+			{
+				"name": "Session, Schema, and Deploy Flow",
+				"tests": [
+					{
+						"name": "Should configure session via UI",
+						"status": "pass",
+						"duration_ms": 3019
+					},
+					{
+						"name": "Should fetch schema via UI",
+						"status": "pass",
+						"duration_ms": 2020
+					},
+					{
+						"name": "Should deploy schema via UI",
+						"status": "pass",
+						"duration_ms": 5074
+					}
+				],
+				"duration_ms": 10113
+			},
+			{
+				"name": "Sync via Web UI",
+				"tests": [
+					{
+						"name": "Should start sync and complete successfully",
+						"status": "pass",
+						"duration_ms": 7184
+					}
+				],
+				"duration_ms": 7184
+			},
+			{
+				"name": "Live Status Display",
+				"tests": [
+					{
+						"name": "Should show progress information during sync",
+						"status": "pass",
+						"duration_ms": 16243
+					}
+				],
+				"duration_ms": 16243
+			}
+		]
+	}
+}

@@ -10,6 +10,7 @@ const libViewDeploy = require('./views/PictView-DataCloner-Deploy.js');
 const libViewSync = require('./views/PictView-DataCloner-Sync.js');
 const libViewExport = require('./views/PictView-DataCloner-Export.js');
 const libViewViewData = require('./views/PictView-DataCloner-ViewData.js');
+const libViewHistogram = require('pict-section-histogram');
 
 class DataClonerApplication extends libPictApplication
 {
@@ -29,6 +30,21 @@ class DataClonerApplication extends libPictApplication
 		this.pict.addView('DataCloner-Sync', libViewSync.default_configuration, libViewSync);
 		this.pict.addView('DataCloner-Export', libViewExport.default_configuration, libViewExport);
 		this.pict.addView('DataCloner-ViewData', libViewViewData.default_configuration, libViewViewData);
+		this.pict.addView('DataCloner-StatusHistogram',
+			{
+				ViewIdentifier: 'DataCloner-StatusHistogram',
+				TargetElementAddress: '#DataCloner-Throughput-Histogram',
+				DefaultDestinationAddress: '#DataCloner-Throughput-Histogram',
+				RenderOnLoad: false,
+				Selectable: false,
+				Orientation: 'vertical',
+				FillContainer: true,
+				ShowValues: false,
+				ShowLabels: true,
+				MaxBarSize: 80,
+				BarColor: '#4a90d9',
+				Bins: []
+			}, libViewHistogram);
 	}
 
 	onAfterInitializeAsync(fCallback)
@@ -42,6 +58,10 @@ class DataClonerApplication extends libPictApplication
 			ServerBusyAtLoad: false,
 			SyncPollTimer: null,
 			LiveStatusTimer: null,
+			StatusDetailExpanded: false,
+			StatusDetailTimer: null,
+			StatusDetailData: null,
+			LastLiveStatus: null,
 			PersistFields: [
 				'serverURL', 'authMethod', 'authURI', 'checkURI',
 				'cookieName', 'cookieValueAddr', 'cookieValueTemplate', 'loginMarker',

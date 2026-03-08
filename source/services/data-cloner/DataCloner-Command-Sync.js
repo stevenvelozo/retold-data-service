@@ -7,6 +7,9 @@
  * @param {Object} pDataClonerService - The RetoldDataServiceDataCloner instance
  * @param {Object} pOratorServiceServer - The Orator ServiceServer instance
  */
+const libFableLog = require('fable-log');
+const libPath = require('path');
+
 module.exports = (pDataClonerService, pOratorServiceServer) =>
 {
 	let tmpFable = pDataClonerService.fable;
@@ -88,6 +91,33 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 				return fNext();
 			}
 
+			// ---- Enable log-to-file if requested ----
+			if (tmpBody.LogToFile)
+			{
+				// Remove any previous sync log stream
+				if (tmpCloneState.SyncLogFileLogger)
+				{
+					try { tmpCloneState.SyncLogFileLogger.closeWriter(() => {}); }
+					catch (pErr) { /* ignore */ }
+					tmpCloneState.SyncLogFileLogger = null;
+				}
+
+				let tmpTimestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+				let tmpLogPath = libPath.join(process.cwd(), `DataCloner-Run-${tmpTimestamp}.log`);
+				let tmpFileLogger = new libFableLog.LogProviderFlatfile(
+					{
+						path: tmpLogPath,
+						showtimestamps: true,
+						formattedtimestamps: true,
+						outputloglinestoconsole: false
+					}, tmpFable.log);
+				tmpFileLogger.initialize();
+				tmpFable.log.addLogger(tmpFileLogger, 'trace');
+				tmpCloneState.SyncLogFileLogger = tmpFileLogger;
+				tmpCloneState.SyncLogFilePath = tmpLogPath;
+				tmpFable.log.info(`Data Cloner: Log file enabled — writing to ${tmpLogPath}`);
+			}
+
 			// ---- Handle Sync Mode switching ----
 			let fStartSync = () =>
 			{
@@ -167,33 +197,35 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 	pOratorServiceServer.get(`${tmpPrefix}/sync/status`,
 		(pRequest, pResponse, fNext) =>
 		{
-			// Update progress from MeadowSync operation trackers
-			if (tmpFable.MeadowSync && tmpFable.MeadowSync.MeadowSyncEntities)
+			// Build a read-only snapshot of progress (never mutate SyncProgress during a poll)
+			let tmpTablesSnapshot = {};
+			let tmpTableNames = Object.keys(tmpCloneState.SyncProgress);
+			for (let i = 0; i < tmpTableNames.length; i++)
 			{
-				let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
-				for (let i = 0; i < tmpEntityNames.length; i++)
+				let tmpName = tmpTableNames[i];
+				let tmpP = tmpCloneState.SyncProgress[tmpName];
+				let tmpSnap = { Status: tmpP.Status, Total: tmpP.Total || 0, Synced: tmpP.Synced || 0, Errors: tmpP.Errors || 0 };
+				if (tmpP.ErrorMessage) tmpSnap.ErrorMessage = tmpP.ErrorMessage;
+
+				if ((tmpP.Status === 'Syncing' || tmpP.Status === 'Pending') && tmpFable.MeadowSync && tmpFable.MeadowSync.MeadowSyncEntities)
 				{
-					let tmpEntityName = tmpEntityNames[i];
-					let tmpProgress = tmpCloneState.SyncProgress[tmpEntityName];
-					if (tmpProgress && (tmpProgress.Status === 'Syncing' || tmpProgress.Status === 'Pending'))
+					let tmpSyncEntity = tmpFable.MeadowSync.MeadowSyncEntities[tmpName];
+					if (tmpSyncEntity && tmpSyncEntity.operation)
 					{
-						let tmpSyncEntity = tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityName];
-						if (tmpSyncEntity && tmpSyncEntity.operation)
+						let tmpTracker = tmpSyncEntity.operation.progressTrackers[`FullSync-${tmpName}`];
+						if (tmpTracker)
 						{
-							let tmpTracker = tmpSyncEntity.operation.progressTrackers[`FullSync-${tmpEntityName}`];
-							if (tmpTracker)
-							{
-								tmpProgress.Total = tmpTracker.TotalCount || 0;
-								tmpProgress.Synced = Math.max(tmpTracker.CurrentCount || 0, 0);
-							}
-						}
-						let tmpRESTErrors = tmpCloneState.SyncRESTErrors[tmpEntityName] || 0;
-						if (tmpRESTErrors > 0)
-						{
-							tmpProgress.Errors = tmpRESTErrors;
+							tmpSnap.Total = tmpTracker.TotalCount || tmpSnap.Total;
+							tmpSnap.Synced = Math.max(tmpTracker.CurrentCount || 0, 0);
 						}
 					}
+					let tmpRESTErrors = tmpCloneState.SyncRESTErrors[tmpName] || 0;
+					if (tmpRESTErrors > 0)
+					{
+						tmpSnap.Errors = tmpRESTErrors;
+					}
 				}
+				tmpTablesSnapshot[tmpName] = tmpSnap;
 			}
 
 			pResponse.send(200,
@@ -201,7 +233,7 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 					Running: tmpCloneState.SyncRunning,
 					Stopping: tmpCloneState.SyncStopping,
 					SyncMode: tmpCloneState.SyncMode,
-					Tables: tmpCloneState.SyncProgress
+					Tables: tmpTablesSnapshot
 				});
 			return fNext();
 		});
@@ -287,57 +319,57 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 							SyncMode: tmpCloneState.SyncMode,
 							ETA: null,
 							PreCountGrandTotal: 0,
-							PreCountProgress: tmpPC
+							PreCountProgress: tmpPC,
+							ThroughputSamples: []
 						});
 					return fNext();
 				}
 
-				// Update progress from MeadowSync operation trackers (same as /sync/status)
-				if (tmpFable.MeadowSync && tmpFable.MeadowSync.MeadowSyncEntities)
-				{
-					let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
-					for (let i = 0; i < tmpEntityNames.length; i++)
-					{
-						let tmpEntityName = tmpEntityNames[i];
-						let tmpProgress = tmpCloneState.SyncProgress[tmpEntityName];
-						if (tmpProgress && (tmpProgress.Status === 'Syncing' || tmpProgress.Status === 'Pending'))
-						{
-							let tmpSyncEntity = tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityName];
-							if (tmpSyncEntity && tmpSyncEntity.operation)
-							{
-								let tmpTracker = tmpSyncEntity.operation.progressTrackers[`FullSync-${tmpEntityName}`];
-								if (tmpTracker)
-								{
-									tmpProgress.Total = tmpTracker.TotalCount || 0;
-									tmpProgress.Synced = Math.max(tmpTracker.CurrentCount || 0, 0);
-								}
-							}
-							let tmpRESTErrors = tmpCloneState.SyncRESTErrors[tmpEntityName] || 0;
-							if (tmpRESTErrors > 0)
-							{
-								tmpProgress.Errors = tmpRESTErrors;
-							}
-						}
-					}
-				}
-
-				// Categorize tables
+				// Read progress from MeadowSync operation trackers (read-only snapshot — never write back to SyncProgress during a poll)
 				let tmpTableNames = Object.keys(tmpCloneState.SyncProgress);
 				for (let i = 0; i < tmpTableNames.length; i++)
 				{
 					let tmpName = tmpTableNames[i];
 					let tmpP = tmpCloneState.SyncProgress[tmpName];
-					tmpTotalSynced += (tmpP.Synced || 0);
-					tmpTotalRecords += (tmpP.Total || 0);
+
+					// Snapshot live tracker values without mutating SyncProgress
+					let tmpLiveTotal = tmpP.Total || 0;
+					let tmpLiveSynced = tmpP.Synced || 0;
+					let tmpLiveErrors = tmpP.Errors || 0;
+
+					if (tmpP.Status === 'Syncing' || tmpP.Status === 'Pending')
+					{
+						if (tmpFable.MeadowSync && tmpFable.MeadowSync.MeadowSyncEntities)
+						{
+							let tmpSyncEntity = tmpFable.MeadowSync.MeadowSyncEntities[tmpName];
+							if (tmpSyncEntity && tmpSyncEntity.operation)
+							{
+								let tmpTracker = tmpSyncEntity.operation.progressTrackers[`FullSync-${tmpName}`];
+								if (tmpTracker)
+								{
+									tmpLiveTotal = tmpTracker.TotalCount || tmpLiveTotal;
+									tmpLiveSynced = Math.max(tmpTracker.CurrentCount || 0, 0);
+								}
+							}
+						}
+						let tmpRESTErrors = tmpCloneState.SyncRESTErrors[tmpName] || 0;
+						if (tmpRESTErrors > 0)
+						{
+							tmpLiveErrors = tmpRESTErrors;
+						}
+					}
+
+					tmpTotalSynced += tmpLiveSynced;
+					tmpTotalRecords += tmpLiveTotal;
 
 					if (tmpP.Status === 'Syncing')
 					{
 						tmpActiveEntity = tmpName;
-						tmpActiveProgress = tmpP;
+						tmpActiveProgress = { Synced: tmpLiveSynced, Total: tmpLiveTotal };
 					}
 					else if (tmpP.Status === 'Complete' || tmpP.Status === 'Partial')
 					{
-						tmpCompleted.push({ Name: tmpName, Synced: tmpP.Synced || 0, Total: tmpP.Total || 0, Status: tmpP.Status });
+						tmpCompleted.push({ Name: tmpName, Synced: tmpLiveSynced, Total: tmpLiveTotal, Status: tmpP.Status });
 					}
 					else if (tmpP.Status === 'Error')
 					{
@@ -455,7 +487,8 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 					Elapsed: tmpElapsed,
 					SyncMode: tmpCloneState.SyncMode,
 					ETA: tmpETA,
-					PreCountGrandTotal: tmpCloneState.PreCountGrandTotal || 0
+					PreCountGrandTotal: tmpCloneState.PreCountGrandTotal || 0,
+					ThroughputSamples: tmpCloneState.ThroughputSamples || []
 				});
 			return fNext();
 		});

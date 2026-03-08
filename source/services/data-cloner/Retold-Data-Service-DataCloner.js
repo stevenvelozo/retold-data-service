@@ -77,7 +77,11 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 				SyncStartTime: null,
 				SyncEndTime: null,
 				SyncEventLog: [],
-				SyncReport: null
+				SyncReport: null,
+
+				// Throughput sampling — records per 10-second window
+				ThroughputSamples: [],
+				ThroughputTimer: null
 			});
 
 		// Create an isolated Pict instance for remote session management
@@ -156,14 +160,52 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 			return fCallback(new Error(`Could not load module "${tmpRegistryEntry.moduleName}": ${pRequireError.message}. Run: npm install ${tmpRegistryEntry.moduleName}`));
 		}
 
+		// Normalize the config to include both old-style (Server, Port, User, etc.)
+		// and mysql2-native (host, port, user, etc.) property names so it works
+		// with any version of the meadow-connection provider.
+		let tmpNormalizedConfig = Object.assign({}, pConfig);
+		if (pProviderName === 'MySQL' || pProviderName === 'MSSQL' || pProviderName === 'PostgreSQL')
+		{
+			if (tmpNormalizedConfig.host && !tmpNormalizedConfig.Server)
+			{
+				tmpNormalizedConfig.Server = tmpNormalizedConfig.host;
+			}
+			if (tmpNormalizedConfig.port && !tmpNormalizedConfig.Port)
+			{
+				tmpNormalizedConfig.Port = tmpNormalizedConfig.port;
+			}
+			if (tmpNormalizedConfig.user && !tmpNormalizedConfig.User)
+			{
+				tmpNormalizedConfig.User = tmpNormalizedConfig.user;
+			}
+			if (tmpNormalizedConfig.password && !tmpNormalizedConfig.Password)
+			{
+				tmpNormalizedConfig.Password = tmpNormalizedConfig.password;
+			}
+			if (tmpNormalizedConfig.database && !tmpNormalizedConfig.Database)
+			{
+				tmpNormalizedConfig.Database = tmpNormalizedConfig.database;
+			}
+			if (tmpNormalizedConfig.connectionLimit && !tmpNormalizedConfig.ConnectionPoolLimit)
+			{
+				tmpNormalizedConfig.ConnectionPoolLimit = tmpNormalizedConfig.connectionLimit;
+			}
+		}
+
 		// Set the provider configuration on fable settings
-		this.fable.settings[tmpRegistryEntry.configKey] = pConfig;
+		this.fable.settings[tmpRegistryEntry.configKey] = tmpNormalizedConfig;
 
 		// Register and instantiate the provider if not already present
 		if (!this.fable[tmpRegistryEntry.serviceName])
 		{
 			this.fable.serviceManager.addServiceType(tmpRegistryEntry.serviceName, tmpModule);
 			this.fable.serviceManager.instantiateServiceProvider(tmpRegistryEntry.serviceName);
+		}
+		else
+		{
+			// Provider already exists — update its options with the new config
+			// so reconnects use the current settings.
+			this.fable[tmpRegistryEntry.serviceName].options[tmpRegistryEntry.configKey] = tmpNormalizedConfig;
 		}
 
 		this.fable[tmpRegistryEntry.serviceName].connectAsync(
@@ -322,6 +364,12 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 					Synced: tmpP.Synced || 0,
 					Skipped: tmpP.Skipped || 0,
 					Errors: tmpP.Errors || 0,
+					New: tmpP.New || 0,
+					Updated: tmpP.Updated || 0,
+					Unchanged: tmpP.Unchanged || 0,
+					Deleted: tmpP.Deleted || 0,
+					ServerTotal: tmpP.ServerTotal || 0,
+					LocalCountBefore: tmpP.LocalCountBefore || 0,
 					ErrorMessage: tmpP.ErrorMessage || null,
 					StartTime: tmpP.StartTime || null,
 					EndTime: tmpP.EndTime || null,
@@ -434,7 +482,8 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 					},
 				Tables: tmpTables,
 				Anomalies: tmpAnomalies,
-				EventLog: tmpState.SyncEventLog
+				EventLog: tmpState.SyncEventLog,
+				ThroughputSamples: tmpState.ThroughputSamples || []
 			});
 
 		tmpState.SyncReport = tmpReport;
@@ -513,6 +562,75 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 		this.fable.log.info(`\n${tmpLines.join('\n')}`);
 	}
 
+
+	/**
+	 * Start the throughput sampler.  Every 10 seconds, records a cumulative
+	 * { t, synced } sample so the UI can render a records-per-10s histogram.
+	 */
+	startThroughputSampling()
+	{
+		this.stopThroughputSampling();
+		this._cloneState.ThroughputSamples = [];
+		this._cloneState.ThroughputSamples.push({ t: Date.now(), synced: 0 });
+
+		this._cloneState.ThroughputTimer = setInterval(
+			() =>
+			{
+				// Read directly from MeadowSync progress trackers for accurate
+				// real-time counts, then update SyncProgress as a side-effect so
+				// the next live-status poll also has fresh data.
+				let tmpTotalSynced = 0;
+				let tmpTableNames = Object.keys(this._cloneState.SyncProgress);
+				let tmpSyncEntities = (this.fable.MeadowSync && this.fable.MeadowSync.MeadowSyncEntities) || {};
+
+				for (let i = 0; i < tmpTableNames.length; i++)
+				{
+					let tmpName = tmpTableNames[i];
+					let tmpProgress = this._cloneState.SyncProgress[tmpName];
+
+					// If the entity is actively syncing, read the live tracker value
+					if (tmpProgress.Status === 'Syncing' || tmpProgress.Status === 'Pending')
+					{
+						let tmpSyncEntity = tmpSyncEntities[tmpName];
+						if (tmpSyncEntity && tmpSyncEntity.operation)
+						{
+							let tmpTracker = tmpSyncEntity.operation.progressTrackers[`FullSync-${tmpName}`];
+							if (tmpTracker)
+							{
+								tmpProgress.Total = tmpTracker.TotalCount || tmpProgress.Total;
+								tmpProgress.Synced = Math.max(tmpTracker.CurrentCount || 0, 0);
+							}
+						}
+					}
+
+					tmpTotalSynced += (tmpProgress.Synced || 0);
+				}
+				this._cloneState.ThroughputSamples.push({ t: Date.now(), synced: tmpTotalSynced });
+			}, 10000);
+	}
+
+	/**
+	 * Stop the throughput sampler and record a final sample.
+	 */
+	stopThroughputSampling()
+	{
+		if (this._cloneState.ThroughputTimer)
+		{
+			clearInterval(this._cloneState.ThroughputTimer);
+			this._cloneState.ThroughputTimer = null;
+		}
+		if (this._cloneState.ThroughputSamples && this._cloneState.ThroughputSamples.length > 0)
+		{
+			let tmpTotalSynced = 0;
+			let tmpTableNames = Object.keys(this._cloneState.SyncProgress);
+			for (let i = 0; i < tmpTableNames.length; i++)
+			{
+				tmpTotalSynced += (this._cloneState.SyncProgress[tmpTableNames[i]].Synced || 0);
+			}
+			this._cloneState.ThroughputSamples.push({ t: Date.now(), synced: tmpTotalSynced });
+		}
+	}
+
 	/**
 	 * Pre-count phase — fetch record counts for all tables in parallel
 	 * before starting the actual sync. Populates SyncProgress[table].Total
@@ -566,6 +684,128 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 	}
 
 	/**
+	 * Warm up the local database connection by running a lightweight test query.
+	 * This forces the connection pool to recycle any stale/dead connections
+	 * (e.g. after a burst of CREATE TABLE statements during deploy).
+	 * Retries up to 3 times with a short delay between attempts.
+	 *
+	 * @param {Function} fCallback - Called when a connection is verified
+	 */
+	warmUpLocalConnection(fCallback)
+	{
+		let tmpProviderName = this._cloneState.ConnectionProvider;
+		let tmpAttempts = 0;
+		let tmpMaxAttempts = 5;
+		let tmpRetryDelayMs = 2000;
+
+		let fAttempt = () =>
+		{
+			tmpAttempts++;
+
+			if (tmpProviderName === 'SQLite')
+			{
+				// SQLite doesn't have connection pool issues
+				return fCallback();
+			}
+
+			// Look up the provider service via the registry
+			let tmpRegistryEntry = _ProviderRegistry[tmpProviderName];
+			if (!tmpRegistryEntry)
+			{
+				this.fable.log.warn(`Data Cloner: Connection warmup — unknown provider "${tmpProviderName}", skipping.`);
+				return fCallback();
+			}
+
+			let tmpProviderService = this.fable[tmpRegistryEntry.serviceName];
+			if (!tmpProviderService)
+			{
+				this.fable.log.warn(`Data Cloner: Connection warmup — provider service "${tmpRegistryEntry.serviceName}" not available, skipping.`);
+				return fCallback();
+			}
+
+			// Log the pool config on the first attempt for diagnostics
+			if (tmpAttempts === 1)
+			{
+				let tmpPoolConfig = tmpProviderService.options && tmpProviderService.options.MySQL;
+				if (tmpPoolConfig)
+				{
+					this.fable.log.info(`Data Cloner: Connection warmup — pool target: ${tmpPoolConfig.host}:${tmpPoolConfig.port} database=${tmpPoolConfig.database} user=${tmpPoolConfig.user}`);
+				}
+			}
+
+			// If the pool doesn't exist or a previous attempt failed, try to (re)create it
+			if (!tmpProviderService.pool)
+			{
+				this.fable.log.info(`Data Cloner: Connection warmup — no pool exists, calling connect()...`);
+				try
+				{
+					tmpProviderService.connect();
+				}
+				catch (pConnectError)
+				{
+					this.fable.log.warn(`Data Cloner: Connection warmup — connect() error: ${pConnectError.message}`);
+				}
+			}
+
+			if (!tmpProviderService.pool)
+			{
+				this.fable.log.warn(`Data Cloner: Connection warmup — pool still not available after connect(), skipping.`);
+				return fCallback();
+			}
+
+			// Run a lightweight test query to force the pool to recycle stale connections
+			this.fable.log.info(`Data Cloner: Connection warmup attempt ${tmpAttempts}/${tmpMaxAttempts}...`);
+			tmpProviderService.pool.query('SELECT 1 AS _warmup',
+				(pError) =>
+				{
+					if (pError)
+					{
+						this.fable.log.warn(`Data Cloner: Connection warmup attempt ${tmpAttempts}/${tmpMaxAttempts} failed: ${pError.code || pError.message}`);
+
+						// If the pool is persistently failing, destroy and recreate it
+						if (tmpAttempts >= 2 && pError.code === 'ECONNREFUSED')
+						{
+							this.fable.log.info('Data Cloner: Connection warmup — destroying stale pool and recreating...');
+							try
+							{
+								tmpProviderService.pool.end(() => {});
+							}
+							catch (pEndError) { /* ignore */ }
+							tmpProviderService._ConnectionPool = false;
+							tmpProviderService.connected = false;
+							try
+							{
+								tmpProviderService.connect();
+								this.fable.log.info('Data Cloner: Connection warmup — pool recreated.');
+							}
+							catch (pReconnectError)
+							{
+								this.fable.log.warn(`Data Cloner: Connection warmup — reconnect error: ${pReconnectError.message}`);
+							}
+						}
+
+						if (tmpAttempts < tmpMaxAttempts)
+						{
+							setTimeout(fAttempt, tmpRetryDelayMs);
+						}
+						else
+						{
+							this.fable.log.warn('Data Cloner: Connection warmup exhausted retries — proceeding with sync anyway.');
+							return fCallback();
+						}
+					}
+					else
+					{
+						this.fable.log.info(`Data Cloner: Connection warmup succeeded on attempt ${tmpAttempts}.`);
+						return fCallback();
+					}
+				});
+		};
+
+		fAttempt();
+	}
+
+	/**
 	 * The sync engine — synchronize data for a list of tables sequentially.
 	 *
 	 * @param {Array<string>} pTables - Table names to sync
@@ -591,10 +831,12 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 				SyncDeletedRecords: this._cloneState.SyncDeletedRecords
 			});
 
+		this.startThroughputSampling();
 		let fSyncNextTable = () =>
 		{
 			if (this._cloneState.SyncStopping || tmpTableIndex >= pTables.length)
 			{
+				this.stopThroughputSampling();
 				this._cloneState.SyncRunning = false;
 				this._cloneState.SyncEndTime = new Date().toJSON();
 
@@ -619,6 +861,22 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 				}
 
 				this.fable.log.info('Data Cloner: Sync complete.');
+
+				// Close the log file stream if one was opened for this run
+				if (this._cloneState.SyncLogFileLogger)
+				{
+					let tmpLogPath = this._cloneState.SyncLogFilePath || '';
+					this._cloneState.SyncLogFileLogger.flushBufferToLogFile(() =>
+					{
+						this._cloneState.SyncLogFileLogger.closeWriter(() =>
+						{
+							this.fable.log.info(`Data Cloner: Log file closed — ${tmpLogPath}`);
+						});
+					});
+					this._cloneState.SyncLogFileLogger = null;
+					this._cloneState.SyncLogFilePath = null;
+				}
+
 				return;
 			}
 
@@ -650,6 +908,18 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 							tmpProgress.Total = tmpTracker.TotalCount || 0;
 							tmpProgress.Synced = Math.max(tmpTracker.CurrentCount || 0, 0);
 						}
+					}
+
+					// Read per-record breakdown from the sync entity
+					if (tmpSyncEntity && tmpSyncEntity.syncResults)
+					{
+						let tmpResults = tmpSyncEntity.syncResults;
+						tmpProgress.New = tmpResults.Created || 0;
+						tmpProgress.Updated = 0;
+						tmpProgress.Unchanged = tmpResults.LocalRecordCount || 0;
+						tmpProgress.Deleted = tmpResults.Deleted || 0;
+						tmpProgress.ServerTotal = tmpResults.ServerRecordCount || 0;
+						tmpProgress.LocalCountBefore = tmpResults.LocalRecordCount || 0;
 					}
 
 					let tmpRESTErrors = this._cloneState.SyncRESTErrors[tmpTableName] || 0;
@@ -698,7 +968,14 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 		this.preCountTables(pTables,
 			() =>
 			{
-				fSyncNextTable();
+				// Warm up the local database connection before starting sync.
+				// After the pre-count phase (which only queries the remote server),
+				// local DB pool connections may have gone stale. A test query
+				// forces the pool to recycle dead connections before we sync.
+				this.warmUpLocalConnection(() =>
+				{
+					fSyncNextTable();
+				});
 			});
 	}
 

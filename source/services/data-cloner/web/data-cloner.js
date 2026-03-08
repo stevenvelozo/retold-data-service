@@ -1818,6 +1818,1615 @@
     }],
     7: [function (require, module, exports) {
       module.exports = {
+        "RenderOnLoad": true,
+        "DefaultRenderable": "Histogram-Wrap",
+        "DefaultDestinationAddress": "#Histogram-Container-Div",
+        "Templates": [{
+          "Hash": "Histogram-Container",
+          "Template": "<!-- Histogram Container Rendering Soon -->"
+        }],
+        "Renderables": [{
+          "RenderableHash": "Histogram-Wrap",
+          "TemplateHash": "Histogram-Container",
+          "DestinationAddress": "#Histogram-Container-Div"
+        }],
+        "TargetElementAddress": "#Histogram-Container-Div",
+        // --- Data Configuration ---
+
+        // Address in AppData (or other Pict address space) for the histogram bins
+        // Expected format: Array of objects with at least { Label, Value } properties
+        // e.g. [{ Label: "2020", Value: 15 }, { Label: "2021", Value: 42 }]
+        "DataAddress": false,
+        // Alternatively, provide bins directly (used if DataAddress is not set)
+        "Bins": [],
+        // Property names within each bin object
+        "LabelProperty": "Label",
+        "ValueProperty": "Value",
+        // --- Layout Configuration ---
+
+        // "vertical" = bars grow upward; "horizontal" = bars grow rightward
+        "Orientation": "vertical",
+        // The rendering mode: "browser", "consoleui", or "cli"
+        // "browser" renders HTML/CSS/SVG; "consoleui" renders via blessed widgets;
+        // "cli" renders ANSI text to stdout
+        "RenderMode": "browser",
+        // Maximum height in pixels (browser vertical) or characters (cli/consoleui)
+        "MaxBarSize": 200,
+        // Bar thickness in pixels (browser) or characters (cli/consoleui)
+        "BarThickness": 30,
+        // Gap between bars in pixels (browser) or characters (cli/consoleui)
+        "BarGap": 4,
+        // When true, bar groups expand to fill the container width (vertical) or
+        // height (horizontal) using CSS flex-grow instead of a fixed BarThickness.
+        // Labels and values overflow their column so they remain readable even when
+        // bars are very narrow.  Best suited for time-series or dense histograms.
+        "FillContainer": false,
+        // Whether to show value labels on/above bars
+        "ShowValues": true,
+        // Whether to show bin labels (x-axis for vertical, y-axis for horizontal)
+        "ShowLabels": true,
+        // In FillContainer mode, controls label density in the separate label row.
+        // 0 = auto-compute (space labels approximately 80px apart based on container
+        // width), N > 0 = show a label every N bars starting from index 0.
+        // Ignored when FillContainer is false (every bar shows its own label).
+        "LabelInterval": 0,
+        // Color of the bars (CSS color for browser, ANSI color name for cli/consoleui)
+        "BarColor": "#4A90D9",
+        // Color of selected bars
+        "SelectedBarColor": "#2ECC71",
+        // Color of bars in the selection range
+        "SelectionRangeColor": "#85C1E9",
+        // --- Selection Configuration ---
+
+        // Enable selection mode
+        "Selectable": false,
+        // Selection mode: "single", "multiple", "range"
+        // "single" - click to select one bar
+        // "multiple" - click to toggle individual bars
+        // "range" - drag sliders to select a contiguous range of bins
+        "SelectionMode": "range",
+        // Address in AppData to write selection state
+        // Will contain { SelectedIndices: [], RangeStart: N, RangeEnd: N } or similar
+        "SelectionDataAddress": false,
+        // Initial selection (array of indices or { Start, End } for range mode)
+        "InitialSelection": null,
+        // --- CLI/ConsoleUI Configuration ---
+
+        // Characters used for rendering in text mode
+        "BarCharacter": "\u2588",
+        "BarPartialCharacters": [" ", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"],
+        "EmptyCharacter": " ",
+        "SliderCharacter": "\u2502",
+        "SliderHandleCharacter": "\u25C6",
+        // Width of the histogram in characters (cli/consoleui)
+        "TextWidth": 60,
+        // Height of the histogram in characters (cli/consoleui vertical)
+        "TextHeight": 15,
+        // --- CSS ---
+        "CSS": `.pict-histogram-container
+{
+	display: inline-block;
+	position: relative;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	font-size: 12px;
+	user-select: none;
+}
+.pict-histogram-chart
+{
+	display: flex;
+	align-items: flex-end;
+	position: relative;
+}
+.pict-histogram-container.pict-histogram-horizontal
+{
+	display: inline-flex;
+	flex-direction: row;
+	align-items: stretch;
+}
+.pict-histogram-chart.pict-histogram-horizontal
+{
+	flex-direction: column;
+	align-items: flex-start;
+}
+.pict-histogram-bar-group
+{
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	cursor: default;
+	flex-shrink: 0;
+}
+.pict-histogram-horizontal .pict-histogram-bar-group
+{
+	flex-direction: row;
+	align-items: center;
+}
+.pict-histogram-bar
+{
+	transition: background-color 0.15s ease, height 0.2s ease, width 0.2s ease;
+	border-radius: 2px 2px 0 0;
+	min-width: 1px;
+	min-height: 1px;
+}
+.pict-histogram-horizontal .pict-histogram-bar
+{
+	border-radius: 0 2px 2px 0;
+}
+.pict-histogram-bar.pict-histogram-selectable
+{
+	cursor: pointer;
+}
+.pict-histogram-bar.pict-histogram-selectable:hover
+{
+	opacity: 0.8;
+}
+.pict-histogram-bar.pict-histogram-selected
+{
+	box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.4);
+}
+.pict-histogram-bar.pict-histogram-in-range
+{
+	opacity: 0.9;
+}
+.pict-histogram-value-label
+{
+	text-align: center;
+	color: #666;
+	font-size: 11px;
+	padding: 2px 0;
+	white-space: nowrap;
+}
+.pict-histogram-horizontal .pict-histogram-value-label
+{
+	padding: 0 4px;
+}
+.pict-histogram-bin-label
+{
+	text-align: center;
+	color: #333;
+	font-size: 11px;
+	padding: 4px 2px 0 2px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.pict-histogram-horizontal .pict-histogram-bin-label
+{
+	padding: 0 4px 0 0;
+	text-align: right;
+	min-width: 40px;
+}
+.pict-histogram-range-slider-container
+{
+	position: relative;
+	width: 100%;
+	height: 24px;
+	margin-top: 4px;
+}
+.pict-histogram-horizontal .pict-histogram-range-slider-container
+{
+	width: 24px;
+	height: auto;
+	align-self: stretch;
+	margin-top: 0;
+	margin-left: 4px;
+}
+.pict-histogram-range-track
+{
+	position: absolute;
+	top: 10px;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: #E0E0E0;
+	border-radius: 2px;
+}
+.pict-histogram-horizontal .pict-histogram-range-track
+{
+	top: 0;
+	left: 10px;
+	right: auto;
+	bottom: 0;
+	width: 4px;
+	height: auto;
+}
+.pict-histogram-range-fill
+{
+	position: absolute;
+	top: 10px;
+	height: 4px;
+	background: #4A90D9;
+	border-radius: 2px;
+}
+.pict-histogram-horizontal .pict-histogram-range-fill
+{
+	top: auto;
+	left: 10px;
+	width: 4px;
+	height: auto;
+}
+.pict-histogram-range-handle
+{
+	position: absolute;
+	top: 4px;
+	width: 16px;
+	height: 16px;
+	background: #fff;
+	border: 2px solid #4A90D9;
+	border-radius: 50%;
+	cursor: grab;
+	z-index: 2;
+	transform: translateX(-50%);
+}
+.pict-histogram-horizontal .pict-histogram-range-handle
+{
+	top: auto;
+	left: 4px;
+	transform: translateY(-50%);
+}
+.pict-histogram-range-handle:active
+{
+	cursor: grabbing;
+	background: #4A90D9;
+}
+.pict-histogram-range-handle:active,
+.pict-histogram-range-handle:focus
+{
+	box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.3);
+	outline: none;
+}
+.pict-histogram-container.pict-histogram-fill
+{
+	display: block;
+	width: 100%;
+}
+.pict-histogram-fill .pict-histogram-chart
+{
+	width: 100%;
+}
+.pict-histogram-fill .pict-histogram-bar-group
+{
+	flex: 1 1 0%;
+	min-width: 0;
+}
+.pict-histogram-fill .pict-histogram-bar
+{
+	width: 100%;
+}
+.pict-histogram-axis-line
+{
+	width: 100%;
+	height: 1px;
+	background: #ccc;
+}
+.pict-histogram-label-row
+{
+	display: flex;
+	width: 100%;
+}
+.pict-histogram-fill-label
+{
+	font-size: 10px;
+	color: #666;
+	text-align: center;
+	white-space: nowrap;
+	overflow: visible;
+	line-height: 16px;
+}
+`
+      };
+    }, {}],
+    8: [function (require, module, exports) {
+      /**
+       * Pict Section Histogram
+       *
+       * A histogram visualization section for the Pict MVC framework.
+       *
+       * Supports:
+       *   - Vertical and horizontal orientation
+       *   - Three render modes: browser (HTML/CSS), consoleui (blessed), cli (ANSI)
+       *   - Interactive selection: single click, multi-select, or range slider
+       *   - Data binding via Pict AppData addresses
+       *
+       * @module pict-section-histogram
+       */
+
+      const libPictViewClass = require('pict-view');
+      const _DefaultConfiguration = require('./Pict-Section-Histogram-DefaultConfiguration.js');
+      const libRendererBrowser = require('./renderers/Pict-Histogram-Renderer-Browser.js');
+      const libRendererConsoleUI = require('./renderers/Pict-Histogram-Renderer-ConsoleUI.js');
+      const libRendererCLI = require('./renderers/Pict-Histogram-Renderer-CLI.js');
+      class PictSectionHistogram extends libPictViewClass {
+        constructor(pFable, pOptions, pServiceHash) {
+          let tmpOptions = Object.assign({}, _DefaultConfiguration, pOptions);
+          super(pFable, tmpOptions, pServiceHash);
+          this.initialRenderComplete = false;
+
+          // --- Selection State ---
+
+          // Set of selected bin indices (for "single" and "multiple" modes)
+          this._selectedIndices = new Set();
+
+          // Range bounds (for "range" mode)
+          this._selectionRangeStart = 0;
+          this._selectionRangeEnd = 0;
+
+          // Resolve the renderer for the configured mode
+          this._renderer = this._resolveRenderer();
+
+          // Apply initial selection if provided
+          this._applyInitialSelection();
+        }
+
+        /**
+         * Set up the initial selection state from options.
+         */
+        _applyInitialSelection() {
+          if (this.options.InitialSelection) {
+            this.setSelection(this.options.InitialSelection);
+          } else if (this.options.Selectable && this.options.SelectionMode === 'range') {
+            // Default: select all bins
+            let tmpBins = this.getBins();
+            this._selectionRangeStart = 0;
+            this._selectionRangeEnd = Math.max(0, tmpBins.length - 1);
+            this._syncSelectionFromRange();
+          }
+        }
+
+        /**
+         * Pick the renderer module based on RenderMode option.
+         *
+         * @returns {object} The renderer module { render, wireEvents }
+         */
+        _resolveRenderer() {
+          switch (this.options.RenderMode) {
+            case 'consoleui':
+              return libRendererConsoleUI;
+            case 'cli':
+              return libRendererCLI;
+            case 'browser':
+            default:
+              return libRendererBrowser;
+          }
+        }
+
+        // --- Data Access ---
+
+        /**
+         * Get the current bin data array.
+         *
+         * Reads from the configured DataAddress in AppData, falling back to
+         * the static Bins option.
+         *
+         * @returns {Array} Array of bin objects
+         */
+        getBins() {
+          if (this.options.DataAddress) {
+            const tmpAddressSpace = {
+              Fable: this.fable,
+              Pict: this.fable,
+              AppData: this.AppData,
+              Bundle: this.Bundle,
+              Options: this.options
+            };
+            let tmpData = this.fable.manifest.getValueByHash(tmpAddressSpace, this.options.DataAddress);
+            if (Array.isArray(tmpData)) {
+              return tmpData;
+            } else {
+              this.log.warn(`PICT-Histogram DataAddress [${this.options.DataAddress}] did not return an array.`);
+            }
+          }
+          return this.options.Bins || [];
+        }
+
+        /**
+         * Set the bins programmatically (updates the Bins option).
+         *
+         * @param {Array} pBins - Array of bin objects { Label, Value, ... }
+         */
+        setBins(pBins) {
+          if (!Array.isArray(pBins)) {
+            this.log.warn('PICT-Histogram setBins requires an array.');
+            return;
+          }
+          this.options.Bins = pBins;
+
+          // If we also have a DataAddress, write through
+          if (this.options.DataAddress) {
+            const tmpAddressSpace = {
+              Fable: this.fable,
+              Pict: this.fable,
+              AppData: this.AppData,
+              Bundle: this.Bundle,
+              Options: this.options
+            };
+            this.fable.manifest.setValueByHash(tmpAddressSpace, this.options.DataAddress, pBins);
+          }
+        }
+
+        // --- Selection Logic ---
+
+        /**
+         * Check whether a bin index is currently selected.
+         *
+         * @param {number} pIndex
+         * @returns {boolean}
+         */
+        isIndexSelected(pIndex) {
+          if (!this.options.Selectable) {
+            return false;
+          }
+          if (this.options.SelectionMode === 'range') {
+            return pIndex === this._selectionRangeStart || pIndex === this._selectionRangeEnd;
+          }
+          return this._selectedIndices.has(pIndex);
+        }
+
+        /**
+         * Check whether a bin index falls within the current range selection
+         * (but is not one of the range endpoints).
+         *
+         * @param {number} pIndex
+         * @returns {boolean}
+         */
+        isIndexInRange(pIndex) {
+          if (!this.options.Selectable || this.options.SelectionMode !== 'range') {
+            return false;
+          }
+          return pIndex > this._selectionRangeStart && pIndex < this._selectionRangeEnd;
+        }
+
+        /**
+         * Get the current selection state.
+         *
+         * @returns {object} Selection descriptor
+         */
+        getSelection() {
+          if (this.options.SelectionMode === 'range') {
+            let tmpBins = this.getBins();
+            let tmpIndices = [];
+            for (let i = this._selectionRangeStart; i <= this._selectionRangeEnd; i++) {
+              tmpIndices.push(i);
+            }
+            return {
+              Mode: 'range',
+              RangeStart: this._selectionRangeStart,
+              RangeEnd: this._selectionRangeEnd,
+              SelectedIndices: tmpIndices,
+              StartLabel: (tmpBins[this._selectionRangeStart] || {})[this.options.LabelProperty],
+              EndLabel: (tmpBins[this._selectionRangeEnd] || {})[this.options.LabelProperty]
+            };
+          } else {
+            return {
+              Mode: this.options.SelectionMode,
+              SelectedIndices: Array.from(this._selectedIndices).sort((a, b) => a - b)
+            };
+          }
+        }
+
+        /**
+         * Programmatically set the selection.
+         *
+         * @param {object|Array} pSelection - For range: { Start, End }; for single/multiple: array of indices
+         */
+        setSelection(pSelection) {
+          if (this.options.SelectionMode === 'range') {
+            if (pSelection && typeof pSelection.Start === 'number' && typeof pSelection.End === 'number') {
+              this._selectionRangeStart = pSelection.Start;
+              this._selectionRangeEnd = pSelection.End;
+              this._syncSelectionFromRange();
+            }
+          } else if (Array.isArray(pSelection)) {
+            this._selectedIndices = new Set(pSelection);
+          }
+          this._writeSelectionToAddress();
+        }
+
+        /**
+         * Handle a bar click in single or multiple selection mode.
+         *
+         * @param {number} pIndex - The clicked bin index
+         */
+        handleBarClick(pIndex) {
+          if (this.options.SelectionMode === 'single') {
+            this._selectedIndices.clear();
+            this._selectedIndices.add(pIndex);
+          } else if (this.options.SelectionMode === 'multiple') {
+            if (this._selectedIndices.has(pIndex)) {
+              this._selectedIndices.delete(pIndex);
+            } else {
+              this._selectedIndices.add(pIndex);
+            }
+          }
+          this._writeSelectionToAddress();
+          this.onSelectionChange(this.getSelection());
+          this.renderHistogram();
+        }
+
+        /**
+         * Handle a bar click in range mode — moves the nearest handle.
+         *
+         * @param {number} pIndex - The clicked bin index
+         */
+        handleRangeBarClick(pIndex) {
+          let tmpDistStart = Math.abs(pIndex - this._selectionRangeStart);
+          let tmpDistEnd = Math.abs(pIndex - this._selectionRangeEnd);
+          if (tmpDistStart <= tmpDistEnd) {
+            this._selectionRangeStart = Math.min(pIndex, this._selectionRangeEnd);
+          } else {
+            this._selectionRangeEnd = Math.max(pIndex, this._selectionRangeStart);
+          }
+          this._syncSelectionFromRange();
+          this._writeSelectionToAddress();
+          this.onSelectionChange(this.getSelection());
+          this.renderHistogram();
+        }
+
+        /**
+         * Sync _selectedIndices from the range bounds (so getSelection is consistent).
+         */
+        _syncSelectionFromRange() {
+          this._selectedIndices.clear();
+          for (let i = this._selectionRangeStart; i <= this._selectionRangeEnd; i++) {
+            this._selectedIndices.add(i);
+          }
+        }
+
+        /**
+         * Write the current selection state to the configured SelectionDataAddress.
+         */
+        _writeSelectionToAddress() {
+          if (!this.options.SelectionDataAddress) {
+            return;
+          }
+          const tmpAddressSpace = {
+            Fable: this.fable,
+            Pict: this.fable,
+            AppData: this.AppData,
+            Bundle: this.Bundle,
+            Options: this.options
+          };
+          this.fable.manifest.setValueByHash(tmpAddressSpace, this.options.SelectionDataAddress, this.getSelection());
+        }
+
+        /**
+         * Hook for subclasses or consumers to react to selection changes.
+         *
+         * @param {object} pSelection - The new selection state
+         */
+        onSelectionChange(pSelection) {
+          // Override in subclass or assign externally
+        }
+
+        // --- Lifecycle Hooks ---
+
+        onBeforeInitialize() {
+          super.onBeforeInitialize();
+          return super.onBeforeInitialize();
+        }
+        onAfterRender(pRenderable) {
+          // Inject CSS
+          this.pict.CSSMap.injectCSS();
+          if (!this.initialRenderComplete) {
+            this.onAfterInitialRender();
+            this.initialRenderComplete = true;
+          }
+          return super.onAfterRender(pRenderable);
+        }
+        onAfterInitialRender() {
+          this.renderHistogram();
+        }
+
+        /**
+         * Render the histogram using the active renderer and wire events.
+         */
+        renderHistogram() {
+          // Ensure CSS is injected (covers both lifecycle and direct calls)
+          if (this.pict.CSSMap) {
+            this.pict.CSSMap.injectCSS();
+          }
+          this._renderer.render(this);
+          this._renderer.wireEvents(this);
+          this.initialRenderComplete = true;
+        }
+
+        // --- Data Marshaling ---
+
+        marshalToView() {
+          super.marshalToView();
+          if (this.initialRenderComplete) {
+            this.renderHistogram();
+          }
+        }
+        marshalFromView() {
+          super.marshalFromView();
+          this._writeSelectionToAddress();
+        }
+
+        // --- Public API ---
+
+        /**
+         * Change the orientation and re-render.
+         *
+         * @param {string} pOrientation - "vertical" or "horizontal"
+         */
+        setOrientation(pOrientation) {
+          if (pOrientation !== 'vertical' && pOrientation !== 'horizontal') {
+            this.log.warn(`PICT-Histogram invalid orientation: ${pOrientation}`);
+            return;
+          }
+          this.options.Orientation = pOrientation;
+          if (this.initialRenderComplete) {
+            this.renderHistogram();
+          }
+        }
+
+        /**
+         * Change the render mode and re-render.
+         *
+         * @param {string} pRenderMode - "browser", "consoleui", or "cli"
+         */
+        setRenderMode(pRenderMode) {
+          this.options.RenderMode = pRenderMode;
+          this._renderer = this._resolveRenderer();
+          if (this.initialRenderComplete) {
+            this.renderHistogram();
+          }
+        }
+
+        /**
+         * Convenience: get the text representation (useful for CLI/consoleui).
+         *
+         * @returns {string}
+         */
+        toText() {
+          if (this.options.Orientation === 'vertical') {
+            return libRendererConsoleUI.renderVertical(this);
+          } else {
+            return libRendererConsoleUI.renderHorizontal(this);
+          }
+        }
+      }
+      module.exports = PictSectionHistogram;
+      module.exports.default_configuration = _DefaultConfiguration;
+      module.exports.renderers = {
+        browser: libRendererBrowser,
+        consoleui: libRendererConsoleUI,
+        cli: libRendererCLI
+      };
+    }, {
+      "./Pict-Section-Histogram-DefaultConfiguration.js": 7,
+      "./renderers/Pict-Histogram-Renderer-Browser.js": 9,
+      "./renderers/Pict-Histogram-Renderer-CLI.js": 10,
+      "./renderers/Pict-Histogram-Renderer-ConsoleUI.js": 11,
+      "pict-view": 13
+    }],
+    9: [function (require, module, exports) {
+      /**
+       * Browser renderer for pict-section-histogram.
+       *
+       * Renders the histogram as HTML/CSS elements using the Pict ContentAssignment
+       * pipeline.  Also wires up interactive selection (click, drag-slider) via
+       * DOM event listeners.
+       *
+       * @module Pict-Histogram-Renderer-Browser
+       */
+
+      /**
+       * Build the HTML string for a single bar group (bar + optional labels).
+       *
+       * @param {object} pBin          - The bin data { Label, Value, ... }
+       * @param {number} pIndex        - Index of the bin
+       * @param {number} pBarSize      - Computed bar size in pixels
+       * @param {object} pOptions      - View options
+       * @param {boolean} pIsSelected  - Whether this bin is selected
+       * @param {boolean} pInRange     - Whether this bin is inside the range selection
+       * @param {number} pLabelWidth   - Fixed label width in pixels (horizontal mode)
+       * @returns {string} HTML fragment
+       */
+      function buildBarGroupHTML(pBin, pIndex, pBarSize, pOptions, pIsSelected, pInRange, pLabelWidth) {
+        let tmpLabel = pBin[pOptions.LabelProperty] || '';
+        let tmpValue = pBin[pOptions.ValueProperty] || 0;
+        let tmpVertical = pOptions.Orientation === 'vertical';
+        let tmpBarColor = pIsSelected ? pOptions.SelectedBarColor : pInRange ? pOptions.SelectionRangeColor : pOptions.BarColor;
+        let tmpSelectableClass = pOptions.Selectable ? ' pict-histogram-selectable' : '';
+        let tmpSelectedClass = pIsSelected ? ' pict-histogram-selected' : '';
+        let tmpInRangeClass = pInRange ? ' pict-histogram-in-range' : '';
+        let tmpFillMode = pOptions.FillContainer;
+        let tmpBarStyle = '';
+        if (tmpVertical) {
+          if (tmpFillMode) {
+            tmpBarStyle = `height:${pBarSize}px;background-color:${tmpBarColor};`;
+          } else {
+            tmpBarStyle = `height:${pBarSize}px;width:${pOptions.BarThickness}px;background-color:${tmpBarColor};`;
+          }
+        } else {
+          if (tmpFillMode) {
+            tmpBarStyle = `width:${pBarSize}px;background-color:${tmpBarColor};`;
+          } else {
+            tmpBarStyle = `width:${pBarSize}px;height:${pOptions.BarThickness}px;background-color:${tmpBarColor};`;
+          }
+        }
+        let tmpGroupWidth = pOptions.BarThickness + pOptions.BarGap;
+        let tmpGroupStyle = '';
+        if (tmpFillMode) {
+          // No fixed dimensions — CSS flex:1 handles sizing
+          tmpGroupStyle = '';
+        } else if (tmpVertical) {
+          tmpGroupStyle = `margin:0 ${pOptions.BarGap / 2}px;width:${tmpGroupWidth}px;`;
+        } else {
+          tmpGroupStyle = `margin:${pOptions.BarGap / 2}px 0;`;
+        }
+        let tmpHTML = `<div class="pict-histogram-bar-group" style="${tmpGroupStyle}" data-histogram-index="${pIndex}">`;
+        if (tmpVertical) {
+          // Value label above bar (skipped in fill mode — values don't fit in narrow columns)
+          if (pOptions.ShowValues && !tmpFillMode) {
+            tmpHTML += `<div class="pict-histogram-value-label" style="width:${tmpGroupWidth}px;">${tmpValue}</div>`;
+          }
+          // Bar
+          tmpHTML += `<div class="pict-histogram-bar${tmpSelectableClass}${tmpSelectedClass}${tmpInRangeClass}" style="${tmpBarStyle}" data-histogram-index="${pIndex}"></div>`;
+          // Bin label below bar (skipped in fill mode — labels rendered in a separate row)
+          if (pOptions.ShowLabels && !tmpFillMode) {
+            tmpHTML += `<div class="pict-histogram-bin-label" style="width:${tmpGroupWidth}px;">${tmpLabel}</div>`;
+          }
+        } else {
+          // Bin label to the left (fixed width so bars align)
+          if (pOptions.ShowLabels) {
+            let tmpLabelStyle = pLabelWidth ? `width:${pLabelWidth}px;min-width:${pLabelWidth}px;` : '';
+            tmpHTML += `<div class="pict-histogram-bin-label" style="${tmpLabelStyle}">${tmpLabel}</div>`;
+          }
+          // Bar
+          tmpHTML += `<div class="pict-histogram-bar${tmpSelectableClass}${tmpSelectedClass}${tmpInRangeClass}" style="${tmpBarStyle}" data-histogram-index="${pIndex}"></div>`;
+          // Value label to the right
+          if (pOptions.ShowValues) {
+            tmpHTML += `<div class="pict-histogram-value-label">${tmpValue}</div>`;
+          }
+        }
+        tmpHTML += '</div>';
+        return tmpHTML;
+      }
+
+      /**
+       * Build the HTML for the range-slider overlay (used in "range" selection mode).
+       *
+       * @param {object} pView - The histogram view instance
+       * @returns {string} HTML fragment
+       */
+      function buildRangeSliderHTML(pView) {
+        let tmpBins = pView.getBins();
+        if (!tmpBins || tmpBins.length === 0) {
+          return '';
+        }
+        let tmpRangeStart = pView._selectionRangeStart;
+        let tmpRangeEnd = pView._selectionRangeEnd;
+        let tmpMax = tmpBins.length - 1;
+
+        // Calculate percentage positions for the handles
+        let tmpStartPct = tmpMax > 0 ? tmpRangeStart / tmpMax * 100 : 0;
+        let tmpEndPct = tmpMax > 0 ? tmpRangeEnd / tmpMax * 100 : 100;
+        let tmpVertical = pView.options.Orientation === 'vertical';
+        let tmpHTML = '<div class="pict-histogram-range-slider-container">';
+        tmpHTML += '<div class="pict-histogram-range-track"></div>';
+        if (tmpVertical) {
+          tmpHTML += `<div class="pict-histogram-range-fill" style="left:${tmpStartPct}%;right:${100 - tmpEndPct}%;"></div>`;
+          tmpHTML += `<div class="pict-histogram-range-handle pict-histogram-range-handle-start" tabindex="0" style="left:${tmpStartPct}%;" data-handle="start"></div>`;
+          tmpHTML += `<div class="pict-histogram-range-handle pict-histogram-range-handle-end" tabindex="0" style="left:${tmpEndPct}%;" data-handle="end"></div>`;
+        } else {
+          tmpHTML += `<div class="pict-histogram-range-fill" style="top:${tmpStartPct}%;bottom:${100 - tmpEndPct}%;"></div>`;
+          tmpHTML += `<div class="pict-histogram-range-handle pict-histogram-range-handle-start" tabindex="0" style="top:${tmpStartPct}%;" data-handle="start"></div>`;
+          tmpHTML += `<div class="pict-histogram-range-handle pict-histogram-range-handle-end" tabindex="0" style="top:${tmpEndPct}%;" data-handle="end"></div>`;
+        }
+        tmpHTML += '</div>';
+        return tmpHTML;
+      }
+
+      /**
+       * Build the label row for FillContainer vertical mode.
+       *
+       * Labels are rendered in a separate flex row below the axis line, with
+       * automatic interval calculation to avoid overlap when there are many bins.
+       *
+       * @param {object} pView  - The histogram view instance
+       * @param {Array}  pBins  - The bin data array
+       * @returns {string} HTML fragment
+       */
+      function buildFillLabelRow(pView, pBins) {
+        if (!pBins || pBins.length === 0) {
+          return '';
+        }
+
+        // Determine label interval: explicit setting or auto-compute
+        let tmpLabelInterval = pView.options.LabelInterval || 0;
+        if (tmpLabelInterval <= 0) {
+          // Auto-compute: space labels approximately 80px apart
+          let tmpTargetElementSet = pView.services.ContentAssignment.getElement(pView.options.TargetElementAddress);
+          let tmpContainerWidth = 800;
+          if (tmpTargetElementSet && tmpTargetElementSet.length > 0 && tmpTargetElementSet[0]) {
+            tmpContainerWidth = tmpTargetElementSet[0].clientWidth || 800;
+          }
+          if (pBins.length > 0) {
+            let tmpBarWidth = tmpContainerWidth / pBins.length;
+            tmpLabelInterval = Math.max(1, Math.ceil(80 / tmpBarWidth));
+          } else {
+            tmpLabelInterval = 1;
+          }
+        }
+        let tmpHTML = '<div class="pict-histogram-label-row">';
+        for (let i = 0; i < pBins.length; i++) {
+          let tmpIsLabeled = i % tmpLabelInterval === 0;
+          if (tmpIsLabeled) {
+            let tmpLabel = pBins[i][pView.options.LabelProperty] || '';
+            // Span covers this label and the unlabeled bars until the next label
+            let tmpSpan = Math.min(tmpLabelInterval, pBins.length - i);
+            tmpHTML += `<div class="pict-histogram-fill-label" style="flex:${tmpSpan};">${tmpLabel}</div>`;
+            i += tmpSpan - 1;
+          }
+        }
+        tmpHTML += '</div>';
+        return tmpHTML;
+      }
+
+      /**
+       * Render the full histogram into the target element.
+       *
+       * @param {object} pView - The histogram view instance
+       */
+      function render(pView) {
+        let tmpBins = pView.getBins();
+        if (!tmpBins || tmpBins.length === 0) {
+          pView.services.ContentAssignment.assignContent(pView.options.TargetElementAddress, '<div class="pict-histogram-container"><em>No histogram data</em></div>');
+          return;
+        }
+        let tmpMaxValue = 0;
+        for (let i = 0; i < tmpBins.length; i++) {
+          let tmpVal = tmpBins[i][pView.options.ValueProperty] || 0;
+          if (tmpVal > tmpMaxValue) {
+            tmpMaxValue = tmpVal;
+          }
+        }
+        if (tmpMaxValue === 0) {
+          tmpMaxValue = 1;
+        }
+        let tmpVertical = pView.options.Orientation === 'vertical';
+        let tmpOrientationClass = tmpVertical ? 'pict-histogram-vertical' : 'pict-histogram-horizontal';
+        let tmpFillClass = pView.options.FillContainer ? ' pict-histogram-fill' : '';
+
+        // For horizontal mode (non-fill), measure the longest label so all labels share the same width
+        let tmpLabelWidth = 0;
+        if (!tmpVertical && pView.options.ShowLabels && !pView.options.FillContainer) {
+          for (let i = 0; i < tmpBins.length; i++) {
+            let tmpLabel = String(tmpBins[i][pView.options.LabelProperty] || '');
+            // Approximate character width at 11px font: ~6.5px per character
+            let tmpEstWidth = tmpLabel.length * 6.5 + 8;
+            if (tmpEstWidth > tmpLabelWidth) {
+              tmpLabelWidth = tmpEstWidth;
+            }
+          }
+          tmpLabelWidth = Math.max(tmpLabelWidth, 40);
+        }
+        let tmpHTML = `<div class="pict-histogram-container ${tmpOrientationClass}${tmpFillClass}">`;
+        tmpHTML += `<div class="pict-histogram-chart ${tmpOrientationClass}${tmpFillClass}">`;
+        for (let i = 0; i < tmpBins.length; i++) {
+          let tmpVal = tmpBins[i][pView.options.ValueProperty] || 0;
+          let tmpBarSize = Math.round(tmpVal / tmpMaxValue * pView.options.MaxBarSize);
+          if (tmpVal > 0 && tmpBarSize < 1) {
+            tmpBarSize = 1;
+          }
+          let tmpIsSelected = pView.isIndexSelected(i);
+          let tmpInRange = !tmpIsSelected && pView.isIndexInRange(i);
+          tmpHTML += buildBarGroupHTML(tmpBins[i], i, tmpBarSize, pView.options, tmpIsSelected, tmpInRange, tmpLabelWidth);
+        }
+        tmpHTML += '</div>';
+
+        // In FillContainer vertical mode, render axis line and label row separately
+        if (pView.options.FillContainer && tmpVertical && pView.options.ShowLabels) {
+          tmpHTML += '<div class="pict-histogram-axis-line"></div>';
+          tmpHTML += buildFillLabelRow(pView, tmpBins);
+        }
+
+        // Range slider for "range" selection mode
+        if (pView.options.Selectable && pView.options.SelectionMode === 'range') {
+          tmpHTML += buildRangeSliderHTML(pView);
+        }
+        tmpHTML += '</div>';
+        pView.services.ContentAssignment.assignContent(pView.options.TargetElementAddress, tmpHTML);
+      }
+
+      /**
+       * Wire up DOM event listeners for interactivity (click selection, range drag).
+       *
+       * @param {object} pView - The histogram view instance
+       */
+      function wireEvents(pView) {
+        if (!pView.options.Selectable) {
+          return;
+        }
+        let tmpTargetElementSet = pView.services.ContentAssignment.getElement(pView.options.TargetElementAddress);
+        if (!tmpTargetElementSet || tmpTargetElementSet.length < 1) {
+          return;
+        }
+        let tmpContainer = tmpTargetElementSet[0];
+        if (!tmpContainer) {
+          return;
+        }
+
+        // --- Bar click selection (single / multiple modes) ---
+        if (pView.options.SelectionMode === 'single' || pView.options.SelectionMode === 'multiple') {
+          let tmpBars = tmpContainer.querySelectorAll('.pict-histogram-bar[data-histogram-index]');
+          for (let i = 0; i < tmpBars.length; i++) {
+            tmpBars[i].addEventListener('click', pEvent => {
+              let tmpIndex = parseInt(pEvent.currentTarget.getAttribute('data-histogram-index'), 10);
+              if (isNaN(tmpIndex)) {
+                return;
+              }
+              pView.handleBarClick(tmpIndex);
+            });
+          }
+        }
+
+        // --- Range slider drag ---
+        if (pView.options.SelectionMode === 'range') {
+          // Also allow clicking bars to move nearest handle
+          let tmpBars = tmpContainer.querySelectorAll('.pict-histogram-bar[data-histogram-index]');
+          for (let i = 0; i < tmpBars.length; i++) {
+            tmpBars[i].addEventListener('click', pEvent => {
+              let tmpIndex = parseInt(pEvent.currentTarget.getAttribute('data-histogram-index'), 10);
+              if (isNaN(tmpIndex)) {
+                return;
+              }
+              pView.handleRangeBarClick(tmpIndex);
+            });
+          }
+          let tmpHandles = tmpContainer.querySelectorAll('.pict-histogram-range-handle');
+          for (let i = 0; i < tmpHandles.length; i++) {
+            wireRangeHandle(pView, tmpHandles[i], tmpContainer);
+          }
+        }
+      }
+
+      /**
+       * Wire drag behavior on a single range handle element.
+       *
+       * @param {object} pView        - The histogram view instance
+       * @param {Element} pHandle     - The handle DOM element
+       * @param {Element} pContainer  - The histogram container element
+       */
+      function wireRangeHandle(pView, pHandle, pContainer) {
+        let tmpHandleType = pHandle.getAttribute('data-handle'); // "start" or "end"
+        let tmpVertical = pView.options.Orientation === 'vertical';
+        let tmpDragging = false;
+        function getSliderBounds() {
+          // Re-query from pContainer every time because renderHistogram() replaces
+          // the inner HTML, detaching any previously-captured slider element.
+          let tmpSlider = pContainer.querySelector('.pict-histogram-range-slider-container');
+          if (!tmpSlider) {
+            return {
+              start: 0,
+              size: 1
+            };
+          }
+          let tmpRect = tmpSlider.getBoundingClientRect();
+          if (tmpVertical) {
+            return {
+              start: tmpRect.left,
+              size: tmpRect.width || 1
+            };
+          } else {
+            return {
+              start: tmpRect.top,
+              size: tmpRect.height || 1
+            };
+          }
+        }
+        function onPointerMove(pEvent) {
+          if (!tmpDragging) {
+            return;
+          }
+          let tmpBins = pView.getBins();
+          if (!tmpBins || tmpBins.length === 0) {
+            return;
+          }
+          let tmpBounds = getSliderBounds();
+          let tmpPos = tmpVertical ? pEvent.clientX : pEvent.clientY;
+          let tmpPct = (tmpPos - tmpBounds.start) / tmpBounds.size;
+          tmpPct = Math.max(0, Math.min(1, tmpPct));
+          let tmpIndex = Math.round(tmpPct * (tmpBins.length - 1));
+          if (tmpHandleType === 'start') {
+            if (tmpIndex > pView._selectionRangeEnd) {
+              tmpIndex = pView._selectionRangeEnd;
+            }
+            pView._selectionRangeStart = tmpIndex;
+          } else {
+            if (tmpIndex < pView._selectionRangeStart) {
+              tmpIndex = pView._selectionRangeStart;
+            }
+            pView._selectionRangeEnd = tmpIndex;
+          }
+          pView._syncSelectionFromRange();
+          pView.renderHistogram();
+        }
+        function onPointerUp() {
+          if (!tmpDragging) {
+            return;
+          }
+          tmpDragging = false;
+          if (typeof document !== 'undefined') {
+            document.removeEventListener('mousemove', onPointerMove);
+            document.removeEventListener('mouseup', onPointerUp);
+          }
+        }
+        pHandle.addEventListener('mousedown', pEvent => {
+          pEvent.preventDefault();
+          tmpDragging = true;
+          if (typeof document !== 'undefined') {
+            document.addEventListener('mousemove', onPointerMove);
+            document.addEventListener('mouseup', onPointerUp);
+          }
+        });
+      }
+      module.exports = {
+        render,
+        wireEvents
+      };
+    }, {}],
+    10: [function (require, module, exports) {
+      (function (process) {
+        (function () {
+          /**
+           * CLI renderer for pict-section-histogram.
+           *
+           * Renders the histogram as ANSI-colored text written directly to stdout
+           * (or through the Pict ContentAssignment pipeline if available).
+           *
+           * This mode is intended for command-line tools that print histogram output
+           * without a full terminal UI framework.
+           *
+           * @module Pict-Histogram-Renderer-CLI
+           */
+
+          // ANSI color codes (basic 16-color)
+          const ANSI_COLORS = {
+            'black': '\x1b[30m',
+            'red': '\x1b[31m',
+            'green': '\x1b[32m',
+            'yellow': '\x1b[33m',
+            'blue': '\x1b[34m',
+            'magenta': '\x1b[35m',
+            'cyan': '\x1b[36m',
+            'white': '\x1b[37m',
+            'reset': '\x1b[0m',
+            'bold': '\x1b[1m',
+            'dim': '\x1b[2m'
+          };
+
+          /**
+           * Map a CSS-ish color string to the nearest ANSI color.
+           *
+           * @param {string} pColor - A color string (name or hex)
+           * @returns {string} ANSI escape code
+           */
+          function colorToAnsi(pColor) {
+            if (!pColor) {
+              return ANSI_COLORS.blue;
+            }
+            let tmpLower = pColor.toLowerCase();
+
+            // Direct name match
+            if (ANSI_COLORS[tmpLower]) {
+              return ANSI_COLORS[tmpLower];
+            }
+
+            // Simple hex-to-nearest mapping
+            if (tmpLower.charAt(0) === '#' && tmpLower.length >= 7) {
+              let tmpR = parseInt(tmpLower.substring(1, 3), 16);
+              let tmpG = parseInt(tmpLower.substring(3, 5), 16);
+              let tmpB = parseInt(tmpLower.substring(5, 7), 16);
+
+              // Pick nearest basic color
+              if (tmpG > tmpR && tmpG > tmpB) {
+                return ANSI_COLORS.green;
+              }
+              if (tmpR > tmpG && tmpR > tmpB) {
+                return ANSI_COLORS.red;
+              }
+              if (tmpB > tmpR && tmpB > tmpG) {
+                return ANSI_COLORS.blue;
+              }
+              if (tmpR > 200 && tmpG > 200) {
+                return ANSI_COLORS.yellow;
+              }
+              if (tmpR > 200 && tmpB > 200) {
+                return ANSI_COLORS.magenta;
+              }
+              if (tmpG > 200 && tmpB > 200) {
+                return ANSI_COLORS.cyan;
+              }
+            }
+            return ANSI_COLORS.blue;
+          }
+
+          /**
+           * Render a vertical CLI histogram.
+           *
+           * @param {object} pView - The histogram view instance
+           * @returns {string} The ANSI text output
+           */
+          function renderVertical(pView) {
+            let tmpBins = pView.getBins();
+            let tmpOptions = pView.options;
+            let tmpHeight = tmpOptions.TextHeight || 15;
+            let tmpBarChar = tmpOptions.BarCharacter;
+            let tmpPartials = tmpOptions.BarPartialCharacters;
+            let tmpBarColor = colorToAnsi(tmpOptions.BarColor);
+            let tmpSelectedColor = colorToAnsi(tmpOptions.SelectedBarColor);
+            let tmpRangeColor = colorToAnsi(tmpOptions.SelectionRangeColor);
+            let tmpReset = ANSI_COLORS.reset;
+            if (!tmpBins || tmpBins.length === 0) {
+              return '(no data)\n';
+            }
+            let tmpMaxValue = 0;
+            for (let i = 0; i < tmpBins.length; i++) {
+              let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+              if (tmpVal > tmpMaxValue) {
+                tmpMaxValue = tmpVal;
+              }
+            }
+            if (tmpMaxValue === 0) {
+              tmpMaxValue = 1;
+            }
+            let tmpValueAxisWidth = String(tmpMaxValue).length + 1;
+            let tmpLines = [];
+            for (let tmpRow = tmpHeight; tmpRow >= 1; tmpRow--) {
+              let tmpLine = '';
+
+              // Axis labels
+              if (tmpRow === tmpHeight) {
+                tmpLine += ANSI_COLORS.dim + padLeft(String(tmpMaxValue), tmpValueAxisWidth) + '|' + tmpReset;
+              } else if (tmpRow === 1) {
+                tmpLine += ANSI_COLORS.dim + padLeft('0', tmpValueAxisWidth) + '|' + tmpReset;
+              } else if (tmpRow === Math.ceil(tmpHeight / 2)) {
+                tmpLine += ANSI_COLORS.dim + padLeft(String(Math.round(tmpMaxValue / 2)), tmpValueAxisWidth) + '|' + tmpReset;
+              } else {
+                tmpLine += ANSI_COLORS.dim + padLeft('', tmpValueAxisWidth) + '|' + tmpReset;
+              }
+              for (let i = 0; i < tmpBins.length; i++) {
+                let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+                let tmpBarHeight = tmpVal / tmpMaxValue * tmpHeight;
+                let tmpFullRows = Math.floor(tmpBarHeight);
+                let tmpFraction = tmpBarHeight - tmpFullRows;
+                let tmpIsSelected = pView.isIndexSelected(i);
+                let tmpInRange = !tmpIsSelected && pView.isIndexInRange(i);
+                let tmpColor = tmpIsSelected ? tmpSelectedColor : tmpInRange ? tmpRangeColor : tmpBarColor;
+                let tmpChar = ' ';
+                if (tmpRow <= tmpFullRows) {
+                  tmpChar = tmpBarChar;
+                } else if (tmpRow === tmpFullRows + 1 && tmpFraction > 0) {
+                  let tmpPartialIndex = Math.round(tmpFraction * (tmpPartials.length - 1));
+                  tmpChar = tmpPartials[tmpPartialIndex];
+                }
+                if (tmpChar !== ' ') {
+                  tmpLine += ' ' + tmpColor + tmpChar + tmpChar + tmpChar + tmpReset;
+                } else {
+                  tmpLine += '    ';
+                }
+              }
+              tmpLines.push(tmpLine);
+            }
+
+            // Bottom axis
+            let tmpAxisLine = ANSI_COLORS.dim + padLeft('', tmpValueAxisWidth) + '+';
+            for (let i = 0; i < tmpBins.length; i++) {
+              tmpAxisLine += '----';
+            }
+            tmpAxisLine += tmpReset;
+            tmpLines.push(tmpAxisLine);
+
+            // Labels
+            if (tmpOptions.ShowLabels) {
+              let tmpLabelLine = padLeft('', tmpValueAxisWidth) + ' ';
+              for (let i = 0; i < tmpBins.length; i++) {
+                let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+                tmpLabelLine += padCenter(tmpLabel.substring(0, 4), 4);
+              }
+              tmpLines.push(tmpLabelLine);
+            }
+
+            // Range selection info
+            if (tmpOptions.Selectable && tmpOptions.SelectionMode === 'range') {
+              let tmpStart = pView._selectionRangeStart;
+              let tmpEnd = pView._selectionRangeEnd;
+              let tmpStartLabel = tmpBins[tmpStart] ? tmpBins[tmpStart][tmpOptions.LabelProperty] : tmpStart;
+              let tmpEndLabel = tmpBins[tmpEnd] ? tmpBins[tmpEnd][tmpOptions.LabelProperty] : tmpEnd;
+              tmpLines.push('');
+              tmpLines.push(ANSI_COLORS.bold + '  Selection: ' + tmpStartLabel + ' - ' + tmpEndLabel + tmpReset);
+            }
+            return tmpLines.join('\n') + '\n';
+          }
+
+          /**
+           * Render a horizontal CLI histogram.
+           *
+           * @param {object} pView - The histogram view instance
+           * @returns {string} The ANSI text output
+           */
+          function renderHorizontal(pView) {
+            let tmpBins = pView.getBins();
+            let tmpOptions = pView.options;
+            let tmpWidth = tmpOptions.TextWidth || 60;
+            let tmpBarChar = tmpOptions.BarCharacter;
+            let tmpBarColor = colorToAnsi(tmpOptions.BarColor);
+            let tmpSelectedColor = colorToAnsi(tmpOptions.SelectedBarColor);
+            let tmpRangeColor = colorToAnsi(tmpOptions.SelectionRangeColor);
+            let tmpReset = ANSI_COLORS.reset;
+            if (!tmpBins || tmpBins.length === 0) {
+              return '(no data)\n';
+            }
+            let tmpMaxValue = 0;
+            let tmpMaxLabelLen = 0;
+            for (let i = 0; i < tmpBins.length; i++) {
+              let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+              if (tmpVal > tmpMaxValue) {
+                tmpMaxValue = tmpVal;
+              }
+              let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+              if (tmpLabel.length > tmpMaxLabelLen) {
+                tmpMaxLabelLen = tmpLabel.length;
+              }
+            }
+            if (tmpMaxValue === 0) {
+              tmpMaxValue = 1;
+            }
+            let tmpLabelWidth = Math.min(tmpMaxLabelLen, 12);
+            let tmpValueWidth = String(tmpMaxValue).length;
+            let tmpBarWidth = tmpWidth - tmpLabelWidth - tmpValueWidth - 4;
+            if (tmpBarWidth < 10) {
+              tmpBarWidth = 10;
+            }
+            let tmpLines = [];
+            for (let i = 0; i < tmpBins.length; i++) {
+              let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+              let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+              let tmpBarLen = Math.round(tmpVal / tmpMaxValue * tmpBarWidth);
+              let tmpIsSelected = pView.isIndexSelected(i);
+              let tmpInRange = !tmpIsSelected && pView.isIndexInRange(i);
+              let tmpColor = tmpIsSelected ? tmpSelectedColor : tmpInRange ? tmpRangeColor : tmpBarColor;
+              let tmpBar = '';
+              for (let j = 0; j < tmpBarLen; j++) {
+                tmpBar += tmpBarChar;
+              }
+              let tmpLine = ANSI_COLORS.dim + padRight(tmpLabel.substring(0, tmpLabelWidth), tmpLabelWidth) + ' |' + tmpReset;
+              tmpLine += tmpColor + tmpBar + tmpReset;
+              tmpLine += ' ' + tmpVal;
+              if (tmpIsSelected) {
+                tmpLine += ANSI_COLORS.bold + ' *' + tmpReset;
+              } else if (tmpInRange) {
+                tmpLine += ANSI_COLORS.dim + ' ~' + tmpReset;
+              }
+              tmpLines.push(tmpLine);
+            }
+
+            // Range info
+            if (tmpOptions.Selectable && tmpOptions.SelectionMode === 'range') {
+              let tmpStart = pView._selectionRangeStart;
+              let tmpEnd = pView._selectionRangeEnd;
+              let tmpStartLabel = tmpBins[tmpStart] ? tmpBins[tmpStart][tmpOptions.LabelProperty] : tmpStart;
+              let tmpEndLabel = tmpBins[tmpEnd] ? tmpBins[tmpEnd][tmpOptions.LabelProperty] : tmpEnd;
+              tmpLines.push('');
+              tmpLines.push(ANSI_COLORS.bold + '  Selection: ' + tmpStartLabel + ' - ' + tmpEndLabel + tmpReset);
+            }
+            return tmpLines.join('\n') + '\n';
+          }
+
+          /**
+           * Render in CLI mode.  Writes to ContentAssignment if available, otherwise
+           * falls back to process.stdout.
+           *
+           * @param {object} pView - The histogram view instance
+           */
+          function render(pView) {
+            let tmpText;
+            if (pView.options.Orientation === 'vertical') {
+              tmpText = renderVertical(pView);
+            } else {
+              tmpText = renderHorizontal(pView);
+            }
+
+            // Try ContentAssignment first (might be mocked in tests or bridged)
+            if (pView.services && pView.services.ContentAssignment) {
+              pView.services.ContentAssignment.assignContent(pView.options.TargetElementAddress, tmpText);
+            } else if (typeof process !== 'undefined' && process.stdout) {
+              process.stdout.write(tmpText);
+            }
+          }
+
+          // No interactive events in CLI mode
+          function wireEvents() {
+            // No-op for CLI
+          }
+
+          // --- Utility ---
+
+          function padLeft(pStr, pLen) {
+            let tmpStr = String(pStr);
+            while (tmpStr.length < pLen) {
+              tmpStr = ' ' + tmpStr;
+            }
+            return tmpStr;
+          }
+          function padRight(pStr, pLen) {
+            let tmpStr = String(pStr);
+            while (tmpStr.length < pLen) {
+              tmpStr = tmpStr + ' ';
+            }
+            return tmpStr;
+          }
+          function padCenter(pStr, pLen) {
+            let tmpStr = String(pStr);
+            while (tmpStr.length < pLen) {
+              tmpStr = tmpStr.length % 2 === 0 ? tmpStr + ' ' : ' ' + tmpStr;
+            }
+            return tmpStr;
+          }
+          module.exports = {
+            render,
+            wireEvents,
+            renderVertical,
+            renderHorizontal,
+            colorToAnsi,
+            ANSI_COLORS
+          };
+        }).call(this);
+      }).call(this, require('_process'));
+    }, {
+      "_process": 14
+    }],
+    11: [function (require, module, exports) {
+      /**
+       * Console UI (blessed) renderer for pict-section-histogram.
+       *
+       * Renders the histogram as text art through the Pict ContentAssignment
+       * pipeline, suitable for blessed/ncurses terminal UI widgets.
+       *
+       * The output is assigned via ContentAssignment so the pict-terminalui
+       * bridge (customAssignFunction) can project it into blessed boxes.
+       *
+       * @module Pict-Histogram-Renderer-ConsoleUI
+       */
+
+      /**
+       * Build a vertical text histogram.
+       *
+       * Each column is one bar.  Rows go from top (max value) to bottom (0).
+       * Uses block characters for fractional rows.
+       *
+       * @param {object} pView - The histogram view instance
+       * @returns {string} The rendered text block
+       */
+      function renderVertical(pView) {
+        let tmpBins = pView.getBins();
+        let tmpOptions = pView.options;
+        let tmpHeight = tmpOptions.TextHeight || 15;
+        let tmpBarChar = tmpOptions.BarCharacter;
+        let tmpPartials = tmpOptions.BarPartialCharacters;
+        let tmpEmptyChar = tmpOptions.EmptyCharacter;
+        if (!tmpBins || tmpBins.length === 0) {
+          return '(no data)';
+        }
+        let tmpMaxValue = 0;
+        for (let i = 0; i < tmpBins.length; i++) {
+          let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+          if (tmpVal > tmpMaxValue) {
+            tmpMaxValue = tmpVal;
+          }
+        }
+        if (tmpMaxValue === 0) {
+          tmpMaxValue = 1;
+        }
+
+        // Determine label width for the value axis
+        let tmpValueAxisWidth = String(tmpMaxValue).length + 1;
+
+        // Build the grid top-down
+        let tmpLines = [];
+        for (let tmpRow = tmpHeight; tmpRow >= 1; tmpRow--) {
+          let tmpLine = '';
+
+          // Value axis label (only on a few rows)
+          if (tmpRow === tmpHeight) {
+            tmpLine += padLeft(String(tmpMaxValue), tmpValueAxisWidth) + '|';
+          } else if (tmpRow === 1) {
+            tmpLine += padLeft('0', tmpValueAxisWidth) + '|';
+          } else if (tmpRow === Math.ceil(tmpHeight / 2)) {
+            tmpLine += padLeft(String(Math.round(tmpMaxValue / 2)), tmpValueAxisWidth) + '|';
+          } else {
+            tmpLine += padLeft('', tmpValueAxisWidth) + '|';
+          }
+          for (let i = 0; i < tmpBins.length; i++) {
+            let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+            let tmpBarHeight = tmpVal / tmpMaxValue * tmpHeight;
+            let tmpFullRows = Math.floor(tmpBarHeight);
+            let tmpFraction = tmpBarHeight - tmpFullRows;
+            let tmpChar = tmpEmptyChar;
+            if (tmpRow <= tmpFullRows) {
+              tmpChar = tmpBarChar;
+            } else if (tmpRow === tmpFullRows + 1 && tmpFraction > 0) {
+              let tmpPartialIndex = Math.round(tmpFraction * (tmpPartials.length - 1));
+              tmpChar = tmpPartials[tmpPartialIndex];
+            }
+
+            // Mark selected bins
+            let tmpIsSelected = pView.isIndexSelected(i);
+            let tmpInRange = !tmpIsSelected && pView.isIndexInRange(i);
+            if (tmpIsSelected && tmpChar !== tmpEmptyChar) {
+              tmpChar = '*';
+            } else if (tmpInRange && tmpChar !== tmpEmptyChar) {
+              tmpChar = '#';
+            }
+
+            // Each bar is 3 chars wide with 1 char gap
+            tmpLine += ' ' + tmpChar + tmpChar + tmpChar;
+          }
+          tmpLines.push(tmpLine);
+        }
+
+        // Bottom axis
+        let tmpAxisLine = padLeft('', tmpValueAxisWidth) + '+';
+        for (let i = 0; i < tmpBins.length; i++) {
+          tmpAxisLine += '----';
+        }
+        tmpLines.push(tmpAxisLine);
+
+        // Labels row
+        if (tmpOptions.ShowLabels) {
+          let tmpLabelLine = padLeft('', tmpValueAxisWidth) + ' ';
+          for (let i = 0; i < tmpBins.length; i++) {
+            let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+            tmpLabelLine += padCenter(tmpLabel.substring(0, 4), 4);
+          }
+          tmpLines.push(tmpLabelLine);
+        }
+
+        // Selection range indicator
+        if (tmpOptions.Selectable && tmpOptions.SelectionMode === 'range') {
+          let tmpRangeLine = padLeft('', tmpValueAxisWidth) + ' ';
+          for (let i = 0; i < tmpBins.length; i++) {
+            if (i === pView._selectionRangeStart) {
+              tmpRangeLine += ' [  ';
+            } else if (i === pView._selectionRangeEnd) {
+              tmpRangeLine += ' ]  ';
+            } else if (i > pView._selectionRangeStart && i < pView._selectionRangeEnd) {
+              tmpRangeLine += ' -  ';
+            } else {
+              tmpRangeLine += '    ';
+            }
+          }
+          tmpLines.push(tmpRangeLine);
+        }
+        return tmpLines.join('\n');
+      }
+
+      /**
+       * Build a horizontal text histogram.
+       *
+       * Each row is one bar growing rightward.
+       *
+       * @param {object} pView - The histogram view instance
+       * @returns {string} The rendered text block
+       */
+      function renderHorizontal(pView) {
+        let tmpBins = pView.getBins();
+        let tmpOptions = pView.options;
+        let tmpWidth = tmpOptions.TextWidth || 60;
+        let tmpBarChar = tmpOptions.BarCharacter;
+        let tmpPartials = tmpOptions.BarPartialCharacters;
+        if (!tmpBins || tmpBins.length === 0) {
+          return '(no data)';
+        }
+        let tmpMaxValue = 0;
+        let tmpMaxLabelLen = 0;
+        for (let i = 0; i < tmpBins.length; i++) {
+          let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+          if (tmpVal > tmpMaxValue) {
+            tmpMaxValue = tmpVal;
+          }
+          let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+          if (tmpLabel.length > tmpMaxLabelLen) {
+            tmpMaxLabelLen = tmpLabel.length;
+          }
+        }
+        if (tmpMaxValue === 0) {
+          tmpMaxValue = 1;
+        }
+        let tmpLabelWidth = Math.min(tmpMaxLabelLen, 12);
+        let tmpBarWidth = tmpWidth - tmpLabelWidth - 2; // space for " |"
+        if (tmpBarWidth < 10) {
+          tmpBarWidth = 10;
+        }
+        let tmpLines = [];
+        for (let i = 0; i < tmpBins.length; i++) {
+          let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+          let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+          let tmpBarLen = tmpVal / tmpMaxValue * tmpBarWidth;
+          let tmpFullChars = Math.floor(tmpBarLen);
+          let tmpFraction = tmpBarLen - tmpFullChars;
+          let tmpBar = '';
+          for (let j = 0; j < tmpFullChars; j++) {
+            tmpBar += tmpBarChar;
+          }
+          if (tmpFraction > 0 && tmpFullChars < tmpBarWidth) {
+            let tmpPartialIndex = Math.round(tmpFraction * (tmpPartials.length - 1));
+            tmpBar += tmpPartials[tmpPartialIndex];
+          }
+
+          // Mark selected
+          let tmpIsSelected = pView.isIndexSelected(i);
+          let tmpInRange = !tmpIsSelected && pView.isIndexInRange(i);
+          let tmpMarker = tmpIsSelected ? '*' : tmpInRange ? '~' : '';
+          let tmpValueStr = tmpOptions.ShowValues ? ' ' + tmpVal : '';
+          let tmpLine = padRight(tmpLabel.substring(0, tmpLabelWidth), tmpLabelWidth) + ' |' + tmpBar + tmpValueStr + tmpMarker;
+          tmpLines.push(tmpLine);
+        }
+
+        // Range indicator for range selection
+        if (tmpOptions.Selectable && tmpOptions.SelectionMode === 'range') {
+          tmpLines.push('');
+          tmpLines.push(padRight('', tmpLabelWidth) + '  Range: [' + pView._selectionRangeStart + ' - ' + pView._selectionRangeEnd + ']');
+        }
+        return tmpLines.join('\n');
+      }
+
+      /**
+       * Render via ContentAssignment for consoleui mode.
+       *
+       * @param {object} pView - The histogram view instance
+       */
+      function render(pView) {
+        let tmpText;
+        if (pView.options.Orientation === 'vertical') {
+          tmpText = renderVertical(pView);
+        } else {
+          tmpText = renderHorizontal(pView);
+        }
+        pView.services.ContentAssignment.assignContent(pView.options.TargetElementAddress, tmpText);
+      }
+
+      // No interactive events for consoleui — input is handled by the blessed widget layer
+      function wireEvents() {
+        // No-op for consoleui
+      }
+
+      // --- Utility ---
+
+      function padLeft(pStr, pLen) {
+        let tmpStr = String(pStr);
+        while (tmpStr.length < pLen) {
+          tmpStr = ' ' + tmpStr;
+        }
+        return tmpStr;
+      }
+      function padRight(pStr, pLen) {
+        let tmpStr = String(pStr);
+        while (tmpStr.length < pLen) {
+          tmpStr = tmpStr + ' ';
+        }
+        return tmpStr;
+      }
+      function padCenter(pStr, pLen) {
+        let tmpStr = String(pStr);
+        while (tmpStr.length < pLen) {
+          tmpStr = tmpStr.length % 2 === 0 ? tmpStr + ' ' : ' ' + tmpStr;
+        }
+        return tmpStr;
+      }
+      module.exports = {
+        render,
+        wireEvents,
+        renderVertical,
+        renderHorizontal
+      };
+    }, {}],
+    12: [function (require, module, exports) {
+      module.exports = {
         "name": "pict-view",
         "version": "1.0.67",
         "description": "Pict View Base Class",
@@ -1870,7 +3479,7 @@
         }
       };
     }, {}],
-    8: [function (require, module, exports) {
+    13: [function (require, module, exports) {
       const libFableServiceBase = require('fable-serviceproviderbase');
       const libPackage = require('../package.json');
       const defaultPictViewSettings = {
@@ -3034,10 +4643,187 @@
       }
       module.exports = PictView;
     }, {
-      "../package.json": 7,
+      "../package.json": 12,
       "fable-serviceproviderbase": 2
     }],
-    9: [function (require, module, exports) {
+    14: [function (require, module, exports) {
+      // shim for using process in browser
+      var process = module.exports = {};
+
+      // cached from whatever global is present so that test runners that stub it
+      // don't break things.  But we need to wrap it in a try catch in case it is
+      // wrapped in strict mode code which doesn't define any globals.  It's inside a
+      // function because try/catches deoptimize in certain engines.
+
+      var cachedSetTimeout;
+      var cachedClearTimeout;
+      function defaultSetTimout() {
+        throw new Error('setTimeout has not been defined');
+      }
+      function defaultClearTimeout() {
+        throw new Error('clearTimeout has not been defined');
+      }
+      (function () {
+        try {
+          if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+          } else {
+            cachedSetTimeout = defaultSetTimout;
+          }
+        } catch (e) {
+          cachedSetTimeout = defaultSetTimout;
+        }
+        try {
+          if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+          } else {
+            cachedClearTimeout = defaultClearTimeout;
+          }
+        } catch (e) {
+          cachedClearTimeout = defaultClearTimeout;
+        }
+      })();
+      function runTimeout(fun) {
+        if (cachedSetTimeout === setTimeout) {
+          //normal enviroments in sane situations
+          return setTimeout(fun, 0);
+        }
+        // if setTimeout wasn't available but was latter defined
+        if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+          cachedSetTimeout = setTimeout;
+          return setTimeout(fun, 0);
+        }
+        try {
+          // when when somebody has screwed with setTimeout but no I.E. maddness
+          return cachedSetTimeout(fun, 0);
+        } catch (e) {
+          try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+          } catch (e) {
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+          }
+        }
+      }
+      function runClearTimeout(marker) {
+        if (cachedClearTimeout === clearTimeout) {
+          //normal enviroments in sane situations
+          return clearTimeout(marker);
+        }
+        // if clearTimeout wasn't available but was latter defined
+        if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+          cachedClearTimeout = clearTimeout;
+          return clearTimeout(marker);
+        }
+        try {
+          // when when somebody has screwed with setTimeout but no I.E. maddness
+          return cachedClearTimeout(marker);
+        } catch (e) {
+          try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+          } catch (e) {
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+          }
+        }
+      }
+      var queue = [];
+      var draining = false;
+      var currentQueue;
+      var queueIndex = -1;
+      function cleanUpNextTick() {
+        if (!draining || !currentQueue) {
+          return;
+        }
+        draining = false;
+        if (currentQueue.length) {
+          queue = currentQueue.concat(queue);
+        } else {
+          queueIndex = -1;
+        }
+        if (queue.length) {
+          drainQueue();
+        }
+      }
+      function drainQueue() {
+        if (draining) {
+          return;
+        }
+        var timeout = runTimeout(cleanUpNextTick);
+        draining = true;
+        var len = queue.length;
+        while (len) {
+          currentQueue = queue;
+          queue = [];
+          while (++queueIndex < len) {
+            if (currentQueue) {
+              currentQueue[queueIndex].run();
+            }
+          }
+          queueIndex = -1;
+          len = queue.length;
+        }
+        currentQueue = null;
+        draining = false;
+        runClearTimeout(timeout);
+      }
+      process.nextTick = function (fun) {
+        var args = new Array(arguments.length - 1);
+        if (arguments.length > 1) {
+          for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+          }
+        }
+        queue.push(new Item(fun, args));
+        if (queue.length === 1 && !draining) {
+          runTimeout(drainQueue);
+        }
+      };
+
+      // v8 likes predictible objects
+      function Item(fun, array) {
+        this.fun = fun;
+        this.array = array;
+      }
+      Item.prototype.run = function () {
+        this.fun.apply(null, this.array);
+      };
+      process.title = 'browser';
+      process.browser = true;
+      process.env = {};
+      process.argv = [];
+      process.version = ''; // empty string to avoid regexp issues
+      process.versions = {};
+      function noop() {}
+      process.on = noop;
+      process.addListener = noop;
+      process.once = noop;
+      process.off = noop;
+      process.removeListener = noop;
+      process.removeAllListeners = noop;
+      process.emit = noop;
+      process.prependListener = noop;
+      process.prependOnceListener = noop;
+      process.listeners = function (name) {
+        return [];
+      };
+      process.binding = function (name) {
+        throw new Error('process.binding is not supported');
+      };
+      process.cwd = function () {
+        return '/';
+      };
+      process.chdir = function (dir) {
+        throw new Error('process.chdir is not supported');
+      };
+      process.umask = function () {
+        return 0;
+      };
+    }, {}],
+    15: [function (require, module, exports) {
       module.exports = {
         "Name": "Retold Data Cloner",
         "Hash": "DataCloner",
@@ -3050,7 +4836,7 @@
         "AutoRenderMainViewportViewAfterInitialize": false
       };
     }, {}],
-    10: [function (require, module, exports) {
+    16: [function (require, module, exports) {
       const libPictApplication = require('pict-application');
       const libProvider = require('./providers/Pict-Provider-DataCloner.js');
       const libViewLayout = require('./views/PictView-DataCloner-Layout.js');
@@ -3061,6 +4847,7 @@
       const libViewSync = require('./views/PictView-DataCloner-Sync.js');
       const libViewExport = require('./views/PictView-DataCloner-Export.js');
       const libViewViewData = require('./views/PictView-DataCloner-ViewData.js');
+      const libViewHistogram = require('pict-section-histogram');
       class DataClonerApplication extends libPictApplication {
         constructor(pFable, pOptions, pServiceHash) {
           super(pFable, pOptions, pServiceHash);
@@ -3077,6 +4864,20 @@
           this.pict.addView('DataCloner-Sync', libViewSync.default_configuration, libViewSync);
           this.pict.addView('DataCloner-Export', libViewExport.default_configuration, libViewExport);
           this.pict.addView('DataCloner-ViewData', libViewViewData.default_configuration, libViewViewData);
+          this.pict.addView('DataCloner-StatusHistogram', {
+            ViewIdentifier: 'DataCloner-StatusHistogram',
+            TargetElementAddress: '#DataCloner-Throughput-Histogram',
+            DefaultDestinationAddress: '#DataCloner-Throughput-Histogram',
+            RenderOnLoad: false,
+            Selectable: false,
+            Orientation: 'vertical',
+            FillContainer: true,
+            ShowValues: false,
+            ShowLabels: true,
+            MaxBarSize: 80,
+            BarColor: '#4a90d9',
+            Bins: []
+          }, libViewHistogram);
         }
         onAfterInitializeAsync(fCallback) {
           // Centralized state (replaces global variables)
@@ -3087,6 +4888,10 @@
             ServerBusyAtLoad: false,
             SyncPollTimer: null,
             LiveStatusTimer: null,
+            StatusDetailExpanded: false,
+            StatusDetailTimer: null,
+            StatusDetailData: null,
+            LastLiveStatus: null,
             PersistFields: ['serverURL', 'authMethod', 'authURI', 'checkURI', 'cookieName', 'cookieValueAddr', 'cookieValueTemplate', 'loginMarker', 'userName', 'password', 'schemaURL', 'pageSize', 'dateTimePrecisionMS', 'connProvider', 'sqliteFilePath', 'mysqlServer', 'mysqlPort', 'mysqlUser', 'mysqlPassword', 'mysqlDatabase', 'mysqlConnectionLimit', 'mssqlServer', 'mssqlPort', 'mssqlUser', 'mssqlPassword', 'mssqlDatabase', 'mssqlConnectionLimit', 'postgresqlHost', 'postgresqlPort', 'postgresqlUser', 'postgresqlPassword', 'postgresqlDatabase', 'postgresqlConnectionLimit', 'solrHost', 'solrPort', 'solrCore', 'solrPath', 'mongodbHost', 'mongodbPort', 'mongodbUser', 'mongodbPassword', 'mongodbDatabase', 'mongodbConnectionLimit', 'rocksdbFolder', 'bibliographFolder']
           };
 
@@ -3111,19 +4916,20 @@
       module.exports = DataClonerApplication;
       module.exports.default_configuration = require('./Pict-Application-DataCloner-Configuration.json');
     }, {
-      "./Pict-Application-DataCloner-Configuration.json": 9,
-      "./providers/Pict-Provider-DataCloner.js": 12,
-      "./views/PictView-DataCloner-Connection.js": 13,
-      "./views/PictView-DataCloner-Deploy.js": 14,
-      "./views/PictView-DataCloner-Export.js": 15,
-      "./views/PictView-DataCloner-Layout.js": 16,
-      "./views/PictView-DataCloner-Schema.js": 17,
-      "./views/PictView-DataCloner-Session.js": 18,
-      "./views/PictView-DataCloner-Sync.js": 19,
-      "./views/PictView-DataCloner-ViewData.js": 20,
-      "pict-application": 4
+      "./Pict-Application-DataCloner-Configuration.json": 15,
+      "./providers/Pict-Provider-DataCloner.js": 18,
+      "./views/PictView-DataCloner-Connection.js": 19,
+      "./views/PictView-DataCloner-Deploy.js": 20,
+      "./views/PictView-DataCloner-Export.js": 21,
+      "./views/PictView-DataCloner-Layout.js": 22,
+      "./views/PictView-DataCloner-Schema.js": 23,
+      "./views/PictView-DataCloner-Session.js": 24,
+      "./views/PictView-DataCloner-Sync.js": 25,
+      "./views/PictView-DataCloner-ViewData.js": 26,
+      "pict-application": 4,
+      "pict-section-histogram": 8
     }],
-    11: [function (require, module, exports) {
+    17: [function (require, module, exports) {
       module.exports = {
         DataClonerApplication: require('./Pict-Application-DataCloner.js')
       };
@@ -3131,9 +4937,9 @@
         window.DataClonerApplication = module.exports.DataClonerApplication;
       }
     }, {
-      "./Pict-Application-DataCloner.js": 10
+      "./Pict-Application-DataCloner.js": 16
     }],
-    12: [function (require, module, exports) {
+    18: [function (require, module, exports) {
       const libPictProvider = require('pict-provider');
       class DataClonerProvider extends libPictProvider {
         constructor(pFable, pOptions, pServiceHash) {
@@ -3280,8 +5086,8 @@
           document.getElementById('preview5').textContent = tmpSyncPreview;
 
           // Section 6 — Export Configuration
-          let tmpMaxRecords = document.getElementById('exportMaxRecords').value;
-          let tmpLogFile = document.getElementById('exportLogFile').checked;
+          let tmpMaxRecords = document.getElementById('syncMaxRecords').value;
+          let tmpLogFile = document.getElementById('syncLogFile').checked;
           let tmpExportParts = [];
           if (tmpMaxRecords && parseInt(tmpMaxRecords, 10) > 0) tmpExportParts.push('max ' + tmpMaxRecords + ' records');
           if (tmpLogFile) tmpExportParts.push('log enabled');else tmpExportParts.push('log disabled');
@@ -3297,7 +5103,7 @@
         }
         initAccordionPreviews() {
           let tmpSelf = this;
-          let tmpPreviewFields = ['connProvider', 'sqliteFilePath', 'mysqlServer', 'mysqlPort', 'mysqlUser', 'mssqlServer', 'mssqlPort', 'mssqlUser', 'postgresqlHost', 'postgresqlPort', 'postgresqlUser', 'mongodbHost', 'mongodbPort', 'solrHost', 'solrPort', 'rocksdbFolder', 'bibliographFolder', 'serverURL', 'userName', 'schemaURL', 'pageSize', 'dateTimePrecisionMS', 'exportMaxRecords', 'viewTable', 'viewLimit'];
+          let tmpPreviewFields = ['connProvider', 'sqliteFilePath', 'mysqlServer', 'mysqlPort', 'mysqlUser', 'mssqlServer', 'mssqlPort', 'mssqlUser', 'postgresqlHost', 'postgresqlPort', 'postgresqlUser', 'mongodbHost', 'mongodbPort', 'solrHost', 'solrPort', 'rocksdbFolder', 'bibliographFolder', 'serverURL', 'userName', 'schemaURL', 'pageSize', 'dateTimePrecisionMS', 'syncMaxRecords', 'viewTable', 'viewLimit'];
           let tmpHandler = function () {
             tmpSelf.updateAllPreviews();
           };
@@ -3310,7 +5116,7 @@
           }
 
           // Checkboxes and radios
-          let tmpCheckboxes = ['syncDeletedRecords', 'exportLogFile'];
+          let tmpCheckboxes = ['syncDeletedRecords', 'syncLogFile'];
           for (let i = 0; i < tmpCheckboxes.length; i++) {
             let tmpEl = document.getElementById(tmpCheckboxes[i]);
             if (tmpEl) tmpEl.addEventListener('change', tmpHandler);
@@ -3440,14 +5246,18 @@
           });
         }
         renderLiveStatus(pData) {
+          // Cache the live status data for the detail view
+          this.pict.AppData.DataCloner.LastLiveStatus = pData;
           let tmpBar = document.getElementById('liveStatusBar');
           let tmpMsg = document.getElementById('liveStatusMessage');
           let tmpMeta = document.getElementById('liveStatusMeta');
           let tmpProgressFill = document.getElementById('liveStatusProgressFill');
           if (!tmpBar) return;
 
-          // Update phase class
+          // Update phase class (preserve expanded class if present)
+          let tmpWasExpanded = tmpBar.classList.contains('expanded');
           tmpBar.className = 'live-status-bar phase-' + (pData.Phase || 'idle');
+          if (tmpWasExpanded) tmpBar.classList.add('expanded');
 
           // Update message
           tmpMsg.textContent = pData.Message || 'Idle';
@@ -3506,6 +5316,333 @@
             tmpPct = 100;
           }
           tmpProgressFill.style.width = Math.min(100, Math.round(tmpPct)) + '%';
+
+          // If the detail view is expanded, re-render it with fresh data
+          if (this.pict.AppData.DataCloner.StatusDetailExpanded) {
+            this.renderStatusDetail();
+          }
+        }
+
+        // ================================================================
+        // Status Detail Expansion
+        // ================================================================
+
+        onStatusDetailExpanded() {
+          let tmpAppData = this.pict.AppData.DataCloner;
+          tmpAppData.StatusDetailExpanded = true;
+
+          // Immediate render from whatever data we have
+          this.renderStatusDetail();
+
+          // Start detail polling (poll /sync/status for per-table data)
+          if (tmpAppData.StatusDetailTimer) clearInterval(tmpAppData.StatusDetailTimer);
+          let tmpSelf = this;
+          tmpAppData.StatusDetailTimer = setInterval(function () {
+            tmpSelf.pollStatusDetail();
+          }, 2000);
+          this.pollStatusDetail();
+        }
+        onStatusDetailCollapsed() {
+          let tmpAppData = this.pict.AppData.DataCloner;
+          tmpAppData.StatusDetailExpanded = false;
+          if (tmpAppData.StatusDetailTimer) {
+            clearInterval(tmpAppData.StatusDetailTimer);
+            tmpAppData.StatusDetailTimer = null;
+          }
+        }
+        pollStatusDetail() {
+          let tmpSelf = this;
+          this.api('GET', '/clone/sync/status').then(function (pData) {
+            tmpSelf.pict.AppData.DataCloner.StatusDetailData = pData;
+            tmpSelf.renderStatusDetail();
+          }).catch(function () {/* ignore poll errors */});
+        }
+        renderStatusDetail() {
+          let tmpContainer = document.getElementById('DataCloner-StatusDetail-Container');
+          if (!tmpContainer) return;
+          let tmpAppData = this.pict.AppData.DataCloner;
+          let tmpLiveStatus = tmpAppData.LastLiveStatus;
+          let tmpStatusData = tmpAppData.StatusDetailData;
+          let tmpReport = tmpAppData.LastReport;
+
+          // Determine data source: live during sync, report after sync
+          let tmpTables = {};
+          let tmpThroughputSamples = [];
+          let tmpEventLog = [];
+          let tmpIsLive = false;
+          if (tmpLiveStatus && (tmpLiveStatus.Phase === 'syncing' || tmpLiveStatus.Phase === 'stopping')) {
+            tmpIsLive = true;
+            if (tmpStatusData && tmpStatusData.Tables) tmpTables = tmpStatusData.Tables;
+            if (tmpLiveStatus.ThroughputSamples) tmpThroughputSamples = tmpLiveStatus.ThroughputSamples;
+          } else if (tmpReport && tmpReport.ReportVersion) {
+            // Build tables object from report
+            for (let i = 0; i < tmpReport.Tables.length; i++) {
+              let tmpT = tmpReport.Tables[i];
+              tmpTables[tmpT.Name] = tmpT;
+            }
+            tmpThroughputSamples = tmpReport.ThroughputSamples || [];
+            tmpEventLog = tmpReport.EventLog || [];
+          } else if (tmpStatusData && tmpStatusData.Tables) {
+            tmpTables = tmpStatusData.Tables;
+          }
+
+          // Categorize tables
+          let tmpRunning = [];
+          let tmpPending = [];
+          let tmpCompleted = [];
+          let tmpErrors = [];
+          let tmpTableNames = Object.keys(tmpTables);
+          for (let i = 0; i < tmpTableNames.length; i++) {
+            let tmpName = tmpTableNames[i];
+            let tmpT = tmpTables[tmpName];
+            if (tmpT.Status === 'Syncing') {
+              tmpRunning.push({
+                Name: tmpName,
+                Data: tmpT
+              });
+            } else if (tmpT.Status === 'Pending') {
+              tmpPending.push(tmpName);
+            } else if (tmpT.Status === 'Complete') {
+              tmpCompleted.push({
+                Name: tmpName,
+                Data: tmpT
+              });
+            } else if (tmpT.Status === 'Error' || tmpT.Status === 'Partial') {
+              tmpErrors.push({
+                Name: tmpName,
+                Data: tmpT
+              });
+            }
+          }
+          let tmpHtml = '';
+
+          // === Section 1: Running Operations ===
+          if (tmpRunning.length > 0 || tmpPending.length > 0) {
+            tmpHtml += '<div class="status-detail-section">';
+            tmpHtml += '<div class="status-detail-section-title">Running</div>';
+            for (let i = 0; i < tmpRunning.length; i++) {
+              let tmpOp = tmpRunning[i];
+              let tmpPct = tmpOp.Data.Total > 0 ? Math.round(tmpOp.Data.Synced / tmpOp.Data.Total * 100) : 0;
+              let tmpSyncedFmt = this.formatNumber(tmpOp.Data.Synced || 0);
+              let tmpTotalFmt = this.formatNumber(tmpOp.Data.Total || 0);
+              tmpHtml += '<div class="running-op-row">';
+              tmpHtml += '  <div class="running-op-name">' + this.escapeHtml(tmpOp.Name) + '</div>';
+              tmpHtml += '  <div class="running-op-bar"><div class="running-op-bar-fill" style="width:' + tmpPct + '%"></div></div>';
+              tmpHtml += '  <div class="running-op-count">' + tmpSyncedFmt + ' / ' + tmpTotalFmt + ' (' + tmpPct + '%)</div>';
+              tmpHtml += '</div>';
+            }
+            if (tmpPending.length > 0) {
+              tmpHtml += '<div class="running-op-pending">' + tmpPending.length + ' table' + (tmpPending.length === 1 ? '' : 's') + ' waiting</div>';
+            }
+            tmpHtml += '</div>';
+          }
+
+          // === Section 2: Completed Successful Operations ===
+          if (tmpCompleted.length > 0) {
+            tmpHtml += '<div class="status-detail-section">';
+            tmpHtml += '<div class="status-detail-section-title">Completed (' + tmpCompleted.length + ')</div>';
+            for (let i = 0; i < tmpCompleted.length; i++) {
+              tmpHtml += this.renderCompletedRow(tmpCompleted[i]);
+            }
+            tmpHtml += '</div>';
+          }
+
+          // === Section 3: Unsuccessful Operations ===
+          if (tmpErrors.length > 0) {
+            tmpHtml += '<div class="status-detail-section">';
+            tmpHtml += '<div class="status-detail-section-title">Errors (' + tmpErrors.length + ')</div>';
+            for (let i = 0; i < tmpErrors.length; i++) {
+              tmpHtml += this.renderErrorRow(tmpErrors[i], tmpEventLog);
+            }
+            tmpHtml += '</div>';
+          }
+          if (tmpHtml === '') {
+            if (tmpIsLive) {
+              tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">Sync in progress, waiting for table data\u2026</div>';
+            } else {
+              tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">No sync data available. Run a sync to see operation details here.</div>';
+            }
+          }
+          tmpContainer.innerHTML = tmpHtml;
+
+          // Update the throughput histogram via pict-section-histogram
+          this.updateThroughputHistogram(tmpThroughputSamples);
+        }
+        updateThroughputHistogram(pSamples) {
+          let tmpHistContainer = document.getElementById('DataCloner-Throughput-Histogram');
+          if (!tmpHistContainer) return;
+          if (!pSamples || pSamples.length < 2) {
+            tmpHistContainer.style.display = 'none';
+            return;
+          }
+
+          // --- Step 1: Compute raw deltas per 10s interval ---
+          let tmpRawDeltas = [];
+          for (let i = 1; i < pSamples.length; i++) {
+            let tmpDelta = pSamples[i].synced - pSamples[i - 1].synced;
+            if (tmpDelta < 0) tmpDelta = 0;
+            tmpRawDeltas.push({
+              delta: tmpDelta,
+              t: pSamples[i].t
+            });
+          }
+
+          // --- Step 2: Downsample if there are too many bars ---
+          let tmpContainerWidth = tmpHistContainer.clientWidth || 800;
+          let tmpMaxBars = Math.max(20, Math.floor(tmpContainerWidth / 6));
+          let tmpAggregated = tmpRawDeltas;
+          if (tmpRawDeltas.length > tmpMaxBars) {
+            let tmpBucketSize = Math.ceil(tmpRawDeltas.length / tmpMaxBars);
+            tmpAggregated = [];
+            for (let i = 0; i < tmpRawDeltas.length; i += tmpBucketSize) {
+              let tmpSum = 0;
+              let tmpLastT = 0;
+              for (let j = i; j < Math.min(i + tmpBucketSize, tmpRawDeltas.length); j++) {
+                tmpSum += tmpRawDeltas[j].delta;
+                tmpLastT = tmpRawDeltas[j].t;
+              }
+              tmpAggregated.push({
+                delta: tmpSum,
+                t: tmpLastT
+              });
+            }
+          }
+
+          // --- Step 3: Check for data ---
+          let tmpHasData = false;
+          for (let i = 0; i < tmpAggregated.length; i++) {
+            if (tmpAggregated[i].delta > 0) {
+              tmpHasData = true;
+              break;
+            }
+          }
+          if (!tmpHasData) {
+            tmpHistContainer.style.display = 'none';
+            return;
+          }
+
+          // --- Step 4: Build bins for the histogram library ---
+          let tmpStartT = pSamples[0].t;
+          let tmpBins = [];
+          for (let i = 0; i < tmpAggregated.length; i++) {
+            let tmpElapsedSec = Math.round((tmpAggregated[i].t - tmpStartT) / 1000);
+            tmpBins.push({
+              Label: this.formatElapsed(tmpElapsedSec),
+              Value: tmpAggregated[i].delta
+            });
+          }
+
+          // --- Step 5: Update the histogram view via the library ---
+          tmpHistContainer.style.display = '';
+          let tmpHistView = this.pict.views['DataCloner-StatusHistogram'];
+          if (tmpHistView) {
+            tmpHistView.setBins(tmpBins);
+            tmpHistView.renderHistogram();
+          }
+        }
+        formatElapsed(pSec) {
+          if (pSec < 60) return pSec + 's';
+          if (pSec < 3600) {
+            let tmpM = Math.floor(pSec / 60);
+            let tmpS = pSec % 60;
+            return tmpM + ':' + (tmpS < 10 ? '0' : '') + tmpS;
+          }
+          let tmpH = Math.floor(pSec / 3600);
+          let tmpM = Math.floor(pSec % 3600 / 60);
+          return tmpH + 'h' + (tmpM < 10 ? '0' : '') + tmpM;
+        }
+        formatCompact(pNum) {
+          if (pNum >= 1000000) return (pNum / 1000000).toFixed(1) + 'M';
+          if (pNum >= 10000) return (pNum / 1000).toFixed(0) + 'K';
+          if (pNum >= 1000) return (pNum / 1000).toFixed(1) + 'K';
+          return pNum.toString();
+        }
+        formatNumber(pNum) {
+          return pNum.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+        renderCompletedRow(pOp) {
+          let tmpNew = pOp.Data.New || 0;
+          let tmpUpdated = pOp.Data.Updated || 0;
+          let tmpUnchanged = pOp.Data.Unchanged || 0;
+          let tmpDeleted = pOp.Data.Deleted || 0;
+          let tmpServerTotal = pOp.Data.ServerTotal || 0;
+
+          // Grand total for the ratio bar: all records the adapter dealt with
+          let tmpGrandTotal = tmpUnchanged + tmpNew + tmpUpdated + tmpDeleted;
+          if (tmpGrandTotal === 0 && tmpServerTotal > 0) {
+            tmpGrandTotal = tmpServerTotal;
+            tmpUnchanged = tmpServerTotal;
+          }
+          let tmpHtml = '<div class="completed-op-row">';
+          tmpHtml += '<div class="completed-op-header">';
+          tmpHtml += '  <span class="completed-op-checkmark">\u2713</span>';
+          tmpHtml += '  <span class="completed-op-name">' + this.escapeHtml(pOp.Name) + '</span>';
+          tmpHtml += '</div>';
+
+          // Ratio bar: Unchanged / New / Updated / Deleted
+          if (tmpGrandTotal > 0) {
+            let tmpUnchangedPct = Math.round(tmpUnchanged / tmpGrandTotal * 100);
+            let tmpNewPct = Math.round(tmpNew / tmpGrandTotal * 100);
+            let tmpUpdatedPct = Math.round(tmpUpdated / tmpGrandTotal * 100);
+            let tmpDeletedPct = Math.round(tmpDeleted / tmpGrandTotal * 100);
+
+            // Ensure percentages sum to 100
+            let tmpPctSum = tmpUnchangedPct + tmpNewPct + tmpUpdatedPct + tmpDeletedPct;
+            if (tmpPctSum !== 100 && tmpPctSum > 0) {
+              tmpUnchangedPct += 100 - tmpPctSum;
+              if (tmpUnchangedPct < 0) tmpUnchangedPct = 0;
+            }
+            tmpHtml += '<div class="ratio-bar-container">';
+            if (tmpUnchangedPct > 0) tmpHtml += '<div class="ratio-bar-segment unchanged" style="width:' + tmpUnchangedPct + '%" title="Unchanged: ' + this.formatNumber(tmpUnchanged) + '"></div>';
+            if (tmpNewPct > 0) tmpHtml += '<div class="ratio-bar-segment new-records" style="width:' + tmpNewPct + '%" title="New: ' + this.formatNumber(tmpNew) + '"></div>';
+            if (tmpUpdatedPct > 0) tmpHtml += '<div class="ratio-bar-segment updated" style="width:' + tmpUpdatedPct + '%" title="Updated: ' + this.formatNumber(tmpUpdated) + '"></div>';
+            if (tmpDeletedPct > 0) tmpHtml += '<div class="ratio-bar-segment deleted" style="width:' + tmpDeletedPct + '%" title="Deleted: ' + this.formatNumber(tmpDeleted) + '"></div>';
+            tmpHtml += '</div>';
+            tmpHtml += '<div class="ratio-bar-legend">';
+            if (tmpUnchanged > 0) tmpHtml += '<span class="ratio-bar-legend-item"><span class="ratio-bar-legend-dot unchanged-dot"></span> Unchanged (' + this.formatNumber(tmpUnchanged) + ')</span>';
+            if (tmpNew > 0) tmpHtml += '<span class="ratio-bar-legend-item"><span class="ratio-bar-legend-dot new-dot"></span> New (' + this.formatNumber(tmpNew) + ')</span>';
+            if (tmpUpdated > 0) tmpHtml += '<span class="ratio-bar-legend-item"><span class="ratio-bar-legend-dot updated-dot"></span> Updated (' + this.formatNumber(tmpUpdated) + ')</span>';
+            if (tmpDeleted > 0) tmpHtml += '<span class="ratio-bar-legend-item"><span class="ratio-bar-legend-dot deleted-dot"></span> Deleted (' + this.formatNumber(tmpDeleted) + ')</span>';
+            tmpHtml += '</div>';
+          }
+          tmpHtml += '</div>';
+          return tmpHtml;
+        }
+        renderErrorRow(pOp, pEventLog) {
+          let tmpSynced = pOp.Data.Synced || 0;
+          let tmpTotal = pOp.Data.Total || 0;
+          let tmpSyncedFmt = this.formatNumber(tmpSynced);
+          let tmpTotalFmt = this.formatNumber(tmpTotal);
+          let tmpHtml = '<div class="error-op-row">';
+          tmpHtml += '<div class="error-op-header">';
+          tmpHtml += '  <span style="color:#dc3545">\u2717</span>';
+          tmpHtml += '  <span class="error-op-name">' + this.escapeHtml(pOp.Name) + '</span>';
+          tmpHtml += '  <span class="error-op-status">' + pOp.Data.Status + ' \u2014 ' + tmpSyncedFmt + ' / ' + tmpTotalFmt + '</span>';
+          tmpHtml += '</div>';
+          if (pOp.Data.ErrorMessage) {
+            tmpHtml += '<div class="error-op-message">' + this.escapeHtml(pOp.Data.ErrorMessage) + '</div>';
+          }
+
+          // Extract relevant log entries from EventLog
+          if (pEventLog && pEventLog.length > 0) {
+            let tmpRelevantLogs = [];
+            for (let j = 0; j < pEventLog.length; j++) {
+              let tmpLog = pEventLog[j];
+              if (tmpLog.Data && tmpLog.Data.Table === pOp.Name && (tmpLog.Type === 'TableError' || tmpLog.Type === 'TablePartial')) {
+                tmpRelevantLogs.push(tmpLog);
+              }
+            }
+            if (tmpRelevantLogs.length > 0) {
+              tmpHtml += '<div class="error-op-log-entries">';
+              for (let j = 0; j < tmpRelevantLogs.length; j++) {
+                let tmpTimestamp = tmpRelevantLogs[j].Timestamp.replace('T', ' ').replace(/\.\d+Z$/, '');
+                tmpHtml += '<div>' + this.escapeHtml(tmpTimestamp + ' ' + tmpRelevantLogs[j].Message) + '</div>';
+              }
+              tmpHtml += '</div>';
+            }
+          }
+          tmpHtml += '</div>';
+          return tmpHtml;
         }
 
         // ================================================================
@@ -3587,7 +5724,7 @@
     }, {
       "pict-provider": 6
     }],
-    13: [function (require, module, exports) {
+    19: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerConnectionView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -3929,9 +6066,9 @@
         }]
       };
     }, {
-      "pict-view": 8
+      "pict-view": 13
     }],
-    14: [function (require, module, exports) {
+    20: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerDeployView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -4024,9 +6161,9 @@
         }]
       };
     }, {
-      "pict-view": 8
+      "pict-view": 13
     }],
-    15: [function (require, module, exports) {
+    21: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerExportView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -4110,7 +6247,7 @@
           tmpConfig.Sync.SyncDeletedRecords = document.getElementById('syncDeletedRecords').checked;
           let tmpPrecision = parseInt(document.getElementById('dateTimePrecisionMS').value, 10);
           if (!isNaN(tmpPrecision) && tmpPrecision !== 1000) tmpConfig.Sync.DateTimePrecisionMS = tmpPrecision;
-          let tmpMaxRecords = parseInt(document.getElementById('exportMaxRecords').value, 10);
+          let tmpMaxRecords = parseInt(document.getElementById('syncMaxRecords').value, 10);
           if (tmpMaxRecords > 0) tmpConfig.Sync.MaxRecords = tmpMaxRecords;
           return tmpConfig;
         }
@@ -4260,9 +6397,9 @@
           tmpTextarea.style.display = '';
 
           // Build CLI flags from export options
-          let tmpLogFlag = document.getElementById('exportLogFile').checked ? ' --log' : '';
+          let tmpLogFlag = document.getElementById('syncLogFile').checked ? ' --log' : '';
           let tmpMaxFlag = '';
-          let tmpExportMax = parseInt(document.getElementById('exportMaxRecords').value, 10);
+          let tmpExportMax = parseInt(document.getElementById('syncMaxRecords').value, 10);
           if (tmpExportMax > 0) tmpMaxFlag = ' --max ' + tmpExportMax;
 
           // Build CLI command (with config file)
@@ -4393,18 +6530,6 @@
 		</div>
 		<div class="accordion-body">
 			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Generate a JSON config file from your current settings. Use it to run headless clones from the command line.</p>
-			<div class="inline-group">
-				<div style="flex:0 0 200px">
-					<label for="exportMaxRecords">Max Records per Entity</label>
-					<input type="number" id="exportMaxRecords" value="" min="0" placeholder="0 = unlimited">
-				</div>
-				<div style="flex:0 0 auto; display:flex; align-items:flex-end; padding-bottom:2px">
-					<div class="checkbox-row" style="margin-bottom:0">
-						<input type="checkbox" id="exportLogFile" checked>
-						<label for="exportLogFile">Write log file</label>
-					</div>
-				</div>
-			</div>
 			<div style="display:flex; gap:8px; margin-bottom:10px">
 				<button class="primary" onclick="pict.views['DataCloner-Export'].generateConfig()">Generate Config</button>
 				<button class="secondary" onclick="pict.views['DataCloner-Export'].copyConfig()">Copy to Clipboard</button>
@@ -4447,9 +6572,9 @@
         }]
       };
     }, {
-      "pict-view": 8
+      "pict-view": 13
     }],
-    16: [function (require, module, exports) {
+    22: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerLayoutView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -4481,6 +6606,30 @@
           let tmpCards = document.querySelectorAll('.accordion-card');
           for (let i = 0; i < tmpCards.length; i++) {
             tmpCards[i].classList.remove('open');
+          }
+        }
+        toggleStatusDetail() {
+          let tmpDetail = document.getElementById('liveStatusDetail');
+          let tmpMeta = document.getElementById('liveStatusMeta');
+          let tmpMessage = document.getElementById('liveStatusMessage');
+          let tmpToggle = document.getElementById('liveStatusToggle');
+          let tmpBar = document.getElementById('liveStatusBar');
+          if (!tmpDetail) return;
+          let tmpIsExpanded = tmpDetail.style.display !== 'none';
+          if (tmpIsExpanded) {
+            tmpDetail.style.display = 'none';
+            tmpMeta.style.display = '';
+            tmpMessage.style.display = '';
+            tmpToggle.innerHTML = '&#9660;';
+            tmpBar.classList.remove('expanded');
+            this.pict.providers.DataCloner.onStatusDetailCollapsed();
+          } else {
+            tmpDetail.style.display = '';
+            tmpMeta.style.display = 'none';
+            tmpMessage.style.display = 'none';
+            tmpToggle.innerHTML = '&#9650;';
+            tmpBar.classList.add('expanded');
+            this.pict.providers.DataCloner.onStatusDetailExpanded();
           }
         }
       }
@@ -4613,8 +6762,8 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 
 /* Live Status Bar */
 .live-status-bar {
-	background: #fff; border-radius: 8px; padding: 14px 20px; margin-bottom: 16px;
-	box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 14px;
+	background: #fff; border-radius: 8px; margin-bottom: 16px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 	position: sticky; top: 0; z-index: 100; border-left: 4px solid #6c757d;
 }
 .live-status-bar.phase-idle { border-left-color: #6c757d; }
@@ -4661,17 +6810,106 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 .live-status-progress-fill {
 	height: 100%; background: #28a745; transition: width 1s ease;
 }
+/* Expandable status bar */
+.live-status-header {
+	display: flex; align-items: center; gap: 14px; cursor: pointer;
+	padding: 14px 20px; user-select: none;
+}
+.live-status-bar.expanded .live-status-header {
+	border-bottom: 1px solid #e9ecef; padding-bottom: 10px;
+}
+.live-status-expand-toggle {
+	flex: 0 0 20px; display: flex; align-items: center; justify-content: center;
+	font-size: 0.7em; color: #888; transition: transform 0.25s;
+}
+.live-status-bar.expanded .live-status-expand-toggle { transform: rotate(180deg); }
+
+.live-status-detail {
+	padding: 12px 20px 16px; max-height: 60vh; overflow-y: auto;
+}
+
+/* Status Detail Sections */
+.status-detail-section { margin-bottom: 14px; }
+.status-detail-section:last-child { margin-bottom: 0; }
+.status-detail-section-title {
+	font-size: 0.85em; font-weight: 600; color: #555; text-transform: uppercase;
+	letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 4px;
+	border-bottom: 1px solid #eee;
+}
+
+/* Running Operations */
+.running-op-row {
+	display: flex; align-items: center; gap: 12px; padding: 6px 0;
+	font-size: 0.9em;
+}
+.running-op-name { font-weight: 600; min-width: 180px; }
+.running-op-bar {
+	flex: 1; height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden;
+	min-width: 120px;
+}
+.running-op-bar-fill { height: 100%; background: #4a90d9; transition: width 0.5s ease; }
+.running-op-count { font-size: 0.85em; color: #666; white-space: nowrap; }
+.running-op-pending { color: #888; font-size: 0.85em; font-style: italic; padding: 4px 0; }
+
+/* Completed Operations */
+.completed-op-row { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.completed-op-row:last-child { border-bottom: none; }
+.completed-op-header {
+	display: flex; align-items: center; gap: 10px; font-size: 0.9em; margin-bottom: 4px;
+}
+.completed-op-name { font-weight: 600; }
+.completed-op-stats { color: #666; font-size: 0.85em; }
+.completed-op-checkmark { color: #28a745; }
+
+/* Ratio Bar */
+.ratio-bar-container {
+	display: flex; height: 10px; border-radius: 5px; overflow: hidden;
+	background: #e9ecef; margin: 4px 0;
+}
+.ratio-bar-segment { height: 100%; transition: width 0.5s ease; }
+.ratio-bar-segment.unchanged { background: #6c757d; }
+.ratio-bar-segment.new-records { background: #28a745; }
+.ratio-bar-segment.updated { background: #4a90d9; }
+.ratio-bar-segment.deleted { background: #dc3545; }
+.ratio-bar-legend {
+	display: flex; gap: 12px; font-size: 0.75em; color: #666; margin-top: 2px; flex-wrap: wrap;
+}
+.ratio-bar-legend-item { display: flex; align-items: center; gap: 4px; }
+.ratio-bar-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ratio-bar-legend-dot.unchanged-dot { background: #6c757d; }
+.ratio-bar-legend-dot.new-dot { background: #28a745; }
+.ratio-bar-legend-dot.updated-dot { background: #4a90d9; }
+.ratio-bar-legend-dot.deleted-dot { background: #dc3545; }
+
+/* Error Operations */
+.error-op-row { padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9em; }
+.error-op-row:last-child { border-bottom: none; }
+.error-op-header { display: flex; align-items: center; gap: 8px; }
+.error-op-name { font-weight: 600; color: #dc3545; }
+.error-op-status { font-size: 0.82em; color: #dc3545; }
+.error-op-message { font-size: 0.82em; color: #888; margin-top: 2px; padding-left: 18px; }
+.error-op-log-entries {
+	font-size: 0.78em; color: #888; margin-top: 4px; padding-left: 18px;
+	font-family: monospace; max-height: 80px; overflow-y: auto;
+}
 `,
         Templates: [{
           Hash: 'DataCloner-Layout',
           Template: /*html*/`
 <h1>Retold Data Cloner</h1>
 
-<!-- Live Status Bar -->
+<!-- Live Status Bar (Expandable) -->
 <div id="liveStatusBar" class="live-status-bar phase-idle" style="position:relative">
-	<div class="live-status-dot"></div>
-	<div class="live-status-message" id="liveStatusMessage">Idle</div>
-	<div class="live-status-meta" id="liveStatusMeta"></div>
+	<div class="live-status-header" onclick="pict.views['DataCloner-Layout'].toggleStatusDetail()">
+		<div class="live-status-dot"></div>
+		<div class="live-status-message" id="liveStatusMessage">Idle</div>
+		<div class="live-status-meta" id="liveStatusMeta"></div>
+		<div class="live-status-expand-toggle" id="liveStatusToggle">&#9660;</div>
+	</div>
+	<div class="live-status-detail" id="liveStatusDetail" style="display:none">
+		<div id="DataCloner-Throughput-Histogram"></div>
+		<div id="DataCloner-StatusDetail-Container"></div>
+	</div>
 	<div class="live-status-progress-bar"><div class="live-status-progress-fill" id="liveStatusProgressFill" style="width:0%"></div></div>
 </div>
 
@@ -4698,9 +6936,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         }]
       };
     }, {
-      "pict-view": 8
+      "pict-view": 13
     }],
-    17: [function (require, module, exports) {
+    23: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerSchemaView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -4886,9 +7124,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         }]
       };
     }, {
-      "pict-view": 8
+      "pict-view": 13
     }],
-    18: [function (require, module, exports) {
+    24: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerSessionView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -5081,9 +7319,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         }]
       };
     }, {
-      "pict-view": 8
+      "pict-view": 13
     }],
-    19: [function (require, module, exports) {
+    25: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerSyncView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -5096,6 +7334,8 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           if (isNaN(tmpDateTimePrecisionMS)) tmpDateTimePrecisionMS = 1000;
           let tmpSyncDeletedRecords = document.getElementById('syncDeletedRecords').checked;
           let tmpSyncMode = document.querySelector('input[name="syncMode"]:checked').value;
+          let tmpMaxRecords = parseInt(document.getElementById('syncMaxRecords').value, 10) || 0;
+          let tmpLogToFile = document.getElementById('syncLogFile').checked;
           if (tmpSelectedTables.length === 0) {
             this.pict.providers.DataCloner.setStatus('syncStatus', 'No tables selected for sync.', 'error');
             this.pict.providers.DataCloner.setSectionPhase(5, 'error');
@@ -5104,13 +7344,16 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           this.pict.providers.DataCloner.setSectionPhase(5, 'busy');
           this.pict.providers.DataCloner.setStatus('syncStatus', 'Starting ' + tmpSyncMode.toLowerCase() + ' sync...', 'info');
           let tmpSelf = this;
-          this.pict.providers.DataCloner.api('POST', '/clone/sync/start', {
+          let tmpPostBody = {
             Tables: tmpSelectedTables,
             PageSize: tmpPageSize,
             DateTimePrecisionMS: tmpDateTimePrecisionMS,
             SyncDeletedRecords: tmpSyncDeletedRecords,
             SyncMode: tmpSyncMode
-          }).then(function (pData) {
+          };
+          if (tmpMaxRecords > 0) tmpPostBody.MaxRecordsPerEntity = tmpMaxRecords;
+          if (tmpLogToFile) tmpPostBody.LogToFile = true;
+          this.pict.providers.DataCloner.api('POST', '/clone/sync/start', tmpPostBody).then(function (pData) {
             if (pData.Success) {
               let tmpMsg = pData.SyncMode + ' sync started for ' + pData.Tables.length + ' tables.';
               if (pData.SyncDeletedRecords) tmpMsg += ' (including deleted records)';
@@ -5296,47 +7539,128 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
             tmpContainer.innerHTML = '';
             return;
           }
-          let tmpHtml = '<table class="progress-table">';
-          tmpHtml += '<tr><th>Table</th><th>Status</th><th>Progress</th><th>Synced</th><th>Details</th></tr>';
+
+          // Categorize tables into sections, preserving original order for pending
+          let tmpSyncing = [];
+          let tmpPending = [];
+          let tmpCompleted = [];
+          let tmpErrors = [];
           for (let i = 0; i < tmpTableNames.length; i++) {
             let tmpName = tmpTableNames[i];
             let tmpTable = tmpTables[tmpName];
-
-            // Calculate percentage: if total is 0, show 100% (nothing to sync)
+            if (tmpTable.Status === 'Syncing') {
+              tmpSyncing.push({
+                Name: tmpName,
+                Data: tmpTable
+              });
+            } else if (tmpTable.Status === 'Pending') {
+              tmpPending.push({
+                Name: tmpName,
+                Data: tmpTable
+              });
+            } else if (tmpTable.Status === 'Complete') {
+              tmpCompleted.push({
+                Name: tmpName,
+                Data: tmpTable
+              });
+            } else {
+              // Error, Partial, or anything else
+              tmpErrors.push({
+                Name: tmpName,
+                Data: tmpTable
+              });
+            }
+          }
+          let tmpHtml = '';
+          let tmpSelf = this;
+          let fRenderRow = (pName, pTable) => {
+            // Calculate percentage
             let tmpPct = 0;
-            if (tmpTable.Total === 0 && (tmpTable.Status === 'Complete' || tmpTable.Status === 'Error')) {
+            if (pTable.Total === 0 && (pTable.Status === 'Complete' || pTable.Status === 'Error')) {
               tmpPct = 100;
-            } else if (tmpTable.Total > 0) {
-              tmpPct = Math.round(tmpTable.Synced / tmpTable.Total * 100);
+            } else if (pTable.Total > 0) {
+              tmpPct = Math.round(pTable.Synced / pTable.Total * 100);
             }
 
             // Color the progress bar based on status
             let tmpBarColor = '#28a745'; // green
-            if (tmpTable.Status === 'Error') tmpBarColor = '#dc3545'; // red
-            else if (tmpTable.Status === 'Partial') tmpBarColor = '#ffc107'; // yellow
-            else if (tmpTable.Status === 'Syncing') tmpBarColor = '#4a90d9'; // blue
+            if (pTable.Status === 'Error') tmpBarColor = '#dc3545';else if (pTable.Status === 'Partial') tmpBarColor = '#ffc107';else if (pTable.Status === 'Syncing') tmpBarColor = '#4a90d9';else if (pTable.Status === 'Pending') tmpBarColor = '#adb5bd';
 
             // Status badge
-            let tmpStatusBadge = tmpTable.Status;
-            if (tmpTable.Status === 'Complete' && tmpTable.Total === 0) tmpStatusBadge = 'Complete (empty)';
-            if (tmpTable.Status === 'Partial') tmpStatusBadge = 'Partial \u26A0';
-            if (tmpTable.Status === 'Error') tmpStatusBadge = 'Error \u2716';
+            let tmpStatusBadge = pTable.Status;
+            if (pTable.Status === 'Complete' && pTable.Total === 0) tmpStatusBadge = 'Complete (empty)';
+            if (pTable.Status === 'Partial') tmpStatusBadge = 'Partial \u26A0';
+            if (pTable.Status === 'Error') tmpStatusBadge = 'Error \u2716';
 
             // Details column
             let tmpDetails = '';
-            if (tmpTable.ErrorMessage) tmpDetails = tmpTable.ErrorMessage;else if (tmpTable.Skipped > 0) tmpDetails = tmpTable.Skipped + ' record(s) skipped';else if ((tmpTable.Errors || 0) > 0) tmpDetails = tmpTable.Errors + ' error(s)';else if (tmpTable.Status === 'Complete' && tmpTable.Total === 0) tmpDetails = 'No records on server';else if (tmpTable.Status === 'Complete') tmpDetails = '\u2714 OK';
-            tmpHtml += '<tr>';
-            tmpHtml += '<td><strong>' + tmpName + '</strong></td>';
-            tmpHtml += '<td>' + tmpStatusBadge + '</td>';
-            tmpHtml += '<td>';
-            tmpHtml += '<div class="progress-bar-container"><div class="progress-bar-fill" style="width:' + tmpPct + '%; background:' + tmpBarColor + '"></div></div>';
-            tmpHtml += ' ' + tmpPct + '%';
-            tmpHtml += '</td>';
-            tmpHtml += '<td>' + tmpTable.Synced + ' / ' + tmpTable.Total + '</td>';
-            tmpHtml += '<td>' + tmpDetails + '</td>';
-            tmpHtml += '</tr>';
+            if (pTable.ErrorMessage) tmpDetails = pTable.ErrorMessage;else if (pTable.Skipped > 0) tmpDetails = pTable.Skipped + ' record(s) skipped';else if ((pTable.Errors || 0) > 0) tmpDetails = pTable.Errors + ' error(s)';else if (pTable.Status === 'Complete' && pTable.Total === 0) tmpDetails = 'No records on server';else if (pTable.Status === 'Complete') tmpDetails = '\u2714 OK';
+            let tmpRow = '<tr>';
+            tmpRow += '<td><strong>' + pName + '</strong></td>';
+            tmpRow += '<td>' + tmpStatusBadge + '</td>';
+            tmpRow += '<td>';
+            tmpRow += '<div class="progress-bar-container"><div class="progress-bar-fill" style="width:' + tmpPct + '%; background:' + tmpBarColor + '"></div></div>';
+            tmpRow += ' ' + tmpPct + '%';
+            tmpRow += '</td>';
+            tmpRow += '<td>' + pTable.Synced + ' / ' + pTable.Total + '</td>';
+            tmpRow += '<td>' + tmpDetails + '</td>';
+            tmpRow += '</tr>';
+            return tmpRow;
+          };
+
+          // === SYNCING — currently active ===
+          if (tmpSyncing.length > 0) {
+            tmpHtml += '<div class="sync-section-header">Syncing</div>';
+            tmpHtml += '<table class="progress-table">';
+            tmpHtml += '<tr><th>Table</th><th>Status</th><th>Progress</th><th>Synced</th><th>Details</th></tr>';
+            for (let i = 0; i < tmpSyncing.length; i++) {
+              tmpHtml += fRenderRow(tmpSyncing[i].Name, tmpSyncing[i].Data);
+            }
+            tmpHtml += '</table>';
           }
-          tmpHtml += '</table>';
+
+          // === NEXT UP — pending tables in queue order ===
+          if (tmpPending.length > 0) {
+            tmpHtml += '<div class="sync-section-header">Next Up <span class="sync-section-count">' + tmpPending.length + '</span></div>';
+            // Show at most 8 upcoming; collapse the rest
+            let tmpShowCount = Math.min(8, tmpPending.length);
+            tmpHtml += '<table class="progress-table progress-table-muted">';
+            for (let i = 0; i < tmpShowCount; i++) {
+              tmpHtml += '<tr><td>' + tmpPending[i].Name + '</td>';
+              if (tmpPending[i].Data.Total > 0) {
+                tmpHtml += '<td class="sync-pending-count">' + tmpPending[i].Data.Total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' records</td>';
+              } else {
+                tmpHtml += '<td class="sync-pending-count">—</td>';
+              }
+              tmpHtml += '</tr>';
+            }
+            tmpHtml += '</table>';
+            if (tmpPending.length > tmpShowCount) {
+              tmpHtml += '<div class="sync-section-overflow">+ ' + (tmpPending.length - tmpShowCount) + ' more table' + (tmpPending.length - tmpShowCount === 1 ? '' : 's') + '</div>';
+            }
+          }
+
+          // === ERRORS — failed or partial ===
+          if (tmpErrors.length > 0) {
+            tmpHtml += '<div class="sync-section-header sync-section-header-error">Errors <span class="sync-section-count">' + tmpErrors.length + '</span></div>';
+            tmpHtml += '<table class="progress-table">';
+            tmpHtml += '<tr><th>Table</th><th>Status</th><th>Progress</th><th>Synced</th><th>Details</th></tr>';
+            for (let i = 0; i < tmpErrors.length; i++) {
+              tmpHtml += fRenderRow(tmpErrors[i].Name, tmpErrors[i].Data);
+            }
+            tmpHtml += '</table>';
+          }
+
+          // === COMPLETED — successful tables ===
+          if (tmpCompleted.length > 0) {
+            tmpHtml += '<div class="sync-section-header sync-section-header-ok">Completed <span class="sync-section-count">' + tmpCompleted.length + '</span></div>';
+            tmpHtml += '<table class="progress-table">';
+            tmpHtml += '<tr><th>Table</th><th>Status</th><th>Progress</th><th>Synced</th><th>Details</th></tr>';
+            for (let i = 0; i < tmpCompleted.length; i++) {
+              tmpHtml += fRenderRow(tmpCompleted[i].Name, tmpCompleted[i].Data);
+            }
+            tmpHtml += '</table>';
+          }
           tmpContainer.innerHTML = tmpHtml;
         }
       }
@@ -5346,11 +7670,19 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         DefaultRenderable: 'DataCloner-Sync',
         DefaultDestinationAddress: '#DataCloner-Section-Sync',
         CSS: /*css*/`
-.progress-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.progress-table { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 4px; }
 .progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; }
 .progress-table th { background: #f8f9fa; font-weight: 600; }
+.progress-table-muted td { color: #888; padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
 .progress-bar-container { width: 120px; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
 .progress-bar-fill { height: 100%; background: #28a745; transition: width 0.3s; }
+.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid #e0e0e0; }
+.sync-section-header:first-child { border-top: none; margin-top: 10px; }
+.sync-section-header-error { color: #dc3545; }
+.sync-section-header-ok { color: #28a745; }
+.sync-section-count { font-weight: 400; color: #999; font-size: 0.95em; }
+.sync-section-overflow { font-size: 0.8em; color: #aaa; padding: 2px 12px 6px; }
+.sync-pending-count { text-align: right; color: #aaa; font-size: 0.85em; }
 .report-card { background: #f8f9fa; border-radius: 8px; padding: 12px 16px; min-width: 140px; text-align: center; border: 1px solid #e9ecef; }
 .report-card .card-label { font-size: 0.8em; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .report-card .card-value { font-size: 1.4em; font-weight: 700; }
@@ -5411,6 +7743,19 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 				<label for="syncDeletedRecords">Sync deleted records (fetch records marked Deleted=1 on source and mirror locally)</label>
 			</div>
 
+			<div class="inline-group" style="margin-top:8px; margin-bottom:4px">
+				<div style="flex:0 0 200px">
+					<label for="syncMaxRecords">Max Records per Entity</label>
+					<input type="number" id="syncMaxRecords" value="" min="0" placeholder="0 = unlimited" style="margin-bottom:0">
+				</div>
+				<div style="flex:0 0 auto; display:flex; align-items:flex-end; padding-bottom:2px">
+					<div class="checkbox-row" style="margin-bottom:0">
+						<input type="checkbox" id="syncLogFile" checked>
+						<label for="syncLogFile">Write log file</label>
+					</div>
+				</div>
+			</div>
+
 			<div id="syncStatus"></div>
 			<div id="syncProgress"></div>
 
@@ -5446,9 +7791,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         }]
       };
     }, {
-      "pict-view": 8
+      "pict-view": 13
     }],
-    20: [function (require, module, exports) {
+    26: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerViewDataView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -5583,8 +7928,8 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         }]
       };
     }, {
-      "pict-view": 8
+      "pict-view": 13
     }]
-  }, {}, [11])(11);
+  }, {}, [17])(17);
 });
 //# sourceMappingURL=data-cloner.js.map
