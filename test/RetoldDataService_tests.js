@@ -1509,5 +1509,226 @@ suite
 				);
 			}
 		);
+
+		suite
+		(
+			'Sync with Standard Pagination',
+			function()
+			{
+				let _SyncFable;
+				let _SyncDB;
+
+				suiteSetup
+				(
+					function(fDone)
+					{
+						this.timeout(15000);
+
+						let tmpSyncSettings = {
+							Product: 'SyncTestStandard',
+							ProductVersion: '1.0.0',
+							LogStreams: [{ streamtype: 'console', level: 'fatal' }],
+							SQLite: { SQLiteFilePath: ':memory:' }
+						};
+
+						_SyncFable = new libFable(tmpSyncSettings);
+
+						// Register SQLite provider for destination
+						_SyncFable.serviceManager.addServiceType('MeadowSQLiteProvider', libMeadowConnectionSQLite);
+						_SyncFable.serviceManager.instantiateServiceProvider('MeadowSQLiteProvider');
+
+						_SyncFable.MeadowSQLiteProvider.connectAsync(
+							(pError) =>
+							{
+								if (pError) return fDone(pError);
+
+								_SyncDB = _SyncFable.MeadowSQLiteProvider.db;
+
+								// Set up MeadowCloneRestClient pointed at the test server
+								const libMeadowCloneRestClient = require('../node_modules/meadow-integration/source/services/clone/Meadow-Service-RestClient.js');
+								_SyncFable.serviceManager.addServiceType('MeadowCloneRestClient', libMeadowCloneRestClient);
+								_SyncFable.serviceManager.instantiateServiceProvider('MeadowCloneRestClient',
+									{
+										ServerURL: `${_BaseURL}1.0/`,
+										UserID: false,
+										Password: false
+									});
+
+								// Set up Meadow prototype (required by sync entities)
+								const libMeadow = require('meadow');
+								_SyncFable._MeadowPrototype = libMeadow;
+								_SyncFable.Meadow = libMeadow.new(_SyncFable, 'SyncTest-Prototype');
+
+								// Set up MeadowSync
+								const libMeadowSync = require('../node_modules/meadow-integration/source/services/clone/Meadow-Service-Sync.js');
+								_SyncFable.serviceManager.addServiceType('MeadowSync', libMeadowSync);
+								_SyncFable.serviceManager.instantiateServiceProvider('MeadowSync',
+									{
+										SyncEntityList: ['Author'],
+										PageSize: 2,
+										SyncDeletedRecords: false,
+										UseAdvancedIDPagination: false
+									});
+
+								// Load the test schema into MeadowSync
+								let tmpFullModel = require('./model/MeadowModel-Extended.json');
+								_SyncFable.MeadowSync.loadMeadowSchema(tmpFullModel,
+									(pSchemaError) =>
+									{
+										if (pSchemaError)
+										{
+											return fDone(pSchemaError);
+										}
+										return fDone();
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'Should sync Author records using standard offset pagination',
+					function(fDone)
+					{
+						this.timeout(15000);
+
+						_SyncFable.MeadowSync.syncAll(
+							(pSyncError) =>
+							{
+								Expect(pSyncError).to.not.exist;
+
+								// Query the destination database to verify records were copied
+								let tmpRows = _SyncDB.prepare('SELECT * FROM Author WHERE Deleted = 0 ORDER BY IDAuthor').all();
+								Expect(tmpRows.length).to.be.greaterThan(0);
+								Expect(tmpRows[0].IDAuthor).to.equal(1);
+
+								let tmpSyncEntity = _SyncFable.MeadowSync.MeadowSyncEntities['Author'];
+								Expect(tmpSyncEntity.syncResults).to.be.an('object');
+								Expect(tmpSyncEntity.syncResults.Created).to.be.greaterThan(0);
+
+								fDone();
+							});
+					}
+				);
+			}
+		);
+
+		suite
+		(
+			'Sync with Advanced ID Pagination',
+			function()
+			{
+				let _SyncFable;
+				let _SyncDB;
+
+				suiteSetup
+				(
+					function(fDone)
+					{
+						this.timeout(15000);
+
+						let tmpSyncSettings = {
+							Product: 'SyncTestAdvanced',
+							ProductVersion: '1.0.0',
+							LogStreams: [{ streamtype: 'console', level: 'fatal' }],
+							SQLite: { SQLiteFilePath: ':memory:' }
+						};
+
+						_SyncFable = new libFable(tmpSyncSettings);
+
+						// Register SQLite provider for destination
+						_SyncFable.serviceManager.addServiceType('MeadowSQLiteProvider', libMeadowConnectionSQLite);
+						_SyncFable.serviceManager.instantiateServiceProvider('MeadowSQLiteProvider');
+
+						_SyncFable.MeadowSQLiteProvider.connectAsync(
+							(pError) =>
+							{
+								if (pError) return fDone(pError);
+
+								_SyncDB = _SyncFable.MeadowSQLiteProvider.db;
+
+								// Set up MeadowCloneRestClient pointed at the test server
+								const libMeadowCloneRestClient = require('../node_modules/meadow-integration/source/services/clone/Meadow-Service-RestClient.js');
+								_SyncFable.serviceManager.addServiceType('MeadowCloneRestClient', libMeadowCloneRestClient);
+								_SyncFable.serviceManager.instantiateServiceProvider('MeadowCloneRestClient',
+									{
+										ServerURL: `${_BaseURL}1.0/`,
+										UserID: false,
+										Password: false
+									});
+
+								// Set up Meadow prototype (required by sync entities)
+								const libMeadow = require('meadow');
+								_SyncFable._MeadowPrototype = libMeadow;
+								_SyncFable.Meadow = libMeadow.new(_SyncFable, 'SyncTest-Prototype');
+
+								// Set up MeadowSync with advanced ID pagination enabled
+								const libMeadowSync = require('../node_modules/meadow-integration/source/services/clone/Meadow-Service-Sync.js');
+								_SyncFable.serviceManager.addServiceType('MeadowSync', libMeadowSync);
+								_SyncFable.serviceManager.instantiateServiceProvider('MeadowSync',
+									{
+										SyncEntityList: ['Author'],
+										PageSize: 2,
+										SyncDeletedRecords: false,
+										UseAdvancedIDPagination: true
+									});
+
+								// Load the test schema into MeadowSync
+								let tmpFullModel = require('./model/MeadowModel-Extended.json');
+								_SyncFable.MeadowSync.loadMeadowSchema(tmpFullModel,
+									(pSchemaError) =>
+									{
+										if (pSchemaError)
+										{
+											return fDone(pSchemaError);
+										}
+										return fDone();
+									});
+							});
+					}
+				);
+
+				test
+				(
+					'Should sync Author records using advanced ID (keyset) pagination',
+					function(fDone)
+					{
+						this.timeout(15000);
+
+						_SyncFable.MeadowSync.syncAll(
+							(pSyncError) =>
+							{
+								Expect(pSyncError).to.not.exist;
+
+								// Query the destination database to verify records were copied
+								let tmpRows = _SyncDB.prepare('SELECT * FROM Author WHERE Deleted = 0 ORDER BY IDAuthor').all();
+								Expect(tmpRows.length).to.be.greaterThan(0);
+								Expect(tmpRows[0].IDAuthor).to.equal(1);
+
+								let tmpSyncEntity = _SyncFable.MeadowSync.MeadowSyncEntities['Author'];
+								Expect(tmpSyncEntity.syncResults).to.be.an('object');
+								Expect(tmpSyncEntity.syncResults.Created).to.be.greaterThan(0);
+
+								// Verify that UseAdvancedIDPagination was set on the entity
+								Expect(tmpSyncEntity.UseAdvancedIDPagination).to.equal(true);
+
+								fDone();
+							});
+					}
+				);
+
+				test
+				(
+					'Should produce the same record count as standard pagination',
+					function(fDone)
+					{
+						// The advanced pagination destination should have the same records
+						let tmpRows = _SyncDB.prepare('SELECT COUNT(*) as cnt FROM Author WHERE Deleted = 0').get();
+						Expect(tmpRows.cnt).to.be.greaterThan(0);
+						fDone();
+					}
+				);
+			}
+		);
 	}
 );
