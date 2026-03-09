@@ -61,7 +61,7 @@
     "devDependencies": {
         "meadow-connection-sqlite": "^1.0.18",
         "puppeteer": "^24.38.0",
-        "quackage": "^1.0.63",
+        "quackage": "^1.0.64",
         "stricture": "^4.0.2",
         "supertest": "^7.2.2"
     },
@@ -72,7 +72,7 @@
         "meadow": "^2.0.33",
         "meadow-connection-mysql": "^1.0.14",
         "meadow-endpoints": "^4.0.14",
-        "meadow-integration": "^1.0.16",
+        "meadow-integration": "^1.0.18",
         "meadow-migrationmanager": "^0.0.4",
         "orator": "^6.0.4",
         "orator-http-proxy": "^1.0.5",
