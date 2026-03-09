@@ -17,6 +17,7 @@ class DataClonerSyncView extends libPictView
 		let tmpSyncMode = document.querySelector('input[name="syncMode"]:checked').value;
 		let tmpMaxRecords = parseInt(document.getElementById('syncMaxRecords').value, 10) || 0;
 		let tmpLogToFile = document.getElementById('syncLogFile').checked;
+		let tmpAdvancedIDPagination = document.getElementById('syncAdvancedIDPagination').checked;
 
 		if (tmpSelectedTables.length === 0)
 		{
@@ -32,6 +33,7 @@ class DataClonerSyncView extends libPictView
 		let tmpPostBody = { Tables: tmpSelectedTables, PageSize: tmpPageSize, DateTimePrecisionMS: tmpDateTimePrecisionMS, SyncDeletedRecords: tmpSyncDeletedRecords, SyncMode: tmpSyncMode };
 		if (tmpMaxRecords > 0) tmpPostBody.MaxRecordsPerEntity = tmpMaxRecords;
 		if (tmpLogToFile) tmpPostBody.LogToFile = true;
+		if (tmpAdvancedIDPagination) tmpPostBody.UseAdvancedIDPagination = true;
 		this.pict.providers.DataCloner.api('POST', '/clone/sync/start', tmpPostBody)
 			.then(function(pData)
 			{
@@ -520,6 +522,11 @@ module.exports.default_configuration =
 			<div class="checkbox-row">
 				<input type="checkbox" id="syncDeletedRecords">
 				<label for="syncDeletedRecords">Sync deleted records (fetch records marked Deleted=1 on source and mirror locally)</label>
+			</div>
+
+			<div class="checkbox-row">
+				<input type="checkbox" id="syncAdvancedIDPagination">
+				<label for="syncAdvancedIDPagination">Use advanced ID pagination (faster for large tables; uses keyset pagination instead of OFFSET)</label>
 			</div>
 
 			<div class="inline-group" style="margin-top:8px; margin-bottom:4px">

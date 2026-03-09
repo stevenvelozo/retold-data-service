@@ -5161,6 +5161,11 @@
           if (tmpSolrSecure !== null) {
             document.getElementById('solrSecure').checked = tmpSolrSecure === 'true';
           }
+          // Restore advanced ID pagination checkbox
+          let tmpAdvancedIDPagination = localStorage.getItem('dataCloner_syncAdvancedIDPagination');
+          if (tmpAdvancedIDPagination !== null) {
+            document.getElementById('syncAdvancedIDPagination').checked = tmpAdvancedIDPagination === 'true';
+          }
         }
         initPersistence() {
           let tmpSelf = this;
@@ -5200,6 +5205,14 @@
           if (tmpSolrSecureEl) {
             tmpSolrSecureEl.addEventListener('change', function () {
               localStorage.setItem('dataCloner_solrSecure', this.checked);
+            });
+          }
+
+          // Persist advanced ID pagination checkbox
+          let tmpAdvancedIDPaginationEl = document.getElementById('syncAdvancedIDPagination');
+          if (tmpAdvancedIDPaginationEl) {
+            tmpAdvancedIDPaginationEl.addEventListener('change', function () {
+              localStorage.setItem('dataCloner_syncAdvancedIDPagination', this.checked);
             });
           }
 
@@ -6330,6 +6343,7 @@
           if (!isNaN(tmpPrecision) && tmpPrecision !== 1000) tmpConfig.Sync.DateTimePrecisionMS = tmpPrecision;
           let tmpMaxRecords = parseInt(document.getElementById('syncMaxRecords').value, 10);
           if (tmpMaxRecords > 0) tmpConfig.Sync.MaxRecords = tmpMaxRecords;
+          if (document.getElementById('syncAdvancedIDPagination').checked) tmpConfig.Sync.UseAdvancedIDPagination = true;
           return tmpConfig;
         }
         buildMeadowIntegrationConfig() {
@@ -6396,6 +6410,7 @@
           let tmpSelectedTables = this.pict.views['DataCloner-Schema'].getSelectedTables();
           tmpConfig.Sync.SyncEntityList = tmpSelectedTables.length > 0 ? tmpSelectedTables : [];
           tmpConfig.Sync.SyncEntityOptions = {};
+          if (document.getElementById('syncAdvancedIDPagination').checked) tmpConfig.Sync.UseAdvancedIDPagination = true;
 
           // ---- SessionManager ----
           tmpConfig.SessionManager = {
@@ -7445,6 +7460,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           let tmpSyncMode = document.querySelector('input[name="syncMode"]:checked').value;
           let tmpMaxRecords = parseInt(document.getElementById('syncMaxRecords').value, 10) || 0;
           let tmpLogToFile = document.getElementById('syncLogFile').checked;
+          let tmpAdvancedIDPagination = document.getElementById('syncAdvancedIDPagination').checked;
           if (tmpSelectedTables.length === 0) {
             this.pict.providers.DataCloner.setStatus('syncStatus', 'No tables selected for sync.', 'error');
             this.pict.providers.DataCloner.setSectionPhase(5, 'error');
@@ -7462,6 +7478,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           };
           if (tmpMaxRecords > 0) tmpPostBody.MaxRecordsPerEntity = tmpMaxRecords;
           if (tmpLogToFile) tmpPostBody.LogToFile = true;
+          if (tmpAdvancedIDPagination) tmpPostBody.UseAdvancedIDPagination = true;
           this.pict.providers.DataCloner.api('POST', '/clone/sync/start', tmpPostBody).then(function (pData) {
             if (pData.Success) {
               let tmpMsg = pData.SyncMode + ' sync started for ' + pData.Tables.length + ' tables.';
@@ -7850,6 +7867,11 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<div class="checkbox-row">
 				<input type="checkbox" id="syncDeletedRecords">
 				<label for="syncDeletedRecords">Sync deleted records (fetch records marked Deleted=1 on source and mirror locally)</label>
+			</div>
+
+			<div class="checkbox-row">
+				<input type="checkbox" id="syncAdvancedIDPagination">
+				<label for="syncAdvancedIDPagination">Use advanced ID pagination (faster for large tables; uses keyset pagination instead of OFFSET)</label>
 			</div>
 
 			<div class="inline-group" style="margin-top:8px; margin-bottom:4px">

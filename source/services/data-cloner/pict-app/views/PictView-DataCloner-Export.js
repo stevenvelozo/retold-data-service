@@ -101,6 +101,7 @@ class DataClonerExportView extends libPictView
 		if (!isNaN(tmpPrecision) && tmpPrecision !== 1000) tmpConfig.Sync.DateTimePrecisionMS = tmpPrecision;
 		let tmpMaxRecords = parseInt(document.getElementById('syncMaxRecords').value, 10);
 		if (tmpMaxRecords > 0) tmpConfig.Sync.MaxRecords = tmpMaxRecords;
+		if (document.getElementById('syncAdvancedIDPagination').checked) tmpConfig.Sync.UseAdvancedIDPagination = true;
 
 		return tmpConfig;
 	}
@@ -169,6 +170,7 @@ class DataClonerExportView extends libPictView
 		let tmpSelectedTables = this.pict.views['DataCloner-Schema'].getSelectedTables();
 		tmpConfig.Sync.SyncEntityList = tmpSelectedTables.length > 0 ? tmpSelectedTables : [];
 		tmpConfig.Sync.SyncEntityOptions = {};
+		if (document.getElementById('syncAdvancedIDPagination').checked) tmpConfig.Sync.UseAdvancedIDPagination = true;
 
 		// ---- SessionManager ----
 		tmpConfig.SessionManager = { Sessions: {} };

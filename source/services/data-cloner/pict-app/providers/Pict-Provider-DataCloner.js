@@ -295,6 +295,12 @@ class DataClonerProvider extends libPictProvider
 		{
 			document.getElementById('solrSecure').checked = tmpSolrSecure === 'true';
 		}
+		// Restore advanced ID pagination checkbox
+		let tmpAdvancedIDPagination = localStorage.getItem('dataCloner_syncAdvancedIDPagination');
+		if (tmpAdvancedIDPagination !== null)
+		{
+			document.getElementById('syncAdvancedIDPagination').checked = tmpAdvancedIDPagination === 'true';
+		}
 	}
 
 	initPersistence()
@@ -342,6 +348,16 @@ class DataClonerProvider extends libPictProvider
 			tmpSolrSecureEl.addEventListener('change', function()
 			{
 				localStorage.setItem('dataCloner_solrSecure', this.checked);
+			});
+		}
+
+		// Persist advanced ID pagination checkbox
+		let tmpAdvancedIDPaginationEl = document.getElementById('syncAdvancedIDPagination');
+		if (tmpAdvancedIDPaginationEl)
+		{
+			tmpAdvancedIDPaginationEl.addEventListener('change', function()
+			{
+				localStorage.setItem('dataCloner_syncAdvancedIDPagination', this.checked);
 			});
 		}
 

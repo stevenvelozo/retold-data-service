@@ -64,6 +64,16 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 				}
 			}
 
+			// Update UseAdvancedIDPagination on all sync entities
+			if (tmpBody.hasOwnProperty('UseAdvancedIDPagination'))
+			{
+				let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
+				for (let i = 0; i < tmpEntityNames.length; i++)
+				{
+					tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].UseAdvancedIDPagination = !!tmpBody.UseAdvancedIDPagination;
+				}
+			}
+
 			// Update DateTimePrecisionMS on MeadowSync and all sync entities
 			if (tmpBody.hasOwnProperty('DateTimePrecisionMS'))
 			{
@@ -173,13 +183,17 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 						let tmpReinitEntities = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
 						tmpFable.log.info(`Data Cloner: Re-created ${tmpReinitEntities.length} sync entities in ${tmpRequestedMode} mode`);
 
-						// Update SyncDeletedRecords and MaxRecordsPerEntity on new entities
+						// Update SyncDeletedRecords, MaxRecordsPerEntity, and UseAdvancedIDPagination on new entities
 						for (let i = 0; i < tmpReinitEntities.length; i++)
 						{
 							tmpFable.MeadowSync.MeadowSyncEntities[tmpReinitEntities[i]].SyncDeletedRecords = tmpCloneState.SyncDeletedRecords;
 							if (tmpMaxRecords > 0)
 							{
 								tmpFable.MeadowSync.MeadowSyncEntities[tmpReinitEntities[i]].MaxRecordsPerEntity = tmpMaxRecords;
+							}
+							if (tmpBody.hasOwnProperty('UseAdvancedIDPagination'))
+							{
+								tmpFable.MeadowSync.MeadowSyncEntities[tmpReinitEntities[i]].UseAdvancedIDPagination = !!tmpBody.UseAdvancedIDPagination;
 							}
 						}
 
