@@ -494,6 +494,25 @@ class DataClonerProvider extends libPictProvider
 		{
 			this.renderStatusDetail();
 		}
+
+		// Auto-fetch the sync report when we detect a completed sync but haven't loaded the report yet
+		if (pData.Phase === 'complete' && !this.pict.AppData.DataCloner.LastReport)
+		{
+			let tmpSelf = this;
+			this.api('GET', '/clone/sync/report')
+				.then(function(pReportData)
+				{
+					if (pReportData && pReportData.ReportVersion)
+					{
+						tmpSelf.pict.AppData.DataCloner.LastReport = pReportData;
+						if (tmpSelf.pict.AppData.DataCloner.StatusDetailExpanded)
+						{
+							tmpSelf.renderStatusDetail();
+						}
+					}
+				})
+				.catch(function() { /* ignore fetch errors */ });
+		}
 	}
 
 	// ================================================================
@@ -575,6 +594,11 @@ class DataClonerProvider extends libPictProvider
 		else if (tmpStatusData && tmpStatusData.Tables)
 		{
 			tmpTables = tmpStatusData.Tables;
+			// Use throughput samples from live status if available (e.g. after page reload with completed sync)
+			if (tmpLiveStatus && tmpLiveStatus.ThroughputSamples)
+			{
+				tmpThroughputSamples = tmpLiveStatus.ThroughputSamples;
+			}
 		}
 
 		// Categorize tables
