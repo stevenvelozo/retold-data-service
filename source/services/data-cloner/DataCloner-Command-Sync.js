@@ -207,6 +207,13 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 				let tmpSnap = { Status: tmpP.Status, Total: tmpP.Total || 0, Synced: tmpP.Synced || 0, Errors: tmpP.Errors || 0 };
 				if (tmpP.ErrorMessage) tmpSnap.ErrorMessage = tmpP.ErrorMessage;
 
+				// Include per-record breakdown fields if available (set after entity sync completes)
+				if (tmpP.hasOwnProperty('New')) tmpSnap.New = tmpP.New;
+				if (tmpP.hasOwnProperty('Updated')) tmpSnap.Updated = tmpP.Updated;
+				if (tmpP.hasOwnProperty('Unchanged')) tmpSnap.Unchanged = tmpP.Unchanged;
+				if (tmpP.hasOwnProperty('Deleted')) tmpSnap.Deleted = tmpP.Deleted;
+				if (tmpP.hasOwnProperty('ServerTotal')) tmpSnap.ServerTotal = tmpP.ServerTotal;
+
 				if ((tmpP.Status === 'Syncing' || tmpP.Status === 'Pending') && tmpFable.MeadowSync && tmpFable.MeadowSync.MeadowSyncEntities)
 				{
 					let tmpSyncEntity = tmpFable.MeadowSync.MeadowSyncEntities[tmpName];
@@ -300,8 +307,14 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 				// Check for pre-count phase
 				if (tmpCloneState.SyncPhase === 'counting')
 				{
-					let tmpPC = tmpCloneState.PreCountProgress || { Counted: 0, TotalTables: 0 };
+					let tmpPC = tmpCloneState.PreCountProgress || { Counted: 0, TotalTables: 0, Tables: [] };
 					tmpMessage = `Analyzing tables: counted ${tmpPC.Counted} / ${tmpPC.TotalTables}...`;
+
+					let tmpCountElapsed = null;
+					if (tmpPC.StartTime)
+					{
+						tmpCountElapsed = fFormatDuration(Date.now() - tmpPC.StartTime);
+					}
 
 					pResponse.send(200,
 						{
@@ -315,10 +328,10 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 							TotalTables: tmpPC.TotalTables,
 							TotalSynced: 0,
 							TotalRecords: 0,
-							Elapsed: null,
+							Elapsed: tmpCountElapsed,
 							SyncMode: tmpCloneState.SyncMode,
 							ETA: null,
-							PreCountGrandTotal: 0,
+							PreCountGrandTotal: tmpCloneState.PreCountGrandTotal || 0,
 							PreCountProgress: tmpPC,
 							ThroughputSamples: []
 						});

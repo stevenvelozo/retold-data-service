@@ -73,7 +73,8 @@ class DataClonerApplication extends libPictApplication
 				'solrHost', 'solrPort', 'solrCore', 'solrPath',
 				'mongodbHost', 'mongodbPort', 'mongodbUser', 'mongodbPassword', 'mongodbDatabase', 'mongodbConnectionLimit',
 				'rocksdbFolder',
-				'bibliographFolder'
+				'bibliographFolder',
+				'syncMaxRecords'
 			]
 		};
 

@@ -166,24 +166,54 @@ function fPrintReport()
 	console.log(`  Skipped:    ${_Report.summary.skipped}`);
 	console.log('-'.repeat(72));
 
-	// Storage engines
-	console.log('\n  Storage Engines:');
-	let tmpEngines = Object.keys(_Report.storage_engines);
-	for (let i = 0; i < tmpEngines.length; i++)
+	// Build storage engine status from suite results
+	let tmpStorageEnginePrefix = 'Storage Engine: ';
+	for (let i = 0; i < _Report.suites.length; i++)
 	{
-		let tmpName = tmpEngines[i];
-		let tmpEngine = _Report.storage_engines[tmpName];
-		if (tmpEngine.status === 'pass')
+		let tmpSuite = _Report.suites[i];
+		if (tmpSuite.name.indexOf(tmpStorageEnginePrefix) !== 0) continue;
+
+		let tmpEngineName = tmpSuite.name.substring(tmpStorageEnginePrefix.length);
+		let tmpPassCount = tmpSuite.tests.filter((t) => t.status === 'pass').length;
+		let tmpFailCount = tmpSuite.tests.filter((t) => t.status === 'fail').length;
+		let tmpSkipCount = tmpSuite.tests.filter((t) => t.status === 'skip').length;
+
+		if (tmpSkipCount === tmpSuite.tests.length)
 		{
-			console.log(`    ${tmpName.padEnd(14)} PASS   ${fFormatDuration(tmpEngine.sync_duration_ms).padStart(10)}   ${tmpEngine.records_synced} records / ${tmpEngine.tables_synced} tables`);
+			_Report.storage_engines[tmpEngineName] = { status: 'skip', reason: 'Not configured (env vars not set)' };
 		}
-		else if (tmpEngine.status === 'fail')
+		else if (tmpFailCount > 0)
 		{
-			console.log(`    ${tmpName.padEnd(14)} FAIL   ${tmpEngine.error || 'Unknown error'}`);
+			let tmpFirstError = tmpSuite.tests.find((t) => t.status === 'fail');
+			_Report.storage_engines[tmpEngineName] = { status: 'fail', error: tmpFirstError ? tmpFirstError.error : 'Unknown' };
 		}
 		else
 		{
-			console.log(`    ${tmpName.padEnd(14)} SKIP   ${tmpEngine.reason || ''}`);
+			_Report.storage_engines[tmpEngineName] = { status: 'pass', sync_duration_ms: tmpSuite.duration_ms, records_synced: 0, tables_synced: 0 };
+		}
+	}
+
+	// Storage engines
+	let tmpEngines = Object.keys(_Report.storage_engines);
+	if (tmpEngines.length > 0)
+	{
+		console.log('\n  Storage Engines:');
+		for (let i = 0; i < tmpEngines.length; i++)
+		{
+			let tmpName = tmpEngines[i];
+			let tmpEngine = _Report.storage_engines[tmpName];
+			if (tmpEngine.status === 'pass')
+			{
+				console.log(`    ${tmpName.padEnd(14)} PASS   ${fFormatDuration(tmpEngine.sync_duration_ms).padStart(10)}   ${tmpEngine.records_synced} records / ${tmpEngine.tables_synced} tables`);
+			}
+			else if (tmpEngine.status === 'fail')
+			{
+				console.log(`    ${tmpName.padEnd(14)} FAIL   ${tmpEngine.error || 'Unknown error'}`);
+			}
+			else
+			{
+				console.log(`    ${tmpName.padEnd(14)} SKIP   ${tmpEngine.reason || ''}`);
+			}
 		}
 	}
 
@@ -194,8 +224,18 @@ function fPrintReport()
 		let tmpSuite = _Report.suites[i];
 		let tmpPassCount = tmpSuite.tests.filter((t) => t.status === 'pass').length;
 		let tmpFailCount = tmpSuite.tests.filter((t) => t.status === 'fail').length;
+		let tmpSkipCount = tmpSuite.tests.filter((t) => t.status === 'skip').length;
+
+		if (tmpSkipCount === tmpSuite.tests.length && tmpSuite.tests.length > 0)
+		{
+			// All tests in this suite were skipped
+			console.log(`    ~ ${tmpSuite.name.padEnd(35)} skipped`);
+			continue;
+		}
+
 		let tmpStatus = tmpFailCount > 0 ? 'FAIL' : 'PASS';
-		console.log(`    ${tmpStatus === 'FAIL' ? 'X' : '+'} ${tmpSuite.name.padEnd(35)} ${tmpPassCount}/${tmpSuite.tests.length} passed   ${fFormatDuration(tmpSuite.duration_ms)}`);
+		let tmpSkipLabel = tmpSkipCount > 0 ? ` (${tmpSkipCount} skipped)` : '';
+		console.log(`    ${tmpStatus === 'FAIL' ? 'X' : '+'} ${tmpSuite.name.padEnd(35)} ${tmpPassCount}/${tmpPassCount + tmpFailCount} passed   ${fFormatDuration(tmpSuite.duration_ms)}${tmpSkipLabel}`);
 
 		// Show failed tests
 		for (let j = 0; j < tmpSuite.tests.length; j++)

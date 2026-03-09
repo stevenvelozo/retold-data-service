@@ -274,10 +274,11 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 				// Extract the entity name from the URL for error tracking
 				let tmpEntityHint = pURL.split('/')[0].replace(/s$/, '');
 
-				// Use the longer timeout for MAX(column) queries only
-				let tmpIsMaxRequest = (pURL.indexOf('/Max/') > -1);
+				// Use the longer timeout for Max and Count queries (which can be
+				// slow on large tables with millions of rows)
+				let tmpIsHeavyQuery = (pURL.indexOf('/Max/') > -1) || (pURL.match(/\/Count(\/|$)/) !== null);
 				let tmpPreviousTimeout = libHttps.globalAgent.options.timeout;
-				libHttps.globalAgent.options.timeout = tmpIsMaxRequest
+				libHttps.globalAgent.options.timeout = tmpIsHeavyQuery
 					? tmpFable.MeadowCloneRestClient.maxRequestTimeout
 					: tmpFable.MeadowCloneRestClient.requestTimeout;
 

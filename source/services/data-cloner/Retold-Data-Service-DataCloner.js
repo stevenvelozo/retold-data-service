@@ -642,7 +642,12 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 	preCountTables(pTables, fCallback)
 	{
 		this._cloneState.SyncPhase = 'counting';
-		this._cloneState.PreCountProgress = { Counted: 0, TotalTables: pTables.length };
+		this._cloneState.PreCountProgress = {
+			Counted: 0,
+			TotalTables: pTables.length,
+			StartTime: Date.now(),
+			Tables: []
+		};
 		this._cloneState.PreCountGrandTotal = 0;
 
 		this.fable.log.info(`Data Cloner: Pre-counting records for ${pTables.length} tables...`);
@@ -656,6 +661,7 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 					return fNext();
 				}
 
+				let tmpTableStartTime = Date.now();
 				let tmpCountURL = `${pTableName}s/Count`;
 				this.fable.MeadowCloneRestClient.getJSON(tmpCountURL,
 					(pError, pResponse, pBody) =>
@@ -669,7 +675,14 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 						{
 							this._cloneState.SyncProgress[pTableName].Total = tmpCount;
 						}
+						let tmpElapsedMs = Date.now() - tmpTableStartTime;
 						this._cloneState.PreCountProgress.Counted++;
+						this._cloneState.PreCountProgress.Tables.push({
+							Name: pTableName,
+							Count: tmpCount,
+							ElapsedMs: tmpElapsedMs,
+							Error: pError ? true : false
+						});
 						this._cloneState.PreCountGrandTotal += tmpCount;
 						return fNext();
 					});
@@ -866,15 +879,42 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 				if (this._cloneState.SyncLogFileLogger)
 				{
 					let tmpLogPath = this._cloneState.SyncLogFilePath || '';
-					this._cloneState.SyncLogFileLogger.flushBufferToLogFile(() =>
+					let tmpLogger = this._cloneState.SyncLogFileLogger;
+
+					// Log before closing so the message is captured in the file
+					this.fable.log.info(`Data Cloner: Log file closing — ${tmpLogPath}`);
+
+					// Remove the logger from fable.log stream arrays so no writes
+					// are dispatched to it after the underlying stream is closed.
+					let tmpStreamArrays = [
+						'logStreams', 'logStreamsTrace', 'logStreamsDebug',
+						'logStreamsInfo', 'logStreamsWarn', 'logStreamsError', 'logStreamsFatal'
+					];
+					for (let s = 0; s < tmpStreamArrays.length; s++)
 					{
-						this._cloneState.SyncLogFileLogger.closeWriter(() =>
+						let tmpArr = this.fable.log[tmpStreamArrays[s]];
+						if (Array.isArray(tmpArr))
 						{
-							this.fable.log.info(`Data Cloner: Log file closed — ${tmpLogPath}`);
-						});
-					});
+							let tmpIdx = tmpArr.indexOf(tmpLogger);
+							if (tmpIdx > -1) tmpArr.splice(tmpIdx, 1);
+						}
+					}
+
 					this._cloneState.SyncLogFileLogger = null;
 					this._cloneState.SyncLogFilePath = null;
+
+					// Now flush and close safely — no more writes can reach this stream
+					try
+					{
+						tmpLogger.flushBufferToLogFile(() =>
+						{
+							tmpLogger.closeWriter(() => {});
+						});
+					}
+					catch (pCloseErr)
+					{
+						// Ignore close errors
+					}
 				}
 
 				return;
@@ -915,7 +955,7 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 					{
 						let tmpResults = tmpSyncEntity.syncResults;
 						tmpProgress.New = tmpResults.Created || 0;
-						tmpProgress.Updated = 0;
+						tmpProgress.Updated = tmpResults.Updated || 0;
 						tmpProgress.Unchanged = tmpResults.LocalRecordCount || 0;
 						tmpProgress.Deleted = tmpResults.Deleted || 0;
 						tmpProgress.ServerTotal = tmpResults.ServerRecordCount || 0;

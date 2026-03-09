@@ -137,6 +137,8 @@ class RetoldDataServiceMeadowEndpoints extends libFableServiceProviderBase
 		{
 			let tmpDALEntityName = tmpEntityList[i];
 
+			let tmpRoutesAlreadyConnected = this._MeadowEndpoints.hasOwnProperty(tmpDALEntityName);
+
 			if (this._DAL.hasOwnProperty(tmpDALEntityName))
 			{
 				this.fable.log.warn(`Entity [${tmpDALEntityName}] already exists in the DAL (from another model); overwriting.`);
@@ -152,8 +154,16 @@ class RetoldDataServiceMeadowEndpoints extends libFableServiceProviderBase
 				this._DAL[tmpDALEntityName].setProvider(tmpStorageProvider);
 				this.fable.log.info(`...initializing the ${tmpDALEntityName} Meadow Endpoints`);
 				this._MeadowEndpoints[tmpDALEntityName] = libMeadowEndpoints.new(this._DAL[tmpDALEntityName]);
-				this.fable.log.info(`...mapping the ${tmpDALEntityName} Meadow Endpoints to Orator`);
-				this._MeadowEndpoints[tmpDALEntityName].connectRoutes(this.fable.OratorServiceServer);
+
+				if (!tmpRoutesAlreadyConnected)
+				{
+					this.fable.log.info(`...mapping the ${tmpDALEntityName} Meadow Endpoints to Orator`);
+					this._MeadowEndpoints[tmpDALEntityName].connectRoutes(this.fable.OratorServiceServer);
+				}
+				else
+				{
+					this.fable.log.info(`...routes for ${tmpDALEntityName} already registered; skipping connectRoutes.`);
+				}
 			}
 			catch (pError)
 			{

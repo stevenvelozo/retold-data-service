@@ -4892,7 +4892,7 @@
             StatusDetailTimer: null,
             StatusDetailData: null,
             LastLiveStatus: null,
-            PersistFields: ['serverURL', 'authMethod', 'authURI', 'checkURI', 'cookieName', 'cookieValueAddr', 'cookieValueTemplate', 'loginMarker', 'userName', 'password', 'schemaURL', 'pageSize', 'dateTimePrecisionMS', 'connProvider', 'sqliteFilePath', 'mysqlServer', 'mysqlPort', 'mysqlUser', 'mysqlPassword', 'mysqlDatabase', 'mysqlConnectionLimit', 'mssqlServer', 'mssqlPort', 'mssqlUser', 'mssqlPassword', 'mssqlDatabase', 'mssqlConnectionLimit', 'postgresqlHost', 'postgresqlPort', 'postgresqlUser', 'postgresqlPassword', 'postgresqlDatabase', 'postgresqlConnectionLimit', 'solrHost', 'solrPort', 'solrCore', 'solrPath', 'mongodbHost', 'mongodbPort', 'mongodbUser', 'mongodbPassword', 'mongodbDatabase', 'mongodbConnectionLimit', 'rocksdbFolder', 'bibliographFolder']
+            PersistFields: ['serverURL', 'authMethod', 'authURI', 'checkURI', 'cookieName', 'cookieValueAddr', 'cookieValueTemplate', 'loginMarker', 'userName', 'password', 'schemaURL', 'pageSize', 'dateTimePrecisionMS', 'connProvider', 'sqliteFilePath', 'mysqlServer', 'mysqlPort', 'mysqlUser', 'mysqlPassword', 'mysqlDatabase', 'mysqlConnectionLimit', 'mssqlServer', 'mssqlPort', 'mssqlUser', 'mssqlPassword', 'mssqlDatabase', 'mssqlConnectionLimit', 'postgresqlHost', 'postgresqlPort', 'postgresqlUser', 'postgresqlPassword', 'postgresqlDatabase', 'postgresqlConnectionLimit', 'solrHost', 'solrPort', 'solrCore', 'solrPath', 'mongodbHost', 'mongodbPort', 'mongodbUser', 'mongodbPassword', 'mongodbDatabase', 'mongodbConnectionLimit', 'rocksdbFolder', 'bibliographFolder', 'syncMaxRecords']
           };
 
           // Make pict available for inline onclick handlers
@@ -5287,7 +5287,8 @@
               tmpMetaParts.push('<span class="live-status-meta-item">' + tmpGrandTotal + ' records to sync</span>');
             }
             if (pData.PreCountProgress && pData.PreCountProgress.Counted < pData.PreCountProgress.TotalTables) {
-              tmpMetaParts.push('<span class="live-status-meta-item">counting: ' + pData.PreCountProgress.Counted + ' / ' + pData.PreCountProgress.TotalTables + '</span>');
+              let tmpCountedSoFar = pData.PreCountGrandTotal > 0 ? ' (' + pData.PreCountGrandTotal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' records found)' : '';
+              tmpMetaParts.push('<span class="live-status-meta-item">counting: ' + pData.PreCountProgress.Counted + ' / ' + pData.PreCountProgress.TotalTables + ' tables' + tmpCountedSoFar + '</span>');
             }
             if (pData.Errors > 0) {
               tmpMetaParts.push('<span class="live-status-meta-item" style="color:#dc3545"><strong>' + pData.Errors + '</strong> error' + (pData.Errors === 1 ? '' : 's') + '</span>');
@@ -5302,7 +5303,10 @@
 
           // Update progress bar
           let tmpPct = 0;
-          if (pData.Phase === 'syncing' && pData.PreCountGrandTotal > 0 && pData.TotalSynced > 0) {
+          if (pData.Phase === 'syncing' && pData.PreCountProgress && pData.PreCountProgress.Counted < pData.PreCountProgress.TotalTables) {
+            // During counting phase, show table counting progress
+            tmpPct = Math.min(pData.PreCountProgress.Counted / pData.PreCountProgress.TotalTables * 100, 99);
+          } else if (pData.Phase === 'syncing' && pData.PreCountGrandTotal > 0 && pData.TotalSynced > 0) {
             tmpPct = Math.min(pData.TotalSynced / pData.PreCountGrandTotal * 100, 99.9);
           } else if (pData.Phase === 'syncing' && pData.TotalTables > 0) {
             let tmpTablePct = pData.Completed / pData.TotalTables * 100;
@@ -5316,6 +5320,14 @@
             tmpPct = 100;
           }
           tmpProgressFill.style.width = Math.min(100, Math.round(tmpPct)) + '%';
+
+          // Auto-expand the detail view when sync starts so users see counting progress
+          if ((pData.Phase === 'syncing' || pData.Phase === 'stopping') && !this.pict.AppData.DataCloner.StatusDetailExpanded) {
+            let tmpLayoutView = this.pict.views['DataCloner-Layout'];
+            if (tmpLayoutView && typeof tmpLayoutView.toggleStatusDetail === 'function') {
+              tmpLayoutView.toggleStatusDetail();
+            }
+          }
 
           // If the detail view is expanded, re-render it with fresh data
           if (this.pict.AppData.DataCloner.StatusDetailExpanded) {
@@ -5370,6 +5382,49 @@
             tmpSelf.renderStatusDetail();
           }).catch(function () {/* ignore poll errors */});
         }
+        renderCountingPhaseDetail(pContainer, pPreCountProgress) {
+          let tmpTables = pPreCountProgress.Tables || [];
+          let tmpCounted = pPreCountProgress.Counted || 0;
+          let tmpTotal = pPreCountProgress.TotalTables || 0;
+          let tmpRunningTotal = 0;
+          let tmpHtml = '<div class="status-detail-section">';
+          tmpHtml += '<div class="status-detail-section-title">Counting Records (' + tmpCounted + ' / ' + tmpTotal + ' tables)</div>';
+          if (tmpTables.length > 0) {
+            tmpHtml += '<table class="precount-table">';
+            tmpHtml += '<thead><tr><th>Table</th><th style="text-align:right">Records</th><th style="text-align:right">Time</th></tr></thead>';
+            tmpHtml += '<tbody>';
+            for (let i = 0; i < tmpTables.length; i++) {
+              let tmpT = tmpTables[i];
+              tmpRunningTotal += tmpT.Count;
+              let tmpCountFmt = this.formatNumber(tmpT.Count);
+              let tmpTimeFmt = tmpT.ElapsedMs < 1000 ? tmpT.ElapsedMs + 'ms' : (tmpT.ElapsedMs / 1000).toFixed(1) + 's';
+              let tmpRowClass = tmpT.Error ? ' class="precount-error"' : '';
+              tmpHtml += '<tr' + tmpRowClass + '>';
+              tmpHtml += '<td>' + this.escapeHtml(tmpT.Name) + '</td>';
+              tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums">' + tmpCountFmt + '</td>';
+              tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums; color:#888">' + tmpTimeFmt + '</td>';
+              tmpHtml += '</tr>';
+            }
+            tmpHtml += '</tbody>';
+            tmpHtml += '<tfoot><tr>';
+            tmpHtml += '<td><strong>Total</strong></td>';
+            tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums"><strong>' + this.formatNumber(tmpRunningTotal) + '</strong></td>';
+            tmpHtml += '<td></td>';
+            tmpHtml += '</tr></tfoot>';
+            tmpHtml += '</table>';
+          }
+
+          // Show pending indicator for remaining tables
+          let tmpRemaining = tmpTotal - tmpCounted;
+          if (tmpRemaining > 0) {
+            tmpHtml += '<div class="precount-pending">';
+            tmpHtml += '<span class="precount-spinner"></span> ';
+            tmpHtml += tmpRemaining + ' table' + (tmpRemaining === 1 ? '' : 's') + ' remaining…';
+            tmpHtml += '</div>';
+          }
+          tmpHtml += '</div>';
+          pContainer.innerHTML = tmpHtml;
+        }
         renderStatusDetail() {
           let tmpContainer = document.getElementById('DataCloner-StatusDetail-Container');
           if (!tmpContainer) return;
@@ -5377,6 +5432,15 @@
           let tmpLiveStatus = tmpAppData.LastLiveStatus;
           let tmpStatusData = tmpAppData.StatusDetailData;
           let tmpReport = tmpAppData.LastReport;
+
+          // During the counting phase, show per-table counts as they arrive
+          if (tmpLiveStatus && tmpLiveStatus.PreCountProgress && tmpLiveStatus.PreCountProgress.Tables && tmpLiveStatus.Phase === 'syncing' && tmpLiveStatus.PreCountProgress.Counted < tmpLiveStatus.PreCountProgress.TotalTables) {
+            this.renderCountingPhaseDetail(tmpContainer, tmpLiveStatus.PreCountProgress);
+            // Hide histogram during counting
+            let tmpHistContainer = document.getElementById('DataCloner-Throughput-Histogram');
+            if (tmpHistContainer) tmpHistContainer.style.display = 'none';
+            return;
+          }
 
           // Determine data source: live during sync, report after sync
           let tmpTables = {};
@@ -6909,6 +6973,34 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	font-size: 0.78em; color: #888; margin-top: 4px; padding-left: 18px;
 	font-family: monospace; max-height: 80px; overflow-y: auto;
 }
+
+/* Pre-count Table */
+.precount-table {
+	width: 100%; border-collapse: collapse; font-size: 0.88em;
+}
+.precount-table thead th {
+	text-align: left; font-weight: 600; color: #555; font-size: 0.85em;
+	text-transform: uppercase; letter-spacing: 0.3px;
+	padding: 4px 8px 6px; border-bottom: 2px solid #e9ecef;
+}
+.precount-table tbody td {
+	padding: 4px 8px; border-bottom: 1px solid #f0f0f0;
+}
+.precount-table tbody tr:last-child td { border-bottom: 1px solid #e9ecef; }
+.precount-table tfoot td {
+	padding: 6px 8px 2px; font-size: 0.95em;
+}
+.precount-error td { color: #dc3545; }
+.precount-pending {
+	color: #888; font-size: 0.85em; font-style: italic; padding: 8px 0 2px;
+	display: flex; align-items: center; gap: 6px;
+}
+.precount-spinner {
+	display: inline-block; width: 12px; height: 12px;
+	border: 2px solid #ddd; border-top-color: #4a90d9;
+	border-radius: 50%; animation: precount-spin 0.8s linear infinite;
+}
+@keyframes precount-spin { to { transform: rotate(360deg); } }
 `,
         Templates: [{
           Hash: 'DataCloner-Layout',

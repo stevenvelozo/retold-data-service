@@ -339,6 +339,34 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	font-size: 0.78em; color: #888; margin-top: 4px; padding-left: 18px;
 	font-family: monospace; max-height: 80px; overflow-y: auto;
 }
+
+/* Pre-count Table */
+.precount-table {
+	width: 100%; border-collapse: collapse; font-size: 0.88em;
+}
+.precount-table thead th {
+	text-align: left; font-weight: 600; color: #555; font-size: 0.85em;
+	text-transform: uppercase; letter-spacing: 0.3px;
+	padding: 4px 8px 6px; border-bottom: 2px solid #e9ecef;
+}
+.precount-table tbody td {
+	padding: 4px 8px; border-bottom: 1px solid #f0f0f0;
+}
+.precount-table tbody tr:last-child td { border-bottom: 1px solid #e9ecef; }
+.precount-table tfoot td {
+	padding: 6px 8px 2px; font-size: 0.95em;
+}
+.precount-error td { color: #dc3545; }
+.precount-pending {
+	color: #888; font-size: 0.85em; font-style: italic; padding: 8px 0 2px;
+	display: flex; align-items: center; gap: 6px;
+}
+.precount-spinner {
+	display: inline-block; width: 12px; height: 12px;
+	border: 2px solid #ddd; border-top-color: #4a90d9;
+	border-radius: 50%; animation: precount-spin 0.8s linear infinite;
+}
+@keyframes precount-spin { to { transform: rotate(360deg); } }
 `,
 	Templates:
 	[

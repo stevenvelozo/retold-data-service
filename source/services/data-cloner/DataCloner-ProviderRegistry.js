@@ -10,7 +10,7 @@ const _ProviderRegistry = {
 	SQLite: { moduleName: 'meadow-connection-sqlite', serviceName: 'MeadowSQLiteProvider', configKey: 'SQLite' },
 	MySQL: { moduleName: 'meadow-connection-mysql', serviceName: 'MeadowMySQLProvider', configKey: 'MySQL' },
 	MSSQL: { moduleName: 'meadow-connection-mssql', serviceName: 'MeadowMSSQLProvider', configKey: 'MSSQL' },
-	PostgreSQL: { moduleName: 'meadow-connection-postgresql', serviceName: 'MeadowConnectionPostgreSQL', configKey: 'PostgreSQL' },
+	PostgreSQL: { moduleName: 'meadow-connection-postgresql', serviceName: 'MeadowPostgreSQLProvider', configKey: 'PostgreSQL' },
 	Solr: { moduleName: 'meadow-connection-solr', serviceName: 'MeadowConnectionSolr', configKey: 'Solr' },
 	MongoDB: { moduleName: 'meadow-connection-mongodb', serviceName: 'MeadowConnectionMongoDB', configKey: 'MongoDB' },
 	RocksDB: { moduleName: 'meadow-connection-rocksdb', serviceName: 'MeadowConnectionRocksDB', configKey: 'RocksDB' },

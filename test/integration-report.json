@@ -1,11 +1,11 @@
 {
-	"timestamp": "2026-03-08T20:33:17.745Z",
-	"duration_ms": 54218,
+	"timestamp": "2026-03-09T04:55:24.920Z",
+	"duration_ms": 22241,
 	"summary": {
-		"total": 35,
-		"passed": 32,
+		"total": 26,
+		"passed": 26,
 		"failed": 0,
-		"skipped": 3
+		"skipped": 0
 	},
 	"storage_engines": {},
 	"suites": [
@@ -20,7 +20,7 @@
 				{
 					"name": "Should show initial connection status",
 					"status": "pass",
-					"duration_ms": 1
+					"duration_ms": 2
 				},
 				{
 					"name": "Should connect SQLite via configure",
@@ -30,10 +30,10 @@
 				{
 					"name": "Should show connected after configure",
 					"status": "pass",
-					"duration_ms": 0
+					"duration_ms": 1
 				}
 			],
-			"duration_ms": 3
+			"duration_ms": 5
 		},
 		{
 			"name": "Session Configuration",
@@ -46,7 +46,7 @@
 				{
 					"name": "Should show session as configured",
 					"status": "pass",
-					"duration_ms": 9
+					"duration_ms": 10
 				},
 				{
 					"name": "Should reject session configure without ServerURL",
@@ -54,7 +54,7 @@
 					"duration_ms": 1
 				}
 			],
-			"duration_ms": 11
+			"duration_ms": 12
 		},
 		{
 			"name": "Schema Fetch",
@@ -89,7 +89,7 @@
 				{
 					"name": "Should start initial sync with record cap",
 					"status": "pass",
-					"duration_ms": 1007
+					"duration_ms": 1005
 				},
 				{
 					"name": "All tables should have completed",
@@ -99,7 +99,7 @@
 				{
 					"name": "Should have a valid sync report",
 					"status": "pass",
-					"duration_ms": 3
+					"duration_ms": 2
 				},
 				{
 					"name": "Report tables should have timing data",
@@ -107,7 +107,7 @@
 					"duration_ms": 1
 				}
 			],
-			"duration_ms": 1012
+			"duration_ms": 1009
 		},
 		{
 			"name": "Data Integrity",
@@ -115,12 +115,12 @@
 				{
 					"name": "Should fetch harness reference data",
 					"status": "pass",
-					"duration_ms": 9
+					"duration_ms": 7
 				},
 				{
 					"name": "Local book count should match sync (capped)",
 					"status": "pass",
-					"duration_ms": 2
+					"duration_ms": 1
 				},
 				{
 					"name": "Local Book 1 should match harness data",
@@ -133,7 +133,7 @@
 					"duration_ms": 0
 				}
 			],
-			"duration_ms": 12
+			"duration_ms": 9
 		},
 		{
 			"name": "Pre-Count and Live Status",
@@ -141,10 +141,10 @@
 				{
 					"name": "Should run a fresh pipeline and capture pre-count data",
 					"status": "pass",
-					"duration_ms": 7885
+					"duration_ms": 8863
 				}
 			],
-			"duration_ms": 7885
+			"duration_ms": 8863
 		},
 		{
 			"name": "Ongoing Sync",
@@ -152,7 +152,7 @@
 				{
 					"name": "Should run ongoing sync after initial",
 					"status": "pass",
-					"duration_ms": 1019
+					"duration_ms": 1015
 				},
 				{
 					"name": "Ongoing sync report should show success",
@@ -160,7 +160,7 @@
 					"duration_ms": 1
 				}
 			],
-			"duration_ms": 1020
+			"duration_ms": 1016
 		},
 		{
 			"name": "Stop Sync",
@@ -168,10 +168,10 @@
 				{
 					"name": "Should be able to stop a sync in progress",
 					"status": "pass",
-					"duration_ms": 4063
+					"duration_ms": 4020
 				}
 			],
-			"duration_ms": 4063
+			"duration_ms": 4020
 		},
 		{
 			"name": "Reset",
@@ -179,7 +179,7 @@
 				{
 					"name": "Should reset the database",
 					"status": "pass",
-					"duration_ms": 2
+					"duration_ms": 1
 				},
 				{
 					"name": "Connection should still work after reset",
@@ -187,125 +187,44 @@
 					"duration_ms": 1
 				}
 			],
-			"duration_ms": 3
+			"duration_ms": 2
 		},
 		{
 			"name": "Storage Engine: MySQL",
 			"tests": [
 				{
 					"name": "Should sync via MySQL",
-					"status": "skip",
-					"duration_ms": 0
+					"status": "pass",
+					"duration_ms": 1033
 				}
 			],
-			"duration_ms": 0
+			"duration_ms": 1033
 		},
 		{
 			"name": "Storage Engine: PostgreSQL",
 			"tests": [
 				{
 					"name": "Should sync via PostgreSQL",
-					"status": "skip",
-					"duration_ms": 0
+					"status": "pass",
+					"duration_ms": 1035
 				}
 			],
-			"duration_ms": 0
+			"duration_ms": 1035
 		},
 		{
 			"name": "Storage Engine: MSSQL",
 			"tests": [
 				{
 					"name": "Should sync via MSSQL",
-					"status": "skip",
-					"duration_ms": 0
+					"status": "pass",
+					"duration_ms": 3103
 				}
 			],
-			"duration_ms": 0
+			"duration_ms": 3103
 		}
 	],
 	"puppeteer": {
-		"available": true,
-		"suites": [
-			{
-				"name": "Data Cloner Web UI (Puppeteer)",
-				"tests": [],
-				"duration_ms": 0
-			},
-			{
-				"name": "Web UI Load",
-				"tests": [
-					{
-						"name": "Should load the data cloner page",
-						"status": "pass",
-						"duration_ms": 734
-					},
-					{
-						"name": "Should display 7 accordion sections",
-						"status": "pass",
-						"duration_ms": 15
-					},
-					{
-						"name": "Should show live status bar",
-						"status": "pass",
-						"duration_ms": 201
-					}
-				],
-				"duration_ms": 950
-			},
-			{
-				"name": "Connection Section",
-				"tests": [
-					{
-						"name": "Should connect to SQLite via go button",
-						"status": "pass",
-						"duration_ms": 2218
-					}
-				],
-				"duration_ms": 2218
-			},
-			{
-				"name": "Session, Schema, and Deploy Flow",
-				"tests": [
-					{
-						"name": "Should configure session via UI",
-						"status": "pass",
-						"duration_ms": 3019
-					},
-					{
-						"name": "Should fetch schema via UI",
-						"status": "pass",
-						"duration_ms": 2020
-					},
-					{
-						"name": "Should deploy schema via UI",
-						"status": "pass",
-						"duration_ms": 5074
-					}
-				],
-				"duration_ms": 10113
-			},
-			{
-				"name": "Sync via Web UI",
-				"tests": [
-					{
-						"name": "Should start sync and complete successfully",
-						"status": "pass",
-						"duration_ms": 7184
-					}
-				],
-				"duration_ms": 7184
-			},
-			{
-				"name": "Live Status Display",
-				"tests": [
-					{
-						"name": "Should show progress information during sync",
-						"status": "pass",
-						"duration_ms": 16243
-					}
-				],
-				"duration_ms": 16243
-			}
-		]
+		"available": false,
+		"suites": []
 	}
 }

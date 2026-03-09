@@ -447,7 +447,10 @@ class DataClonerProvider extends libPictProvider
 			}
 			if (pData.PreCountProgress && pData.PreCountProgress.Counted < pData.PreCountProgress.TotalTables)
 			{
-				tmpMetaParts.push('<span class="live-status-meta-item">counting: ' + pData.PreCountProgress.Counted + ' / ' + pData.PreCountProgress.TotalTables + '</span>');
+				let tmpCountedSoFar = pData.PreCountGrandTotal > 0
+					? ' (' + pData.PreCountGrandTotal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' records found)'
+					: '';
+				tmpMetaParts.push('<span class="live-status-meta-item">counting: ' + pData.PreCountProgress.Counted + ' / ' + pData.PreCountProgress.TotalTables + ' tables' + tmpCountedSoFar + '</span>');
 			}
 			if (pData.Errors > 0)
 			{
@@ -466,7 +469,12 @@ class DataClonerProvider extends libPictProvider
 
 		// Update progress bar
 		let tmpPct = 0;
-		if (pData.Phase === 'syncing' && pData.PreCountGrandTotal > 0 && pData.TotalSynced > 0)
+		if (pData.Phase === 'syncing' && pData.PreCountProgress && pData.PreCountProgress.Counted < pData.PreCountProgress.TotalTables)
+		{
+			// During counting phase, show table counting progress
+			tmpPct = Math.min((pData.PreCountProgress.Counted / pData.PreCountProgress.TotalTables) * 100, 99);
+		}
+		else if (pData.Phase === 'syncing' && pData.PreCountGrandTotal > 0 && pData.TotalSynced > 0)
 		{
 			tmpPct = Math.min((pData.TotalSynced / pData.PreCountGrandTotal) * 100, 99.9);
 		}
@@ -488,6 +496,16 @@ class DataClonerProvider extends libPictProvider
 			tmpPct = 100;
 		}
 		tmpProgressFill.style.width = Math.min(100, Math.round(tmpPct)) + '%';
+
+		// Auto-expand the detail view when sync starts so users see counting progress
+		if ((pData.Phase === 'syncing' || pData.Phase === 'stopping') && !this.pict.AppData.DataCloner.StatusDetailExpanded)
+		{
+			let tmpLayoutView = this.pict.views['DataCloner-Layout'];
+			if (tmpLayoutView && typeof tmpLayoutView.toggleStatusDetail === 'function')
+			{
+				tmpLayoutView.toggleStatusDetail();
+			}
+		}
 
 		// If the detail view is expanded, re-render it with fresh data
 		if (this.pict.AppData.DataCloner.StatusDetailExpanded)
@@ -558,6 +576,59 @@ class DataClonerProvider extends libPictProvider
 			.catch(function() { /* ignore poll errors */ });
 	}
 
+	renderCountingPhaseDetail(pContainer, pPreCountProgress)
+	{
+		let tmpTables = pPreCountProgress.Tables || [];
+		let tmpCounted = pPreCountProgress.Counted || 0;
+		let tmpTotal = pPreCountProgress.TotalTables || 0;
+		let tmpRunningTotal = 0;
+
+		let tmpHtml = '<div class="status-detail-section">';
+		tmpHtml += '<div class="status-detail-section-title">Counting Records (' + tmpCounted + ' / ' + tmpTotal + ' tables)</div>';
+
+		if (tmpTables.length > 0)
+		{
+			tmpHtml += '<table class="precount-table">';
+			tmpHtml += '<thead><tr><th>Table</th><th style="text-align:right">Records</th><th style="text-align:right">Time</th></tr></thead>';
+			tmpHtml += '<tbody>';
+			for (let i = 0; i < tmpTables.length; i++)
+			{
+				let tmpT = tmpTables[i];
+				tmpRunningTotal += tmpT.Count;
+				let tmpCountFmt = this.formatNumber(tmpT.Count);
+				let tmpTimeFmt = tmpT.ElapsedMs < 1000
+					? tmpT.ElapsedMs + 'ms'
+					: (tmpT.ElapsedMs / 1000).toFixed(1) + 's';
+				let tmpRowClass = tmpT.Error ? ' class="precount-error"' : '';
+				tmpHtml += '<tr' + tmpRowClass + '>';
+				tmpHtml += '<td>' + this.escapeHtml(tmpT.Name) + '</td>';
+				tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums">' + tmpCountFmt + '</td>';
+				tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums; color:#888">' + tmpTimeFmt + '</td>';
+				tmpHtml += '</tr>';
+			}
+			tmpHtml += '</tbody>';
+			tmpHtml += '<tfoot><tr>';
+			tmpHtml += '<td><strong>Total</strong></td>';
+			tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums"><strong>' + this.formatNumber(tmpRunningTotal) + '</strong></td>';
+			tmpHtml += '<td></td>';
+			tmpHtml += '</tr></tfoot>';
+			tmpHtml += '</table>';
+		}
+
+		// Show pending indicator for remaining tables
+		let tmpRemaining = tmpTotal - tmpCounted;
+		if (tmpRemaining > 0)
+		{
+			tmpHtml += '<div class="precount-pending">';
+			tmpHtml += '<span class="precount-spinner"></span> ';
+			tmpHtml += tmpRemaining + ' table' + (tmpRemaining === 1 ? '' : 's') + ' remaining…';
+			tmpHtml += '</div>';
+		}
+
+		tmpHtml += '</div>';
+		pContainer.innerHTML = tmpHtml;
+	}
+
 	renderStatusDetail()
 	{
 		let tmpContainer = document.getElementById('DataCloner-StatusDetail-Container');
@@ -567,6 +638,19 @@ class DataClonerProvider extends libPictProvider
 		let tmpLiveStatus = tmpAppData.LastLiveStatus;
 		let tmpStatusData = tmpAppData.StatusDetailData;
 		let tmpReport = tmpAppData.LastReport;
+
+		// During the counting phase, show per-table counts as they arrive
+		if (tmpLiveStatus && tmpLiveStatus.PreCountProgress
+			&& tmpLiveStatus.PreCountProgress.Tables
+			&& tmpLiveStatus.Phase === 'syncing'
+			&& tmpLiveStatus.PreCountProgress.Counted < tmpLiveStatus.PreCountProgress.TotalTables)
+		{
+			this.renderCountingPhaseDetail(tmpContainer, tmpLiveStatus.PreCountProgress);
+			// Hide histogram during counting
+			let tmpHistContainer = document.getElementById('DataCloner-Throughput-Histogram');
+			if (tmpHistContainer) tmpHistContainer.style.display = 'none';
+			return;
+		}
 
 		// Determine data source: live during sync, report after sync
 		let tmpTables = {};
