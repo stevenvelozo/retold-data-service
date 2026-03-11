@@ -18,7 +18,7 @@ class DataClonerExportView extends libPictView
 
 		if (tmpProvider === 'SQLite')
 		{
-			tmpDbConfig.SQLiteFilePath = document.getElementById('sqliteFilePath').value.trim() || 'data/cloned.sqlite';
+			tmpDbConfig.SQLiteFilePath = document.getElementById('sqliteFilePath').value.trim() || '~/headlight-liveconnect-local/cloned.sqlite';
 		}
 		else if (tmpProvider === 'MySQL')
 		{

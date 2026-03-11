@@ -29,7 +29,7 @@ class DataClonerConnectionView extends libPictView
 
 		if (tmpProvider === 'SQLite')
 		{
-			tmpConfig.SQLiteFilePath = document.getElementById('sqliteFilePath').value.trim() || 'data/cloned.sqlite';
+			tmpConfig.SQLiteFilePath = document.getElementById('sqliteFilePath').value.trim() || '~/headlight-liveconnect-local/cloned.sqlite';
 		}
 		else if (tmpProvider === 'MySQL')
 		{
@@ -214,7 +214,7 @@ module.exports.default_configuration =
 			<!-- SQLite Config -->
 			<div id="configSQLite">
 				<label for="sqliteFilePath">SQLite File Path</label>
-				<input type="text" id="sqliteFilePath" placeholder="data/cloned.sqlite" value="data/cloned.sqlite">
+				<input type="text" id="sqliteFilePath" placeholder="~/headlight-liveconnect-local/cloned.sqlite" value="~/headlight-liveconnect-local/cloned.sqlite">
 			</div>
 
 			<!-- MySQL Config -->

@@ -83,7 +83,7 @@ class DataClonerProvider extends libPictProvider
 		let tmpPreview1 = tmpProvider;
 		if (tmpProvider === 'SQLite')
 		{
-			let tmpPath = document.getElementById('sqliteFilePath').value || 'data/cloned.sqlite';
+			let tmpPath = document.getElementById('sqliteFilePath').value || '~/headlight-liveconnect-local/cloned.sqlite';
 			tmpPreview1 = 'SQLite at ' + tmpPath;
 		}
 		else if (tmpProvider === 'MySQL')
@@ -121,12 +121,12 @@ class DataClonerProvider extends libPictProvider
 		}
 		else if (tmpProvider === 'RocksDB')
 		{
-			let tmpFolder = document.getElementById('rocksdbFolder').value || 'data/rocksdb';
+			let tmpFolder = document.getElementById('rocksdbFolder').value || '~/headlight-liveconnect-local/rocksdb';
 			tmpPreview1 = 'RocksDB at ' + tmpFolder;
 		}
 		else if (tmpProvider === 'Bibliograph')
 		{
-			let tmpFolder = document.getElementById('bibliographFolder').value || 'data/bibliograph';
+			let tmpFolder = document.getElementById('bibliographFolder').value || '~/headlight-liveconnect-local/bibliograph';
 			tmpPreview1 = 'Bibliograph at ' + tmpFolder;
 		}
 		document.getElementById('preview1').textContent = tmpPreview1;
@@ -513,14 +513,23 @@ class DataClonerProvider extends libPictProvider
 		}
 		tmpProgressFill.style.width = Math.min(100, Math.round(tmpPct)) + '%';
 
-		// Auto-expand the detail view when sync starts so users see counting progress
-		if ((pData.Phase === 'syncing' || pData.Phase === 'stopping') && !this.pict.AppData.DataCloner.StatusDetailExpanded)
+		// Auto-expand the detail view once when sync first starts so users see counting progress.
+		// Only expand once per sync run — if the user collapses it, respect that choice.
+		if ((pData.Phase === 'syncing' || pData.Phase === 'stopping') && !this.pict.AppData.DataCloner.StatusDetailExpanded && !this.pict.AppData.DataCloner.StatusDetailAutoExpanded)
 		{
+			this.pict.AppData.DataCloner.StatusDetailAutoExpanded = true;
 			let tmpLayoutView = this.pict.views['DataCloner-Layout'];
 			if (tmpLayoutView && typeof tmpLayoutView.toggleStatusDetail === 'function')
 			{
 				tmpLayoutView.toggleStatusDetail();
 			}
+		}
+
+		// Reset the auto-expand flag when the sync is no longer running,
+		// so the next sync run will auto-expand again.
+		if (pData.Phase !== 'syncing' && pData.Phase !== 'stopping')
+		{
+			this.pict.AppData.DataCloner.StatusDetailAutoExpanded = false;
 		}
 
 		// If the detail view is expanded, re-render it with fresh data
@@ -662,6 +671,12 @@ class DataClonerProvider extends libPictProvider
 			&& tmpLiveStatus.PreCountProgress.Counted < tmpLiveStatus.PreCountProgress.TotalTables)
 		{
 			this.renderCountingPhaseDetail(tmpContainer, tmpLiveStatus.PreCountProgress);
+			// Prepend the summary banner above the counting detail
+			let tmpSummaryBanner = this.buildStatusSummaryHtml();
+			if (tmpSummaryBanner)
+			{
+				tmpContainer.innerHTML = tmpSummaryBanner + tmpContainer.innerHTML;
+			}
 			// Hide histogram during counting
 			let tmpHistContainer = document.getElementById('DataCloner-Throughput-Histogram');
 			if (tmpHistContainer) tmpHistContainer.style.display = 'none';
@@ -731,6 +746,9 @@ class DataClonerProvider extends libPictProvider
 		}
 
 		let tmpHtml = '';
+
+		// === Summary Banner (mirrors collapsed bar counters) ===
+		tmpHtml += this.buildStatusSummaryHtml();
 
 		// === Section 1: Running Operations ===
 		if (tmpRunning.length > 0 || tmpPending.length > 0)
@@ -873,6 +891,108 @@ class DataClonerProvider extends libPictProvider
 			tmpHistView.setBins(tmpBins);
 			tmpHistView.renderHistogram();
 		}
+	}
+
+	buildStatusSummaryHtml()
+	{
+		let tmpLiveStatus = this.pict.AppData.DataCloner.LastLiveStatus;
+		let tmpReport = this.pict.AppData.DataCloner.LastReport;
+
+		let tmpParts = [];
+		let tmpMessage = '';
+
+		if (tmpLiveStatus && (tmpLiveStatus.Phase === 'syncing' || tmpLiveStatus.Phase === 'stopping'))
+		{
+			tmpMessage = tmpLiveStatus.Message || '';
+			if (tmpLiveStatus.Elapsed)
+			{
+				tmpParts.push('<span class="live-status-meta-item">\u23F1 ' + this.escapeHtml(tmpLiveStatus.Elapsed) + '</span>');
+			}
+			if (tmpLiveStatus.ETA)
+			{
+				tmpParts.push('<span class="live-status-meta-item">~' + this.escapeHtml(tmpLiveStatus.ETA) + ' remaining</span>');
+			}
+			if (tmpLiveStatus.TotalTables > 0)
+			{
+				tmpParts.push('<span class="live-status-meta-item"><strong>' + tmpLiveStatus.Completed + '</strong> / ' + tmpLiveStatus.TotalTables + ' tables</span>');
+			}
+			if (tmpLiveStatus.TotalSynced > 0)
+			{
+				let tmpSynced = this.formatNumber(tmpLiveStatus.TotalSynced);
+				if (tmpLiveStatus.PreCountGrandTotal > 0)
+				{
+					let tmpGrandTotal = this.formatNumber(tmpLiveStatus.PreCountGrandTotal);
+					tmpParts.push('<span class="live-status-meta-item"><strong>' + tmpSynced + '</strong> / ' + tmpGrandTotal + ' records</span>');
+				}
+				else
+				{
+					tmpParts.push('<span class="live-status-meta-item"><strong>' + tmpSynced + '</strong> records</span>');
+				}
+			}
+			else if (tmpLiveStatus.PreCountGrandTotal > 0)
+			{
+				let tmpGrandTotal = this.formatNumber(tmpLiveStatus.PreCountGrandTotal);
+				tmpParts.push('<span class="live-status-meta-item">' + tmpGrandTotal + ' records to sync</span>');
+			}
+			if (tmpLiveStatus.PreCountProgress && tmpLiveStatus.PreCountProgress.Counted < tmpLiveStatus.PreCountProgress.TotalTables)
+			{
+				let tmpCountedSoFar = tmpLiveStatus.PreCountGrandTotal > 0
+					? ' (' + this.formatNumber(tmpLiveStatus.PreCountGrandTotal) + ' records found)'
+					: '';
+				tmpParts.push('<span class="live-status-meta-item">counting: ' + tmpLiveStatus.PreCountProgress.Counted + ' / ' + tmpLiveStatus.PreCountProgress.TotalTables + ' tables' + tmpCountedSoFar + '</span>');
+			}
+			if (tmpLiveStatus.Errors > 0)
+			{
+				tmpParts.push('<span class="live-status-meta-item" style="color:#dc3545"><strong>' + tmpLiveStatus.Errors + '</strong> error' + (tmpLiveStatus.Errors === 1 ? '' : 's') + '</span>');
+			}
+		}
+		else if (tmpLiveStatus && tmpLiveStatus.Phase === 'complete')
+		{
+			tmpMessage = tmpLiveStatus.Message || 'Sync complete';
+			if (tmpLiveStatus.Elapsed)
+			{
+				tmpParts.push('<span class="live-status-meta-item">\u23F1 ' + this.escapeHtml(tmpLiveStatus.Elapsed) + '</span>');
+			}
+			if (tmpLiveStatus.TotalSynced > 0)
+			{
+				let tmpSynced = this.formatNumber(tmpLiveStatus.TotalSynced);
+				tmpParts.push('<span class="live-status-meta-item"><strong>' + tmpSynced + '</strong> records synced</span>');
+			}
+		}
+		else if (tmpReport && tmpReport.ReportVersion)
+		{
+			tmpMessage = 'Sync ' + (tmpReport.Outcome || 'complete').toLowerCase();
+			if (tmpReport.RunTimestamps && tmpReport.RunTimestamps.DurationSeconds)
+			{
+				tmpParts.push('<span class="live-status-meta-item">\u23F1 ' + this.formatElapsed(tmpReport.RunTimestamps.DurationSeconds) + '</span>');
+			}
+			if (tmpReport.Summary)
+			{
+				if (tmpReport.Summary.TotalSynced > 0)
+				{
+					tmpParts.push('<span class="live-status-meta-item"><strong>' + this.formatNumber(tmpReport.Summary.TotalSynced) + '</strong> records synced</span>');
+				}
+				tmpParts.push('<span class="live-status-meta-item"><strong>' + tmpReport.Summary.TotalTables + '</strong> tables</span>');
+				if (tmpReport.Summary.TotalErrors > 0)
+				{
+					tmpParts.push('<span class="live-status-meta-item" style="color:#dc3545"><strong>' + tmpReport.Summary.TotalErrors + '</strong> error' + (tmpReport.Summary.TotalErrors === 1 ? '' : 's') + '</span>');
+				}
+			}
+		}
+
+		if (!tmpMessage && tmpParts.length === 0) return '';
+
+		let tmpHtml = '<div class="status-detail-summary">';
+		if (tmpMessage)
+		{
+			tmpHtml += '<div class="status-detail-summary-message">' + this.escapeHtml(tmpMessage) + '</div>';
+		}
+		if (tmpParts.length > 0)
+		{
+			tmpHtml += '<div class="status-detail-summary-counters">' + tmpParts.join('') + '</div>';
+		}
+		tmpHtml += '</div>';
+		return tmpHtml;
 	}
 
 	formatElapsed(pSec)

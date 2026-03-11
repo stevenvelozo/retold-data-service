@@ -1,0 +1,9 @@
+{
+	"Name": "Retold Comprehension Loader",
+	"Hash": "ComprehensionLoader",
+	"MainViewportViewIdentifier": "ComprehensionLoader-Layout",
+	"MainViewportDestinationAddress": "#ComprehensionLoader-Application-Container",
+	"MainViewportDefaultDataAddress": "AppData.ComprehensionLoader",
+	"pict_configuration": { "Product": "ComprehensionLoader" },
+	"AutoRenderMainViewportViewAfterInitialize": false
+}

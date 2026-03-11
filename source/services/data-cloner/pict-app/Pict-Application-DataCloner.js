@@ -59,6 +59,7 @@ class DataClonerApplication extends libPictApplication
 			SyncPollTimer: null,
 			LiveStatusTimer: null,
 			StatusDetailExpanded: false,
+			StatusDetailAutoExpanded: false,
 			StatusDetailTimer: null,
 			StatusDetailData: null,
 			LastLiveStatus: null,

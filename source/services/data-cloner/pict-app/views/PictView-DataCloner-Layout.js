@@ -275,6 +275,18 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	padding: 12px 20px 16px; max-height: 60vh; overflow-y: auto;
 }
 
+/* Status Detail Summary Banner */
+.status-detail-summary {
+	display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+	padding: 8px 0 12px; margin-bottom: 12px; border-bottom: 1px solid #e9ecef;
+}
+.status-detail-summary-message {
+	font-size: 0.92em; color: #333; font-weight: 600;
+}
+.status-detail-summary-counters {
+	display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.82em; color: #666;
+}
+
 /* Status Detail Sections */
 .status-detail-section { margin-bottom: 14px; }
 .status-detail-section:last-child { margin-bottom: 0; }

@@ -1,0 +1,6794 @@
+"use strict";
+
+(function (f) {
+  if (typeof exports === "object" && typeof module !== "undefined") {
+    module.exports = f();
+  } else if (typeof define === "function" && define.amd) {
+    define([], f);
+  } else {
+    var g;
+    if (typeof window !== "undefined") {
+      g = window;
+    } else if (typeof global !== "undefined") {
+      g = global;
+    } else if (typeof self !== "undefined") {
+      g = self;
+    } else {
+      g = this;
+    }
+    g.comprehensionLoader = f();
+  }
+})(function () {
+  var define, module, exports;
+  return function () {
+    function r(e, n, t) {
+      function o(i, f) {
+        if (!n[i]) {
+          if (!e[i]) {
+            var c = "function" == typeof require && require;
+            if (!f && c) return c(i, !0);
+            if (u) return u(i, !0);
+            var a = new Error("Cannot find module '" + i + "'");
+            throw a.code = "MODULE_NOT_FOUND", a;
+          }
+          var p = n[i] = {
+            exports: {}
+          };
+          e[i][0].call(p.exports, function (r) {
+            var n = e[i][1][r];
+            return o(n || r);
+          }, p, p.exports, r, e, n, t);
+        }
+        return n[i].exports;
+      }
+      for (var u = "function" == typeof require && require, i = 0; i < t.length; i++) o(t[i]);
+      return o;
+    }
+    return r;
+  }()({
+    1: [function (require, module, exports) {
+      module.exports = {
+        "name": "fable-serviceproviderbase",
+        "version": "3.0.19",
+        "description": "Simple base classes for fable services.",
+        "main": "source/Fable-ServiceProviderBase.js",
+        "scripts": {
+          "start": "node source/Fable-ServiceProviderBase.js",
+          "test": "npx quack test",
+          "tests": "npx quack test -g",
+          "coverage": "npx quack coverage",
+          "build": "npx quack build",
+          "types": "tsc -p ./tsconfig.build.json",
+          "check": "tsc -p . --noEmit"
+        },
+        "types": "types/source/Fable-ServiceProviderBase.d.ts",
+        "mocha": {
+          "diff": true,
+          "extension": ["js"],
+          "package": "./package.json",
+          "reporter": "spec",
+          "slow": "75",
+          "timeout": "5000",
+          "ui": "tdd",
+          "watch-files": ["source/**/*.js", "test/**/*.js"],
+          "watch-ignore": ["lib/vendor"]
+        },
+        "repository": {
+          "type": "git",
+          "url": "https://github.com/stevenvelozo/fable-serviceproviderbase.git"
+        },
+        "keywords": ["entity", "behavior"],
+        "author": "Steven Velozo <steven@velozo.com> (http://velozo.com/)",
+        "license": "MIT",
+        "bugs": {
+          "url": "https://github.com/stevenvelozo/fable-serviceproviderbase/issues"
+        },
+        "homepage": "https://github.com/stevenvelozo/fable-serviceproviderbase",
+        "devDependencies": {
+          "@types/mocha": "^10.0.10",
+          "fable": "^3.1.62",
+          "quackage": "^1.0.58",
+          "typescript": "^5.9.3"
+        }
+      };
+    }, {}],
+    2: [function (require, module, exports) {
+      /**
+      * Fable Service Base
+      * @author <steven@velozo.com>
+      */
+
+      const libPackage = require('../package.json');
+      class FableServiceProviderBase {
+        /**
+         * The constructor can be used in two ways:
+         * 1) With a fable, options object and service hash (the options object and service hash are optional)a
+         * 2) With an object or nothing as the first parameter, where it will be treated as the options object
+         *
+         * @param {import('fable')|Record<string, any>} [pFable] - (optional) The fable instance, or the options object if there is no fable
+         * @param {Record<string, any>|string} [pOptions] - (optional) The options object, or the service hash if there is no fable
+         * @param {string} [pServiceHash] - (optional) The service hash to identify this service instance
+         */
+        constructor(pFable, pOptions, pServiceHash) {
+          /** @type {import('fable')} */
+          this.fable;
+          /** @type {string} */
+          this.UUID;
+          /** @type {Record<string, any>} */
+          this.options;
+          /** @type {Record<string, any>} */
+          this.services;
+          /** @type {Record<string, any>} */
+          this.servicesMap;
+
+          // Check if a fable was passed in; connect it if so
+          if (typeof pFable === 'object' && pFable.isFable) {
+            this.connectFable(pFable);
+          } else {
+            this.fable = false;
+          }
+
+          // Initialize the services map if it wasn't passed in
+          /** @type {Record<string, any>} */
+          this._PackageFableServiceProvider = libPackage;
+
+          // initialize options and UUID based on whether the fable was passed in or not.
+          if (this.fable) {
+            this.UUID = pFable.getUUID();
+            this.options = typeof pOptions === 'object' ? pOptions : {};
+          } else {
+            // With no fable, check to see if there was an object passed into either of the first two
+            // Parameters, and if so, treat it as the options object
+            this.options = typeof pFable === 'object' && !pFable.isFable ? pFable : typeof pOptions === 'object' ? pOptions : {};
+            this.UUID = `CORE-SVC-${Math.floor(Math.random() * (99999 - 10000) + 10000)}`;
+          }
+
+          // It's expected that the deriving class will set this
+          this.serviceType = `Unknown-${this.UUID}`;
+
+          // The service hash is used to identify the specific instantiation of the service in the services map
+          this.Hash = typeof pServiceHash === 'string' ? pServiceHash : !this.fable && typeof pOptions === 'string' ? pOptions : `${this.UUID}`;
+        }
+
+        /**
+         * @param {import('fable')} pFable
+         */
+        connectFable(pFable) {
+          if (typeof pFable !== 'object' || !pFable.isFable) {
+            let tmpErrorMessage = `Fable Service Provider Base: Cannot connect to Fable, invalid Fable object passed in.  The pFable parameter was a [${typeof pFable}].}`;
+            console.log(tmpErrorMessage);
+            return new Error(tmpErrorMessage);
+          }
+          if (!this.fable) {
+            this.fable = pFable;
+          }
+          if (!this.log) {
+            this.log = this.fable.Logging;
+          }
+          if (!this.services) {
+            this.services = this.fable.services;
+          }
+          if (!this.servicesMap) {
+            this.servicesMap = this.fable.servicesMap;
+          }
+          return true;
+        }
+        static isFableService = true;
+      }
+      module.exports = FableServiceProviderBase;
+
+      // This is left here in case we want to go back to having different code/base class for "core" services
+      module.exports.CoreServiceProviderBase = FableServiceProviderBase;
+    }, {
+      "../package.json": 1
+    }],
+    3: [function (require, module, exports) {
+      module.exports = {
+        "name": "pict-application",
+        "version": "1.0.33",
+        "description": "Application base class for a pict view-based application",
+        "main": "source/Pict-Application.js",
+        "scripts": {
+          "test": "npx quack test",
+          "start": "node source/Pict-Application.js",
+          "coverage": "npx quack coverage",
+          "build": "npx quack build",
+          "docker-dev-build": "docker build ./ -f Dockerfile_LUXURYCode -t pict-application-image:local",
+          "docker-dev-run": "docker run -it -d --name pict-application-dev -p 30001:8080 -p 38086:8086 -v \"$PWD/.config:/home/coder/.config\"  -v \"$PWD:/home/coder/pict-application\" -u \"$(id -u):$(id -g)\" -e \"DOCKER_USER=$USER\" pict-application-image:local",
+          "docker-dev-shell": "docker exec -it pict-application-dev /bin/bash",
+          "tests": "npx quack test -g",
+          "lint": "eslint source/**",
+          "types": "tsc -p ."
+        },
+        "types": "types/source/Pict-Application.d.ts",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/stevenvelozo/pict-application.git"
+        },
+        "author": "steven velozo <steven@velozo.com>",
+        "license": "MIT",
+        "bugs": {
+          "url": "https://github.com/stevenvelozo/pict-application/issues"
+        },
+        "homepage": "https://github.com/stevenvelozo/pict-application#readme",
+        "devDependencies": {
+          "@eslint/js": "^9.28.0",
+          "browser-env": "^3.3.0",
+          "eslint": "^9.28.0",
+          "pict": "^1.0.348",
+          "pict-provider": "^1.0.10",
+          "pict-view": "^1.0.66",
+          "quackage": "^1.0.58",
+          "typescript": "^5.9.3"
+        },
+        "mocha": {
+          "diff": true,
+          "extension": ["js"],
+          "package": "./package.json",
+          "reporter": "spec",
+          "slow": "75",
+          "timeout": "5000",
+          "ui": "tdd",
+          "watch-files": ["source/**/*.js", "test/**/*.js"],
+          "watch-ignore": ["lib/vendor"]
+        },
+        "dependencies": {
+          "fable-serviceproviderbase": "^3.0.19"
+        }
+      };
+    }, {}],
+    4: [function (require, module, exports) {
+      const libFableServiceBase = require('fable-serviceproviderbase');
+      const libPackage = require('../package.json');
+      const defaultPictSettings = {
+        Name: 'DefaultPictApplication',
+        // The main "viewport" is the view that is used to host our application
+        MainViewportViewIdentifier: 'Default-View',
+        MainViewportRenderableHash: false,
+        MainViewportDestinationAddress: false,
+        MainViewportDefaultDataAddress: false,
+        // Whether or not we should automatically render the main viewport and other autorender views after we initialize the pict application
+        AutoSolveAfterInitialize: true,
+        AutoRenderMainViewportViewAfterInitialize: true,
+        AutoRenderViewsAfterInitialize: false,
+        AutoLoginAfterInitialize: false,
+        AutoLoadDataAfterLogin: false,
+        ConfigurationOnlyViews: [],
+        Manifests: {},
+        // The prefix to prepend on all template destination hashes
+        IdentifierAddressPrefix: 'PICT-'
+      };
+
+      /**
+       * Base class for pict applications.
+       */
+      class PictApplication extends libFableServiceBase {
+        /**
+         * @param {import('fable')} pFable
+         * @param {Record<string, any>} [pOptions]
+         * @param {string} [pServiceHash]
+         */
+        constructor(pFable, pOptions, pServiceHash) {
+          let tmpCarryOverConfiguration = typeof pFable.settings.PictApplicationConfiguration === 'object' ? pFable.settings.PictApplicationConfiguration : {};
+          let tmpOptions = Object.assign({}, JSON.parse(JSON.stringify(defaultPictSettings)), tmpCarryOverConfiguration, pOptions);
+          super(pFable, tmpOptions, pServiceHash);
+
+          /** @type {any} */
+          this.options;
+          /** @type {any} */
+          this.log;
+          /** @type {import('pict') & import('fable')} */
+          this.fable;
+          /** @type {string} */
+          this.UUID;
+          /** @type {string} */
+          this.Hash;
+          /**
+           * @type {{ [key: string]: any }}
+           */
+          this.servicesMap;
+          this.serviceType = 'PictApplication';
+          /** @type {Record<string, any>} */
+          this._Package = libPackage;
+
+          // Convenience and consistency naming
+          this.pict = this.fable;
+          // Wire in the essential Pict state
+          /** @type {Record<string, any>} */
+          this.AppData = this.fable.AppData;
+          /** @type {Record<string, any>} */
+          this.Bundle = this.fable.Bundle;
+
+          /** @type {number} */
+          this.initializeTimestamp;
+          /** @type {number} */
+          this.lastSolvedTimestamp;
+          /** @type {number} */
+          this.lastLoginTimestamp;
+          /** @type {number} */
+          this.lastMarshalFromViewsTimestamp;
+          /** @type {number} */
+          this.lastMarshalToViewsTimestamp;
+          /** @type {number} */
+          this.lastAutoRenderTimestamp;
+          /** @type {number} */
+          this.lastLoadDataTimestamp;
+
+          // Load all the manifests for the application
+          let tmpManifestKeys = Object.keys(this.options.Manifests);
+          if (tmpManifestKeys.length > 0) {
+            for (let i = 0; i < tmpManifestKeys.length; i++) {
+              // Load each manifest
+              let tmpManifestKey = tmpManifestKeys[i];
+              this.fable.instantiateServiceProvider('Manifest', this.options.Manifests[tmpManifestKey], tmpManifestKey);
+            }
+          }
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                     Code Section: Solve All Views                          */
+        /* -------------------------------------------------------------------------- */
+        /**
+         * @return {boolean}
+         */
+        onPreSolve() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onPreSolve:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onPreSolveAsync(fCallback) {
+          this.onPreSolve();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onBeforeSolve() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onBeforeSolve:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onBeforeSolveAsync(fCallback) {
+          this.onBeforeSolve();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onSolve() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onSolve:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onSolveAsync(fCallback) {
+          this.onSolve();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        solve() {
+          if (this.pict.LogNoisiness > 2) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} executing solve() function...`);
+          }
+
+          // Walk through any loaded providers and solve them as well.
+          let tmpLoadedProviders = Object.keys(this.pict.providers);
+          let tmpProvidersToSolve = [];
+          for (let i = 0; i < tmpLoadedProviders.length; i++) {
+            let tmpProvider = this.pict.providers[tmpLoadedProviders[i]];
+            if (tmpProvider.options.AutoSolveWithApp) {
+              tmpProvidersToSolve.push(tmpProvider);
+            }
+          }
+          // Sort the providers by their priority (if they are all priority 0, it will end up being add order due to JSON Object Property Key order stuff)
+          tmpProvidersToSolve.sort((a, b) => {
+            return a.options.AutoSolveOrdinal - b.options.AutoSolveOrdinal;
+          });
+          for (let i = 0; i < tmpProvidersToSolve.length; i++) {
+            tmpProvidersToSolve[i].solve(tmpProvidersToSolve[i]);
+          }
+          this.onBeforeSolve();
+          // Now walk through any loaded views and initialize them as well.
+          let tmpLoadedViews = Object.keys(this.pict.views);
+          let tmpViewsToSolve = [];
+          for (let i = 0; i < tmpLoadedViews.length; i++) {
+            let tmpView = this.pict.views[tmpLoadedViews[i]];
+            if (tmpView.options.AutoInitialize) {
+              tmpViewsToSolve.push(tmpView);
+            }
+          }
+          // Sort the views by their priority (if they are all priority 0, it will end up being add order due to JSON Object Property Key order stuff)
+          tmpViewsToSolve.sort((a, b) => {
+            return a.options.AutoInitializeOrdinal - b.options.AutoInitializeOrdinal;
+          });
+          for (let i = 0; i < tmpViewsToSolve.length; i++) {
+            tmpViewsToSolve[i].solve();
+          }
+          this.onSolve();
+          this.onAfterSolve();
+          this.lastSolvedTimestamp = this.fable.log.getTimeStamp();
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        solveAsync(fCallback) {
+          let tmpAnticipate = this.fable.instantiateServiceProviderWithoutRegistration('Anticipate');
+          tmpAnticipate.anticipate(this.onBeforeSolveAsync.bind(this));
+
+          // Allow the callback to be passed in as the last parameter no matter what
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : false;
+          if (!tmpCallback) {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} solveAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} solveAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          // Walk through any loaded providers and solve them as well.
+          let tmpLoadedProviders = Object.keys(this.pict.providers);
+          let tmpProvidersToSolve = [];
+          for (let i = 0; i < tmpLoadedProviders.length; i++) {
+            let tmpProvider = this.pict.providers[tmpLoadedProviders[i]];
+            if (tmpProvider.options.AutoSolveWithApp) {
+              tmpProvidersToSolve.push(tmpProvider);
+            }
+          }
+          // Sort the providers by their priority (if they are all priority 0, it will end up being add order due to JSON Object Property Key order stuff)
+          tmpProvidersToSolve.sort((a, b) => {
+            return a.options.AutoSolveOrdinal - b.options.AutoSolveOrdinal;
+          });
+          for (let i = 0; i < tmpProvidersToSolve.length; i++) {
+            tmpAnticipate.anticipate(tmpProvidersToSolve[i].solveAsync.bind(tmpProvidersToSolve[i]));
+          }
+
+          // Walk through any loaded views and solve them as well.
+          let tmpLoadedViews = Object.keys(this.pict.views);
+          let tmpViewsToSolve = [];
+          for (let i = 0; i < tmpLoadedViews.length; i++) {
+            let tmpView = this.pict.views[tmpLoadedViews[i]];
+            if (tmpView.options.AutoSolveWithApp) {
+              tmpViewsToSolve.push(tmpView);
+            }
+          }
+          // Sort the views by their priority (if they are all priority 0, it will end up being add order due to JSON Object Property Key order stuff)
+          tmpViewsToSolve.sort((a, b) => {
+            return a.options.AutoSolveOrdinal - b.options.AutoSolveOrdinal;
+          });
+          for (let i = 0; i < tmpViewsToSolve.length; i++) {
+            tmpAnticipate.anticipate(tmpViewsToSolve[i].solveAsync.bind(tmpViewsToSolve[i]));
+          }
+          tmpAnticipate.anticipate(this.onSolveAsync.bind(this));
+          tmpAnticipate.anticipate(this.onAfterSolveAsync.bind(this));
+          tmpAnticipate.wait(pError => {
+            if (this.pict.LogNoisiness > 2) {
+              this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} solveAsync() complete.`);
+            }
+            this.lastSolvedTimestamp = this.fable.log.getTimeStamp();
+            return tmpCallback(pError);
+          });
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onAfterSolve() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onAfterSolve:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onAfterSolveAsync(fCallback) {
+          this.onAfterSolve();
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                     Code Section: Application Login                        */
+        /* -------------------------------------------------------------------------- */
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onBeforeLoginAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onBeforeLoginAsync:`);
+          }
+          return fCallback();
+        }
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onLoginAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onLoginAsync:`);
+          }
+          return fCallback();
+        }
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        loginAsync(fCallback) {
+          const tmpAnticipate = this.fable.instantiateServiceProviderWithoutRegistration('Anticipate');
+          let tmpCallback = fCallback;
+          if (typeof tmpCallback !== 'function') {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} loginAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} loginAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          tmpAnticipate.anticipate(this.onBeforeLoginAsync.bind(this));
+          tmpAnticipate.anticipate(this.onLoginAsync.bind(this));
+          tmpAnticipate.anticipate(this.onAfterLoginAsync.bind(this));
+
+          // check and see if we should automatically trigger a data load
+          if (this.options.AutoLoadDataAfterLogin) {
+            tmpAnticipate.anticipate(fNext => {
+              if (!this.isLoggedIn()) {
+                return fNext();
+              }
+              if (this.pict.LogNoisiness > 1) {
+                this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} auto loading data after login...`);
+              }
+              //TODO: should data load errors funnel here? this creates a weird coupling between login and data load callbacks
+              this.loadDataAsync(pError => {
+                fNext(pError);
+              });
+            });
+          }
+          tmpAnticipate.wait(pError => {
+            if (this.pict.LogNoisiness > 2) {
+              this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} loginAsync() complete.`);
+            }
+            this.lastLoginTimestamp = this.fable.log.getTimeStamp();
+            return tmpCallback(pError);
+          });
+        }
+
+        /**
+         * Check if the application state is logged in. Defaults to true. Override this method in your application based on login requirements.
+         *
+         * @return {boolean}
+         */
+        isLoggedIn() {
+          return true;
+        }
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onAfterLoginAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onAfterLoginAsync:`);
+          }
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                     Code Section: Application LoadData                     */
+        /* -------------------------------------------------------------------------- */
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onBeforeLoadDataAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onBeforeLoadDataAsync:`);
+          }
+          return fCallback();
+        }
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onLoadDataAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onLoadDataAsync:`);
+          }
+          return fCallback();
+        }
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        loadDataAsync(fCallback) {
+          const tmpAnticipate = this.fable.instantiateServiceProviderWithoutRegistration('Anticipate');
+          let tmpCallback = fCallback;
+          if (typeof tmpCallback !== 'function') {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} loadDataAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} loadDataAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          tmpAnticipate.anticipate(this.onBeforeLoadDataAsync.bind(this));
+
+          // Walk through any loaded providers and load their data as well.
+          let tmpLoadedProviders = Object.keys(this.pict.providers);
+          let tmpProvidersToLoadData = [];
+          for (let i = 0; i < tmpLoadedProviders.length; i++) {
+            let tmpProvider = this.pict.providers[tmpLoadedProviders[i]];
+            if (tmpProvider.options.AutoLoadDataWithApp) {
+              tmpProvidersToLoadData.push(tmpProvider);
+            }
+          }
+          // Sort the providers by their priority (if they are all priority 0, it will end up being add order due to JSON Object Property Key order stuff)
+          tmpProvidersToLoadData.sort((a, b) => {
+            return a.options.AutoLoadDataOrdinal - b.options.AutoLoadDataOrdinal;
+          });
+          for (const tmpProvider of tmpProvidersToLoadData) {
+            tmpAnticipate.anticipate(tmpProvider.onBeforeLoadDataAsync.bind(tmpProvider));
+          }
+          tmpAnticipate.anticipate(this.onLoadDataAsync.bind(this));
+
+          //TODO: think about ways to parallelize these
+          for (const tmpProvider of tmpProvidersToLoadData) {
+            tmpAnticipate.anticipate(tmpProvider.onLoadDataAsync.bind(tmpProvider));
+          }
+          tmpAnticipate.anticipate(this.onAfterLoadDataAsync.bind(this));
+          for (const tmpProvider of tmpProvidersToLoadData) {
+            tmpAnticipate.anticipate(tmpProvider.onAfterLoadDataAsync.bind(tmpProvider));
+          }
+          tmpAnticipate.wait(/** @param {Error} [pError] */
+          pError => {
+            if (this.pict.LogNoisiness > 2) {
+              this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} loadDataAsync() complete.`);
+            }
+            this.lastLoadDataTimestamp = this.fable.log.getTimeStamp();
+            return tmpCallback(pError);
+          });
+        }
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onAfterLoadDataAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onAfterLoadDataAsync:`);
+          }
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                     Code Section: Application SaveData                     */
+        /* -------------------------------------------------------------------------- */
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onBeforeSaveDataAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onBeforeSaveDataAsync:`);
+          }
+          return fCallback();
+        }
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onSaveDataAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onSaveDataAsync:`);
+          }
+          return fCallback();
+        }
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        saveDataAsync(fCallback) {
+          const tmpAnticipate = this.fable.instantiateServiceProviderWithoutRegistration('Anticipate');
+          let tmpCallback = fCallback;
+          if (typeof tmpCallback !== 'function') {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} saveDataAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} saveDataAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          tmpAnticipate.anticipate(this.onBeforeSaveDataAsync.bind(this));
+
+          // Walk through any loaded providers and load their data as well.
+          let tmpLoadedProviders = Object.keys(this.pict.providers);
+          let tmpProvidersToSaveData = [];
+          for (let i = 0; i < tmpLoadedProviders.length; i++) {
+            let tmpProvider = this.pict.providers[tmpLoadedProviders[i]];
+            if (tmpProvider.options.AutoSaveDataWithApp) {
+              tmpProvidersToSaveData.push(tmpProvider);
+            }
+          }
+          // Sort the providers by their priority (if they are all priority 0, it will end up being add order due to JSON Object Property Key order stuff)
+          tmpProvidersToSaveData.sort((a, b) => {
+            return a.options.AutoSaveDataOrdinal - b.options.AutoSaveDataOrdinal;
+          });
+          for (const tmpProvider of tmpProvidersToSaveData) {
+            tmpAnticipate.anticipate(tmpProvider.onBeforeSaveDataAsync.bind(tmpProvider));
+          }
+          tmpAnticipate.anticipate(this.onSaveDataAsync.bind(this));
+
+          //TODO: think about ways to parallelize these
+          for (const tmpProvider of tmpProvidersToSaveData) {
+            tmpAnticipate.anticipate(tmpProvider.onSaveDataAsync.bind(tmpProvider));
+          }
+          tmpAnticipate.anticipate(this.onAfterSaveDataAsync.bind(this));
+          for (const tmpProvider of tmpProvidersToSaveData) {
+            tmpAnticipate.anticipate(tmpProvider.onAfterSaveDataAsync.bind(tmpProvider));
+          }
+          tmpAnticipate.wait(/** @param {Error} [pError] */
+          pError => {
+            if (this.pict.LogNoisiness > 2) {
+              this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} saveDataAsync() complete.`);
+            }
+            this.lastSaveDataTimestamp = this.fable.log.getTimeStamp();
+            return tmpCallback(pError);
+          });
+        }
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onAfterSaveDataAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onAfterSaveDataAsync:`);
+          }
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                     Code Section: Initialize Application                   */
+        /* -------------------------------------------------------------------------- */
+        /**
+         * @return {boolean}
+         */
+        onBeforeInitialize() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onBeforeInitialize:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onBeforeInitializeAsync(fCallback) {
+          this.onBeforeInitialize();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onInitialize() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onInitialize:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onInitializeAsync(fCallback) {
+          this.onInitialize();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        initialize() {
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow APPLICATION [${this.UUID}]::[${this.Hash}] ${this.options.Name} initialize:`);
+          }
+          if (!this.initializeTimestamp) {
+            this.onBeforeInitialize();
+            if ('ConfigurationOnlyViews' in this.options) {
+              // Load all the configuration only views
+              for (let i = 0; i < this.options.ConfigurationOnlyViews.length; i++) {
+                let tmpViewIdentifier = typeof this.options.ConfigurationOnlyViews[i].ViewIdentifier === 'undefined' ? `AutoView-${this.fable.getUUID()}` : this.options.ConfigurationOnlyViews[i].ViewIdentifier;
+                this.log.info(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} adding configuration only view: ${tmpViewIdentifier}`);
+                this.pict.addView(tmpViewIdentifier, this.options.ConfigurationOnlyViews[i]);
+              }
+            }
+            this.onInitialize();
+
+            // Walk through any loaded providers and initialize them as well.
+            let tmpLoadedProviders = Object.keys(this.pict.providers);
+            let tmpProvidersToInitialize = [];
+            for (let i = 0; i < tmpLoadedProviders.length; i++) {
+              let tmpProvider = this.pict.providers[tmpLoadedProviders[i]];
+              if (tmpProvider.options.AutoInitialize) {
+                tmpProvidersToInitialize.push(tmpProvider);
+              }
+            }
+            // Sort the providers by their priority (if they are all priority 0, it will end up being add order due to JSON Object Property Key order stuff)
+            tmpProvidersToInitialize.sort((a, b) => {
+              return a.options.AutoInitializeOrdinal - b.options.AutoInitializeOrdinal;
+            });
+            for (let i = 0; i < tmpProvidersToInitialize.length; i++) {
+              tmpProvidersToInitialize[i].initialize();
+            }
+
+            // Now walk through any loaded views and initialize them as well.
+            let tmpLoadedViews = Object.keys(this.pict.views);
+            let tmpViewsToInitialize = [];
+            for (let i = 0; i < tmpLoadedViews.length; i++) {
+              let tmpView = this.pict.views[tmpLoadedViews[i]];
+              if (tmpView.options.AutoInitialize) {
+                tmpViewsToInitialize.push(tmpView);
+              }
+            }
+            // Sort the views by their priority (if they are all priority 0, it will end up being add order due to JSON Object Property Key order stuff)
+            tmpViewsToInitialize.sort((a, b) => {
+              return a.options.AutoInitializeOrdinal - b.options.AutoInitializeOrdinal;
+            });
+            for (let i = 0; i < tmpViewsToInitialize.length; i++) {
+              tmpViewsToInitialize[i].initialize();
+            }
+            this.onAfterInitialize();
+            if (this.options.AutoSolveAfterInitialize) {
+              if (this.pict.LogNoisiness > 1) {
+                this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} auto solving after initialization...`);
+              }
+              // Solve the template synchronously
+              this.solve();
+            }
+            // Now check and see if we should automatically render as well
+            if (this.options.AutoRenderMainViewportViewAfterInitialize) {
+              if (this.pict.LogNoisiness > 1) {
+                this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} auto rendering after initialization...`);
+              }
+              // Render the template synchronously
+              this.render();
+            }
+            this.initializeTimestamp = this.fable.log.getTimeStamp();
+            this.onCompletionOfInitialize();
+            return true;
+          } else {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} initialize called but initialization is already completed.  Aborting.`);
+            return false;
+          }
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        initializeAsync(fCallback) {
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow APPLICATION [${this.UUID}]::[${this.Hash}] ${this.options.Name} initializeAsync:`);
+          }
+
+          // Allow the callback to be passed in as the last parameter no matter what
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : false;
+          if (!tmpCallback) {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} initializeAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} initializeAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          if (!this.initializeTimestamp) {
+            let tmpAnticipate = this.fable.instantiateServiceProviderWithoutRegistration('Anticipate');
+            if (this.pict.LogNoisiness > 3) {
+              this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} beginning initialization...`);
+            }
+            if ('ConfigurationOnlyViews' in this.options) {
+              // Load all the configuration only views
+              for (let i = 0; i < this.options.ConfigurationOnlyViews.length; i++) {
+                let tmpViewIdentifier = typeof this.options.ConfigurationOnlyViews[i].ViewIdentifier === 'undefined' ? `AutoView-${this.fable.getUUID()}` : this.options.ConfigurationOnlyViews[i].ViewIdentifier;
+                this.log.info(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} adding configuration only view: ${tmpViewIdentifier}`);
+                this.pict.addView(tmpViewIdentifier, this.options.ConfigurationOnlyViews[i]);
+              }
+            }
+            tmpAnticipate.anticipate(this.onBeforeInitializeAsync.bind(this));
+            tmpAnticipate.anticipate(this.onInitializeAsync.bind(this));
+
+            // Walk through any loaded providers and solve them as well.
+            let tmpLoadedProviders = Object.keys(this.pict.providers);
+            let tmpProvidersToInitialize = [];
+            for (let i = 0; i < tmpLoadedProviders.length; i++) {
+              let tmpProvider = this.pict.providers[tmpLoadedProviders[i]];
+              if (tmpProvider.options.AutoInitialize) {
+                tmpProvidersToInitialize.push(tmpProvider);
+              }
+            }
+            // Sort the providers by their priority (if they are all priority 0, it will end up being add order due to JSON Object Property Key order stuff)
+            tmpProvidersToInitialize.sort((a, b) => {
+              return a.options.AutoInitializeOrdinal - b.options.AutoInitializeOrdinal;
+            });
+            for (let i = 0; i < tmpProvidersToInitialize.length; i++) {
+              tmpAnticipate.anticipate(tmpProvidersToInitialize[i].initializeAsync.bind(tmpProvidersToInitialize[i]));
+            }
+
+            // Now walk through any loaded views and initialize them as well.
+            // TODO: Some optimization cleverness could be gained by grouping them into a parallelized async operation, by ordinal.
+            let tmpLoadedViews = Object.keys(this.pict.views);
+            let tmpViewsToInitialize = [];
+            for (let i = 0; i < tmpLoadedViews.length; i++) {
+              let tmpView = this.pict.views[tmpLoadedViews[i]];
+              if (tmpView.options.AutoInitialize) {
+                tmpViewsToInitialize.push(tmpView);
+              }
+            }
+            // Sort the views by their priority
+            // If they are all the default priority 0, it will end up being add order due to JSON Object Property Key order stuff
+            tmpViewsToInitialize.sort((a, b) => {
+              return a.options.AutoInitializeOrdinal - b.options.AutoInitializeOrdinal;
+            });
+            for (let i = 0; i < tmpViewsToInitialize.length; i++) {
+              let tmpView = tmpViewsToInitialize[i];
+              tmpAnticipate.anticipate(tmpView.initializeAsync.bind(tmpView));
+            }
+            tmpAnticipate.anticipate(this.onAfterInitializeAsync.bind(this));
+            if (this.options.AutoLoginAfterInitialize) {
+              if (this.pict.LogNoisiness > 1) {
+                this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} auto login (asynchronously) after initialization...`);
+              }
+              tmpAnticipate.anticipate(this.loginAsync.bind(this));
+            }
+            if (this.options.AutoSolveAfterInitialize) {
+              if (this.pict.LogNoisiness > 1) {
+                this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} auto solving (asynchronously) after initialization...`);
+              }
+              tmpAnticipate.anticipate(this.solveAsync.bind(this));
+            }
+            if (this.options.AutoRenderMainViewportViewAfterInitialize) {
+              if (this.pict.LogNoisiness > 1) {
+                this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} auto rendering (asynchronously) after initialization...`);
+              }
+              tmpAnticipate.anticipate(this.renderMainViewportAsync.bind(this));
+            }
+            tmpAnticipate.wait(pError => {
+              if (pError) {
+                this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} initializeAsync Error: ${pError.message || pError}`, {
+                  stack: pError.stack
+                });
+              }
+              this.initializeTimestamp = this.fable.log.getTimeStamp();
+              if (this.pict.LogNoisiness > 2) {
+                this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} initialization complete.`);
+              }
+              return tmpCallback();
+            });
+          } else {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} async initialize called but initialization is already completed.  Aborting.`);
+            // TODO: Should this be an error?
+            return this.onCompletionOfInitializeAsync(tmpCallback);
+          }
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onAfterInitialize() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onAfterInitialize:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onAfterInitializeAsync(fCallback) {
+          this.onAfterInitialize();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onCompletionOfInitialize() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onCompletionOfInitialize:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onCompletionOfInitializeAsync(fCallback) {
+          this.onCompletionOfInitialize();
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                     Code Section: Marshal Data From All Views              */
+        /* -------------------------------------------------------------------------- */
+        /**
+         * @return {boolean}
+         */
+        onBeforeMarshalFromViews() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onBeforeMarshalFromViews:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onBeforeMarshalFromViewsAsync(fCallback) {
+          this.onBeforeMarshalFromViews();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onMarshalFromViews() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onMarshalFromViews:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onMarshalFromViewsAsync(fCallback) {
+          this.onMarshalFromViews();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        marshalFromViews() {
+          if (this.pict.LogNoisiness > 2) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} executing marshalFromViews() function...`);
+          }
+          this.onBeforeMarshalFromViews();
+          // Now walk through any loaded views and initialize them as well.
+          let tmpLoadedViews = Object.keys(this.pict.views);
+          let tmpViewsToMarshalFromViews = [];
+          for (let i = 0; i < tmpLoadedViews.length; i++) {
+            let tmpView = this.pict.views[tmpLoadedViews[i]];
+            tmpViewsToMarshalFromViews.push(tmpView);
+          }
+          for (let i = 0; i < tmpViewsToMarshalFromViews.length; i++) {
+            tmpViewsToMarshalFromViews[i].marshalFromView();
+          }
+          this.onMarshalFromViews();
+          this.onAfterMarshalFromViews();
+          this.lastMarshalFromViewsTimestamp = this.fable.log.getTimeStamp();
+          return true;
+        }
+
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        marshalFromViewsAsync(fCallback) {
+          let tmpAnticipate = this.fable.instantiateServiceProviderWithoutRegistration('Anticipate');
+
+          // Allow the callback to be passed in as the last parameter no matter what
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : false;
+          if (!tmpCallback) {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} marshalFromViewsAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} marshalFromViewsAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          tmpAnticipate.anticipate(this.onBeforeMarshalFromViewsAsync.bind(this));
+          // Walk through any loaded views and marshalFromViews them as well.
+          let tmpLoadedViews = Object.keys(this.pict.views);
+          let tmpViewsToMarshalFromViews = [];
+          for (let i = 0; i < tmpLoadedViews.length; i++) {
+            let tmpView = this.pict.views[tmpLoadedViews[i]];
+            tmpViewsToMarshalFromViews.push(tmpView);
+          }
+          for (let i = 0; i < tmpViewsToMarshalFromViews.length; i++) {
+            tmpAnticipate.anticipate(tmpViewsToMarshalFromViews[i].marshalFromViewAsync.bind(tmpViewsToMarshalFromViews[i]));
+          }
+          tmpAnticipate.anticipate(this.onMarshalFromViewsAsync.bind(this));
+          tmpAnticipate.anticipate(this.onAfterMarshalFromViewsAsync.bind(this));
+          tmpAnticipate.wait(pError => {
+            if (this.pict.LogNoisiness > 2) {
+              this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} marshalFromViewsAsync() complete.`);
+            }
+            this.lastMarshalFromViewsTimestamp = this.fable.log.getTimeStamp();
+            return tmpCallback(pError);
+          });
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onAfterMarshalFromViews() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onAfterMarshalFromViews:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onAfterMarshalFromViewsAsync(fCallback) {
+          this.onAfterMarshalFromViews();
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                     Code Section: Marshal Data To All Views                */
+        /* -------------------------------------------------------------------------- */
+        /**
+         * @return {boolean}
+         */
+        onBeforeMarshalToViews() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onBeforeMarshalToViews:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onBeforeMarshalToViewsAsync(fCallback) {
+          this.onBeforeMarshalToViews();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onMarshalToViews() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onMarshalToViews:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onMarshalToViewsAsync(fCallback) {
+          this.onMarshalToViews();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        marshalToViews() {
+          if (this.pict.LogNoisiness > 2) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} executing marshalToViews() function...`);
+          }
+          this.onBeforeMarshalToViews();
+          // Now walk through any loaded views and initialize them as well.
+          let tmpLoadedViews = Object.keys(this.pict.views);
+          let tmpViewsToMarshalToViews = [];
+          for (let i = 0; i < tmpLoadedViews.length; i++) {
+            let tmpView = this.pict.views[tmpLoadedViews[i]];
+            tmpViewsToMarshalToViews.push(tmpView);
+          }
+          for (let i = 0; i < tmpViewsToMarshalToViews.length; i++) {
+            tmpViewsToMarshalToViews[i].marshalToView();
+          }
+          this.onMarshalToViews();
+          this.onAfterMarshalToViews();
+          this.lastMarshalToViewsTimestamp = this.fable.log.getTimeStamp();
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        marshalToViewsAsync(fCallback) {
+          let tmpAnticipate = this.fable.instantiateServiceProviderWithoutRegistration('Anticipate');
+
+          // Allow the callback to be passed in as the last parameter no matter what
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : false;
+          if (!tmpCallback) {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} marshalToViewsAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} marshalToViewsAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          tmpAnticipate.anticipate(this.onBeforeMarshalToViewsAsync.bind(this));
+          // Walk through any loaded views and marshalToViews them as well.
+          let tmpLoadedViews = Object.keys(this.pict.views);
+          let tmpViewsToMarshalToViews = [];
+          for (let i = 0; i < tmpLoadedViews.length; i++) {
+            let tmpView = this.pict.views[tmpLoadedViews[i]];
+            tmpViewsToMarshalToViews.push(tmpView);
+          }
+          for (let i = 0; i < tmpViewsToMarshalToViews.length; i++) {
+            tmpAnticipate.anticipate(tmpViewsToMarshalToViews[i].marshalToViewAsync.bind(tmpViewsToMarshalToViews[i]));
+          }
+          tmpAnticipate.anticipate(this.onMarshalToViewsAsync.bind(this));
+          tmpAnticipate.anticipate(this.onAfterMarshalToViewsAsync.bind(this));
+          tmpAnticipate.wait(pError => {
+            if (this.pict.LogNoisiness > 2) {
+              this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} marshalToViewsAsync() complete.`);
+            }
+            this.lastMarshalToViewsTimestamp = this.fable.log.getTimeStamp();
+            return tmpCallback(pError);
+          });
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onAfterMarshalToViews() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onAfterMarshalToViews:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onAfterMarshalToViewsAsync(fCallback) {
+          this.onAfterMarshalToViews();
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                     Code Section: Render View                              */
+        /* -------------------------------------------------------------------------- */
+        /**
+         * @return {boolean}
+         */
+        onBeforeRender() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onBeforeRender:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onBeforeRenderAsync(fCallback) {
+          this.onBeforeRender();
+          return fCallback();
+        }
+
+        /**
+         * @param {string} [pViewIdentifier] - The hash of the view to render. By default, the main viewport view is rendered.
+         * @param {string} [pRenderableHash] - The hash of the renderable to render.
+         * @param {string} [pRenderDestinationAddress] - The address where the renderable will be rendered.
+         * @param {string} [pTemplateDataAddress] - The address where the data for the template is stored.
+         *
+         * TODO: Should we support objects for pTemplateDataAddress for parity with pict-view?
+         */
+        render(pViewIdentifier, pRenderableHash, pRenderDestinationAddress, pTemplateDataAddress) {
+          let tmpViewIdentifier = typeof pViewIdentifier !== 'string' ? this.options.MainViewportViewIdentifier : pViewIdentifier;
+          let tmpRenderableHash = typeof pRenderableHash !== 'string' ? this.options.MainViewportRenderableHash : pRenderableHash;
+          let tmpRenderDestinationAddress = typeof pRenderDestinationAddress !== 'string' ? this.options.MainViewportDestinationAddress : pRenderDestinationAddress;
+          let tmpTemplateDataAddress = typeof pTemplateDataAddress !== 'string' ? this.options.MainViewportDefaultDataAddress : pTemplateDataAddress;
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow APPLICATION [${this.UUID}]::[${this.Hash}] ${this.options.Name} VIEW Renderable[${tmpRenderableHash}] Destination[${tmpRenderDestinationAddress}] TemplateDataAddress[${tmpTemplateDataAddress}] render:`);
+          }
+          this.onBeforeRender();
+
+          // Now get the view (by hash) from the loaded views
+          let tmpView = typeof tmpViewIdentifier === 'string' ? this.servicesMap.PictView[tmpViewIdentifier] : false;
+          if (!tmpView) {
+            this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} could not render from View ${tmpViewIdentifier} because it is not a valid view.`);
+            return false;
+          }
+          this.onRender();
+          tmpView.render(tmpRenderableHash, tmpRenderDestinationAddress, tmpTemplateDataAddress);
+          this.onAfterRender();
+          return true;
+        }
+        /**
+         * @return {boolean}
+         */
+        onRender() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onRender:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onRenderAsync(fCallback) {
+          this.onRender();
+          return fCallback();
+        }
+
+        /**
+         * @param {string|((error?: Error) => void)} pViewIdentifier - The hash of the view to render. By default, the main viewport view is rendered. (or the callback)
+         * @param {string|((error?: Error) => void)} [pRenderableHash] - The hash of the renderable to render. (or the callback)
+         * @param {string|((error?: Error) => void)} [pRenderDestinationAddress] - The address where the renderable will be rendered. (or the callback)
+         * @param {string|((error?: Error) => void)} [pTemplateDataAddress] - The address where the data for the template is stored. (or the callback)
+         * @param {(error?: Error) => void} [fCallback] - The callback, if all other parameters are provided.
+         *
+         * TODO: Should we support objects for pTemplateDataAddress for parity with pict-view?
+         */
+        renderAsync(pViewIdentifier, pRenderableHash, pRenderDestinationAddress, pTemplateDataAddress, fCallback) {
+          let tmpViewIdentifier = typeof pViewIdentifier !== 'string' ? this.options.MainViewportViewIdentifier : pViewIdentifier;
+          let tmpRenderableHash = typeof pRenderableHash !== 'string' ? this.options.MainViewportRenderableHash : pRenderableHash;
+          let tmpRenderDestinationAddress = typeof pRenderDestinationAddress !== 'string' ? this.options.MainViewportDestinationAddress : pRenderDestinationAddress;
+          let tmpTemplateDataAddress = typeof pTemplateDataAddress !== 'string' ? this.options.MainViewportDefaultDataAddress : pTemplateDataAddress;
+
+          // Allow the callback to be passed in as the last parameter no matter what
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : typeof pTemplateDataAddress === 'function' ? pTemplateDataAddress : typeof pRenderDestinationAddress === 'function' ? pRenderDestinationAddress : typeof pRenderableHash === 'function' ? pRenderableHash : typeof pViewIdentifier === 'function' ? pViewIdentifier : false;
+          if (!tmpCallback) {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} renderAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} renderAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow APPLICATION [${this.UUID}]::[${this.Hash}] ${this.options.Name} VIEW Renderable[${tmpRenderableHash}] Destination[${tmpRenderDestinationAddress}] TemplateDataAddress[${tmpTemplateDataAddress}] renderAsync:`);
+          }
+          let tmpRenderAnticipate = this.fable.newAnticipate();
+          tmpRenderAnticipate.anticipate(this.onBeforeRenderAsync.bind(this));
+          let tmpView = typeof tmpViewIdentifier === 'string' ? this.servicesMap.PictView[tmpViewIdentifier] : false;
+          if (!tmpView) {
+            let tmpErrorMessage = `PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} could not asynchronously render from View ${tmpViewIdentifier} because it is not a valid view.`;
+            if (this.pict.LogNoisiness > 3) {
+              this.log.error(tmpErrorMessage);
+            }
+            return tmpCallback(new Error(tmpErrorMessage));
+          }
+          tmpRenderAnticipate.anticipate(this.onRenderAsync.bind(this));
+          tmpRenderAnticipate.anticipate(fNext => {
+            tmpView.renderAsync.call(tmpView, tmpRenderableHash, tmpRenderDestinationAddress, tmpTemplateDataAddress, fNext);
+          });
+          tmpRenderAnticipate.anticipate(this.onAfterRenderAsync.bind(this));
+          return tmpRenderAnticipate.wait(tmpCallback);
+        }
+
+        /**
+         * @return {boolean}
+         */
+        onAfterRender() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} onAfterRender:`);
+          }
+          return true;
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        onAfterRenderAsync(fCallback) {
+          this.onAfterRender();
+          return fCallback();
+        }
+
+        /**
+         * @return {boolean}
+         */
+        renderMainViewport() {
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow APPLICATION [${this.UUID}]::[${this.Hash}] ${this.options.Name} renderMainViewport:`);
+          }
+          return this.render();
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        renderMainViewportAsync(fCallback) {
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow APPLICATION [${this.UUID}]::[${this.Hash}] ${this.options.Name} renderMainViewportAsync:`);
+          }
+          return this.renderAsync(fCallback);
+        }
+        /**
+         * @return {void}
+         */
+        renderAutoViews() {
+          if (this.pict.LogNoisiness > 0) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} beginning renderAutoViews...`);
+          }
+          // Now walk through any loaded views and sort them by the AutoRender ordinal
+          let tmpLoadedViews = Object.keys(this.pict.views);
+          // Sort the views by their priority
+          // If they are all the default priority 0, it will end up being add order due to JSON Object Property Key order stuff
+          tmpLoadedViews.sort((a, b) => {
+            return this.pict.views[a].options.AutoRenderOrdinal - this.pict.views[b].options.AutoRenderOrdinal;
+          });
+          for (let i = 0; i < tmpLoadedViews.length; i++) {
+            let tmpView = this.pict.views[tmpLoadedViews[i]];
+            if (tmpView.options.AutoRender) {
+              tmpView.render();
+            }
+          }
+          if (this.pict.LogNoisiness > 0) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} renderAutoViewsAsync complete.`);
+          }
+        }
+        /**
+         * @param {(error?: Error) => void} fCallback
+         */
+        renderAutoViewsAsync(fCallback) {
+          let tmpAnticipate = this.fable.instantiateServiceProviderWithoutRegistration('Anticipate');
+
+          // Allow the callback to be passed in as the last parameter no matter what
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : false;
+          if (!tmpCallback) {
+            this.log.warn(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} renderAutoViewsAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} renderAutoViewsAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          if (this.pict.LogNoisiness > 0) {
+            this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} beginning renderAutoViewsAsync...`);
+          }
+
+          // Now walk through any loaded views and sort them by the AutoRender ordinal
+          // TODO: Some optimization cleverness could be gained by grouping them into a parallelized async operation, by ordinal.
+          let tmpLoadedViews = Object.keys(this.pict.views);
+          // Sort the views by their priority
+          // If they are all the default priority 0, it will end up being add order due to JSON Object Property Key order stuff
+          tmpLoadedViews.sort((a, b) => {
+            return this.pict.views[a].options.AutoRenderOrdinal - this.pict.views[b].options.AutoRenderOrdinal;
+          });
+          for (let i = 0; i < tmpLoadedViews.length; i++) {
+            let tmpView = this.pict.views[tmpLoadedViews[i]];
+            if (tmpView.options.AutoRender) {
+              tmpAnticipate.anticipate(tmpView.renderAsync.bind(tmpView));
+            }
+          }
+          tmpAnticipate.wait(pError => {
+            this.lastAutoRenderTimestamp = this.fable.log.getTimeStamp();
+            if (this.pict.LogNoisiness > 0) {
+              this.log.trace(`PictApp [${this.UUID}]::[${this.Hash}] ${this.options.Name} renderAutoViewsAsync complete.`);
+            }
+            return tmpCallback(pError);
+          });
+        }
+
+        /**
+         * @return {boolean}
+         */
+        get isPictApplication() {
+          return true;
+        }
+      }
+      module.exports = PictApplication;
+    }, {
+      "../package.json": 3,
+      "fable-serviceproviderbase": 2
+    }],
+    5: [function (require, module, exports) {
+      module.exports = {
+        "name": "pict-provider",
+        "version": "1.0.12",
+        "description": "Pict Provider Base Class",
+        "main": "source/Pict-Provider.js",
+        "scripts": {
+          "start": "node source/Pict-Provider.js",
+          "test": "npx quack test",
+          "tests": "npx quack test -g",
+          "coverage": "npx quack coverage",
+          "build": "npx quack build",
+          "docker-dev-build": "docker build ./ -f Dockerfile_LUXURYCode -t pict-provider-image:local",
+          "docker-dev-run": "docker run -it -d --name pict-provider-dev -p 24125:8080 -p 30027:8086 -v \"$PWD/.config:/home/coder/.config\"  -v \"$PWD:/home/coder/pict-provider\" -u \"$(id -u):$(id -g)\" -e \"DOCKER_USER=$USER\" pict-provider-image:local",
+          "docker-dev-shell": "docker exec -it pict-provider-dev /bin/bash",
+          "lint": "eslint source/**",
+          "types": "tsc -p ."
+        },
+        "types": "types/source/Pict-Provider.d.ts",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/stevenvelozo/pict-provider.git"
+        },
+        "author": "steven velozo <steven@velozo.com>",
+        "license": "MIT",
+        "bugs": {
+          "url": "https://github.com/stevenvelozo/pict-provider/issues"
+        },
+        "homepage": "https://github.com/stevenvelozo/pict-provider#readme",
+        "devDependencies": {
+          "@eslint/js": "^9.39.1",
+          "eslint": "^9.39.1",
+          "pict": "^1.0.351",
+          "quackage": "^1.0.58",
+          "typescript": "^5.9.3"
+        },
+        "dependencies": {
+          "fable-serviceproviderbase": "^3.0.19"
+        },
+        "mocha": {
+          "diff": true,
+          "extension": ["js"],
+          "package": "./package.json",
+          "reporter": "spec",
+          "slow": "75",
+          "timeout": "5000",
+          "ui": "tdd",
+          "watch-files": ["source/**/*.js", "test/**/*.js"],
+          "watch-ignore": ["lib/vendor"]
+        }
+      };
+    }, {}],
+    6: [function (require, module, exports) {
+      const libFableServiceBase = require('fable-serviceproviderbase');
+      const libPackage = require('../package.json');
+      const defaultPictProviderSettings = {
+        ProviderIdentifier: false,
+        // If this is set to true, when the App initializes this will.
+        // After the App initializes, initialize will be called as soon as it's added.
+        AutoInitialize: true,
+        AutoInitializeOrdinal: 0,
+        AutoLoadDataWithApp: true,
+        AutoLoadDataOrdinal: 0,
+        AutoSolveWithApp: true,
+        AutoSolveOrdinal: 0,
+        Manifests: {},
+        Templates: []
+      };
+      class PictProvider extends libFableServiceBase {
+        /**
+         * @param {import('fable')} pFable - The Fable instance.
+         * @param {Record<string, any>} [pOptions] - The options for the provider.
+         * @param {string} [pServiceHash] - The service hash for the provider.
+         */
+        constructor(pFable, pOptions, pServiceHash) {
+          // Intersect default options, parent constructor, service information
+          let tmpOptions = Object.assign({}, JSON.parse(JSON.stringify(defaultPictProviderSettings)), pOptions);
+          super(pFable, tmpOptions, pServiceHash);
+
+          /** @type {import('fable') & import('pict') & { instantiateServiceProviderWithoutRegistration(pServiceType: string, pOptions?: Record<string, any>, pCustomServiceHash?: string): any }} */
+          this.fable;
+          /** @type {import('fable') & import('pict') & { instantiateServiceProviderWithoutRegistration(pServiceType: string, pOptions?: Record<string, any>, pCustomServiceHash?: string): any }} */
+          this.pict;
+          /** @type {any} */
+          this.log;
+          /** @type {Record<string, any>} */
+          this.options;
+          /** @type {string} */
+          this.UUID;
+          /** @type {string} */
+          this.Hash;
+          if (!this.options.ProviderIdentifier) {
+            this.options.ProviderIdentifier = `AutoProviderID-${this.fable.getUUID()}`;
+          }
+          this.serviceType = 'PictProvider';
+          /** @type {Record<string, any>} */
+          this._Package = libPackage;
+
+          // Convenience and consistency naming
+          this.pict = this.fable;
+
+          // Wire in the essential Pict application state
+          /** @type {Record<string, any>} */
+          this.AppData = this.pict.AppData;
+          /** @type {Record<string, any>} */
+          this.Bundle = this.pict.Bundle;
+          this.initializeTimestamp = false;
+          this.lastSolvedTimestamp = false;
+          for (let i = 0; i < this.options.Templates.length; i++) {
+            let tmpDefaultTemplate = this.options.Templates[i];
+            if (!tmpDefaultTemplate.hasOwnProperty('Postfix') || !tmpDefaultTemplate.hasOwnProperty('Template')) {
+              this.log.error(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} could not load Default Template ${i} in the options array.`, tmpDefaultTemplate);
+            } else {
+              if (!tmpDefaultTemplate.Source) {
+                tmpDefaultTemplate.Source = `PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} options object.`;
+              }
+              this.pict.TemplateProvider.addDefaultTemplate(tmpDefaultTemplate.Prefix, tmpDefaultTemplate.Postfix, tmpDefaultTemplate.Template, tmpDefaultTemplate.Source);
+            }
+          }
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                        Code Section: Initialization                        */
+        /* -------------------------------------------------------------------------- */
+        onBeforeInitialize() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} onBeforeInitialize:`);
+          }
+          return true;
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after pre-pinitialization.
+         *
+         * @return {void}
+         */
+        onBeforeInitializeAsync(fCallback) {
+          this.onBeforeInitialize();
+          return fCallback();
+        }
+        onInitialize() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} onInitialize:`);
+          }
+          return true;
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after initialization.
+         *
+         * @return {void}
+         */
+        onInitializeAsync(fCallback) {
+          this.onInitialize();
+          return fCallback();
+        }
+        initialize() {
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow PROVIDER [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} initialize:`);
+          }
+          if (!this.initializeTimestamp) {
+            this.onBeforeInitialize();
+            this.onInitialize();
+            this.onAfterInitialize();
+            this.initializeTimestamp = this.pict.log.getTimeStamp();
+            return true;
+          } else {
+            this.log.warn(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} initialize called but initialization is already completed.  Aborting.`);
+            return false;
+          }
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after initialization.
+         *
+         * @return {void}
+         */
+        initializeAsync(fCallback) {
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow PROVIDER [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} initializeAsync:`);
+          }
+          if (!this.initializeTimestamp) {
+            let tmpAnticipate = this.pict.instantiateServiceProviderWithoutRegistration('Anticipate');
+            if (this.pict.LogNoisiness > 0) {
+              this.log.info(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} beginning initialization...`);
+            }
+            tmpAnticipate.anticipate(this.onBeforeInitializeAsync.bind(this));
+            tmpAnticipate.anticipate(this.onInitializeAsync.bind(this));
+            tmpAnticipate.anticipate(this.onAfterInitializeAsync.bind(this));
+            tmpAnticipate.wait(pError => {
+              this.initializeTimestamp = this.pict.log.getTimeStamp();
+              if (pError) {
+                this.log.error(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} initialization failed: ${pError.message || pError}`, {
+                  Stack: pError.stack
+                });
+              } else if (this.pict.LogNoisiness > 0) {
+                this.log.info(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} initialization complete.`);
+              }
+              return fCallback();
+            });
+          } else {
+            this.log.warn(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} async initialize called but initialization is already completed.  Aborting.`);
+            // TODO: Should this be an error?
+            return fCallback();
+          }
+        }
+        onAfterInitialize() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} onAfterInitialize:`);
+          }
+          return true;
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after initialization.
+         *
+         * @return {void}
+         */
+        onAfterInitializeAsync(fCallback) {
+          this.onAfterInitialize();
+          return fCallback();
+        }
+        onPreRender() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} onPreRender:`);
+          }
+          return true;
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after pre-render.
+         *
+         * @return {void}
+         */
+        onPreRenderAsync(fCallback) {
+          this.onPreRender();
+          return fCallback();
+        }
+        render() {
+          return this.onPreRender();
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after render.
+         *
+         * @return {void}
+         */
+        renderAsync(fCallback) {
+          this.onPreRender();
+          return fCallback();
+        }
+        onPreSolve() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} onPreSolve:`);
+          }
+          return true;
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after pre-solve.
+         *
+         * @return {void}
+         */
+        onPreSolveAsync(fCallback) {
+          this.onPreSolve();
+          return fCallback();
+        }
+        solve() {
+          return this.onPreSolve();
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after solve.
+         *
+         * @return {void}
+         */
+        solveAsync(fCallback) {
+          this.onPreSolve();
+          return fCallback();
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after the data pre-load.
+         */
+        onBeforeLoadDataAsync(fCallback) {
+          return fCallback();
+        }
+
+        /**
+         * Hook to allow the provider to load data during application data load.
+         *
+         * @param {(pError?: Error) => void} fCallback - The callback to call after the data load.
+         */
+        onLoadDataAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} onLoadDataAsync:`);
+          }
+          return fCallback();
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after the data post-load.
+         */
+        onAfterLoadDataAsync(fCallback) {
+          return fCallback();
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after the data pre-load.
+         *
+         * @return {void}
+         */
+        onBeforeSaveDataAsync(fCallback) {
+          return fCallback();
+        }
+
+        /**
+         * Hook to allow the provider to load data during application data load.
+         *
+         * @param {(pError?: Error) => void} fCallback - The callback to call after the data load.
+         *
+         * @return {void}
+         */
+        onSaveDataAsync(fCallback) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictProvider [${this.UUID}]::[${this.Hash}] ${this.options.ProviderIdentifier} onSaveDataAsync:`);
+          }
+          return fCallback();
+        }
+
+        /**
+         * @param {(pError?: Error) => void} fCallback - The callback to call after the data post-load.
+         *
+         * @return {void}
+         */
+        onAfterSaveDataAsync(fCallback) {
+          return fCallback();
+        }
+      }
+      module.exports = PictProvider;
+    }, {
+      "../package.json": 5,
+      "fable-serviceproviderbase": 2
+    }],
+    7: [function (require, module, exports) {
+      module.exports = {
+        "RenderOnLoad": true,
+        "DefaultRenderable": "Histogram-Wrap",
+        "DefaultDestinationAddress": "#Histogram-Container-Div",
+        "Templates": [{
+          "Hash": "Histogram-Container",
+          "Template": "<!-- Histogram Container Rendering Soon -->"
+        }],
+        "Renderables": [{
+          "RenderableHash": "Histogram-Wrap",
+          "TemplateHash": "Histogram-Container",
+          "DestinationAddress": "#Histogram-Container-Div"
+        }],
+        "TargetElementAddress": "#Histogram-Container-Div",
+        // --- Data Configuration ---
+
+        // Address in AppData (or other Pict address space) for the histogram bins
+        // Expected format: Array of objects with at least { Label, Value } properties
+        // e.g. [{ Label: "2020", Value: 15 }, { Label: "2021", Value: 42 }]
+        "DataAddress": false,
+        // Alternatively, provide bins directly (used if DataAddress is not set)
+        "Bins": [],
+        // Property names within each bin object
+        "LabelProperty": "Label",
+        "ValueProperty": "Value",
+        // --- Layout Configuration ---
+
+        // "vertical" = bars grow upward; "horizontal" = bars grow rightward
+        "Orientation": "vertical",
+        // The rendering mode: "browser", "consoleui", or "cli"
+        // "browser" renders HTML/CSS/SVG; "consoleui" renders via blessed widgets;
+        // "cli" renders ANSI text to stdout
+        "RenderMode": "browser",
+        // Maximum height in pixels (browser vertical) or characters (cli/consoleui)
+        "MaxBarSize": 200,
+        // Bar thickness in pixels (browser) or characters (cli/consoleui)
+        "BarThickness": 30,
+        // Gap between bars in pixels (browser) or characters (cli/consoleui)
+        "BarGap": 4,
+        // When true, bar groups expand to fill the container width (vertical) or
+        // height (horizontal) using CSS flex-grow instead of a fixed BarThickness.
+        // Labels and values overflow their column so they remain readable even when
+        // bars are very narrow.  Best suited for time-series or dense histograms.
+        "FillContainer": false,
+        // Whether to show value labels on/above bars
+        "ShowValues": true,
+        // Whether to show bin labels (x-axis for vertical, y-axis for horizontal)
+        "ShowLabels": true,
+        // In FillContainer mode, controls label density in the separate label row.
+        // 0 = auto-compute (space labels approximately 80px apart based on container
+        // width), N > 0 = show a label every N bars starting from index 0.
+        // Ignored when FillContainer is false (every bar shows its own label).
+        "LabelInterval": 0,
+        // Color of the bars (CSS color for browser, ANSI color name for cli/consoleui)
+        "BarColor": "#4A90D9",
+        // Color of selected bars
+        "SelectedBarColor": "#2ECC71",
+        // Color of bars in the selection range
+        "SelectionRangeColor": "#85C1E9",
+        // --- Selection Configuration ---
+
+        // Enable selection mode
+        "Selectable": false,
+        // Selection mode: "single", "multiple", "range"
+        // "single" - click to select one bar
+        // "multiple" - click to toggle individual bars
+        // "range" - drag sliders to select a contiguous range of bins
+        "SelectionMode": "range",
+        // Address in AppData to write selection state
+        // Will contain { SelectedIndices: [], RangeStart: N, RangeEnd: N } or similar
+        "SelectionDataAddress": false,
+        // Initial selection (array of indices or { Start, End } for range mode)
+        "InitialSelection": null,
+        // --- CLI/ConsoleUI Configuration ---
+
+        // Characters used for rendering in text mode
+        "BarCharacter": "\u2588",
+        "BarPartialCharacters": [" ", "\u2581", "\u2582", "\u2583", "\u2584", "\u2585", "\u2586", "\u2587", "\u2588"],
+        "EmptyCharacter": " ",
+        "SliderCharacter": "\u2502",
+        "SliderHandleCharacter": "\u25C6",
+        // Width of the histogram in characters (cli/consoleui)
+        "TextWidth": 60,
+        // Height of the histogram in characters (cli/consoleui vertical)
+        "TextHeight": 15,
+        // --- CSS ---
+        "CSS": `.pict-histogram-container
+{
+	display: inline-block;
+	position: relative;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	font-size: 12px;
+	user-select: none;
+}
+.pict-histogram-chart
+{
+	display: flex;
+	align-items: flex-end;
+	position: relative;
+}
+.pict-histogram-container.pict-histogram-horizontal
+{
+	display: inline-flex;
+	flex-direction: row;
+	align-items: stretch;
+}
+.pict-histogram-chart.pict-histogram-horizontal
+{
+	flex-direction: column;
+	align-items: flex-start;
+}
+.pict-histogram-bar-group
+{
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	cursor: default;
+	flex-shrink: 0;
+}
+.pict-histogram-horizontal .pict-histogram-bar-group
+{
+	flex-direction: row;
+	align-items: center;
+}
+.pict-histogram-bar
+{
+	transition: background-color 0.15s ease, height 0.2s ease, width 0.2s ease;
+	border-radius: 2px 2px 0 0;
+	min-width: 1px;
+	min-height: 1px;
+}
+.pict-histogram-horizontal .pict-histogram-bar
+{
+	border-radius: 0 2px 2px 0;
+}
+.pict-histogram-bar.pict-histogram-selectable
+{
+	cursor: pointer;
+}
+.pict-histogram-bar.pict-histogram-selectable:hover
+{
+	opacity: 0.8;
+}
+.pict-histogram-bar.pict-histogram-selected
+{
+	box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.4);
+}
+.pict-histogram-bar.pict-histogram-in-range
+{
+	opacity: 0.9;
+}
+.pict-histogram-value-label
+{
+	text-align: center;
+	color: #666;
+	font-size: 11px;
+	padding: 2px 0;
+	white-space: nowrap;
+}
+.pict-histogram-horizontal .pict-histogram-value-label
+{
+	padding: 0 4px;
+}
+.pict-histogram-bin-label
+{
+	text-align: center;
+	color: #333;
+	font-size: 11px;
+	padding: 4px 2px 0 2px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.pict-histogram-horizontal .pict-histogram-bin-label
+{
+	padding: 0 4px 0 0;
+	text-align: right;
+	min-width: 40px;
+}
+.pict-histogram-range-slider-container
+{
+	position: relative;
+	width: 100%;
+	height: 24px;
+	margin-top: 4px;
+}
+.pict-histogram-horizontal .pict-histogram-range-slider-container
+{
+	width: 24px;
+	height: auto;
+	align-self: stretch;
+	margin-top: 0;
+	margin-left: 4px;
+}
+.pict-histogram-range-track
+{
+	position: absolute;
+	top: 10px;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: #E0E0E0;
+	border-radius: 2px;
+}
+.pict-histogram-horizontal .pict-histogram-range-track
+{
+	top: 0;
+	left: 10px;
+	right: auto;
+	bottom: 0;
+	width: 4px;
+	height: auto;
+}
+.pict-histogram-range-fill
+{
+	position: absolute;
+	top: 10px;
+	height: 4px;
+	background: #4A90D9;
+	border-radius: 2px;
+}
+.pict-histogram-horizontal .pict-histogram-range-fill
+{
+	top: auto;
+	left: 10px;
+	width: 4px;
+	height: auto;
+}
+.pict-histogram-range-handle
+{
+	position: absolute;
+	top: 4px;
+	width: 16px;
+	height: 16px;
+	background: #fff;
+	border: 2px solid #4A90D9;
+	border-radius: 50%;
+	cursor: grab;
+	z-index: 2;
+	transform: translateX(-50%);
+}
+.pict-histogram-horizontal .pict-histogram-range-handle
+{
+	top: auto;
+	left: 4px;
+	transform: translateY(-50%);
+}
+.pict-histogram-range-handle:active
+{
+	cursor: grabbing;
+	background: #4A90D9;
+}
+.pict-histogram-range-handle:active,
+.pict-histogram-range-handle:focus
+{
+	box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.3);
+	outline: none;
+}
+.pict-histogram-container.pict-histogram-fill
+{
+	display: block;
+	width: 100%;
+}
+.pict-histogram-fill .pict-histogram-chart
+{
+	width: 100%;
+}
+.pict-histogram-fill .pict-histogram-bar-group
+{
+	flex: 1 1 0%;
+	min-width: 0;
+}
+.pict-histogram-fill .pict-histogram-bar
+{
+	width: 100%;
+}
+.pict-histogram-axis-line
+{
+	width: 100%;
+	height: 1px;
+	background: #ccc;
+}
+.pict-histogram-label-row
+{
+	display: flex;
+	width: 100%;
+}
+.pict-histogram-fill-label
+{
+	font-size: 10px;
+	color: #666;
+	text-align: center;
+	white-space: nowrap;
+	overflow: visible;
+	line-height: 16px;
+}
+`
+      };
+    }, {}],
+    8: [function (require, module, exports) {
+      /**
+       * Pict Section Histogram
+       *
+       * A histogram visualization section for the Pict MVC framework.
+       *
+       * Supports:
+       *   - Vertical and horizontal orientation
+       *   - Three render modes: browser (HTML/CSS), consoleui (blessed), cli (ANSI)
+       *   - Interactive selection: single click, multi-select, or range slider
+       *   - Data binding via Pict AppData addresses
+       *
+       * @module pict-section-histogram
+       */
+
+      const libPictViewClass = require('pict-view');
+      const _DefaultConfiguration = require('./Pict-Section-Histogram-DefaultConfiguration.js');
+      const libRendererBrowser = require('./renderers/Pict-Histogram-Renderer-Browser.js');
+      const libRendererConsoleUI = require('./renderers/Pict-Histogram-Renderer-ConsoleUI.js');
+      const libRendererCLI = require('./renderers/Pict-Histogram-Renderer-CLI.js');
+      class PictSectionHistogram extends libPictViewClass {
+        constructor(pFable, pOptions, pServiceHash) {
+          let tmpOptions = Object.assign({}, _DefaultConfiguration, pOptions);
+          super(pFable, tmpOptions, pServiceHash);
+          this.initialRenderComplete = false;
+
+          // --- Selection State ---
+
+          // Set of selected bin indices (for "single" and "multiple" modes)
+          this._selectedIndices = new Set();
+
+          // Range bounds (for "range" mode)
+          this._selectionRangeStart = 0;
+          this._selectionRangeEnd = 0;
+
+          // Resolve the renderer for the configured mode
+          this._renderer = this._resolveRenderer();
+
+          // Apply initial selection if provided
+          this._applyInitialSelection();
+        }
+
+        /**
+         * Set up the initial selection state from options.
+         */
+        _applyInitialSelection() {
+          if (this.options.InitialSelection) {
+            this.setSelection(this.options.InitialSelection);
+          } else if (this.options.Selectable && this.options.SelectionMode === 'range') {
+            // Default: select all bins
+            let tmpBins = this.getBins();
+            this._selectionRangeStart = 0;
+            this._selectionRangeEnd = Math.max(0, tmpBins.length - 1);
+            this._syncSelectionFromRange();
+          }
+        }
+
+        /**
+         * Pick the renderer module based on RenderMode option.
+         *
+         * @returns {object} The renderer module { render, wireEvents }
+         */
+        _resolveRenderer() {
+          switch (this.options.RenderMode) {
+            case 'consoleui':
+              return libRendererConsoleUI;
+            case 'cli':
+              return libRendererCLI;
+            case 'browser':
+            default:
+              return libRendererBrowser;
+          }
+        }
+
+        // --- Data Access ---
+
+        /**
+         * Get the current bin data array.
+         *
+         * Reads from the configured DataAddress in AppData, falling back to
+         * the static Bins option.
+         *
+         * @returns {Array} Array of bin objects
+         */
+        getBins() {
+          if (this.options.DataAddress) {
+            const tmpAddressSpace = {
+              Fable: this.fable,
+              Pict: this.fable,
+              AppData: this.AppData,
+              Bundle: this.Bundle,
+              Options: this.options
+            };
+            let tmpData = this.fable.manifest.getValueByHash(tmpAddressSpace, this.options.DataAddress);
+            if (Array.isArray(tmpData)) {
+              return tmpData;
+            } else {
+              this.log.warn(`PICT-Histogram DataAddress [${this.options.DataAddress}] did not return an array.`);
+            }
+          }
+          return this.options.Bins || [];
+        }
+
+        /**
+         * Set the bins programmatically (updates the Bins option).
+         *
+         * @param {Array} pBins - Array of bin objects { Label, Value, ... }
+         */
+        setBins(pBins) {
+          if (!Array.isArray(pBins)) {
+            this.log.warn('PICT-Histogram setBins requires an array.');
+            return;
+          }
+          this.options.Bins = pBins;
+
+          // If we also have a DataAddress, write through
+          if (this.options.DataAddress) {
+            const tmpAddressSpace = {
+              Fable: this.fable,
+              Pict: this.fable,
+              AppData: this.AppData,
+              Bundle: this.Bundle,
+              Options: this.options
+            };
+            this.fable.manifest.setValueByHash(tmpAddressSpace, this.options.DataAddress, pBins);
+          }
+        }
+
+        // --- Selection Logic ---
+
+        /**
+         * Check whether a bin index is currently selected.
+         *
+         * @param {number} pIndex
+         * @returns {boolean}
+         */
+        isIndexSelected(pIndex) {
+          if (!this.options.Selectable) {
+            return false;
+          }
+          if (this.options.SelectionMode === 'range') {
+            return pIndex === this._selectionRangeStart || pIndex === this._selectionRangeEnd;
+          }
+          return this._selectedIndices.has(pIndex);
+        }
+
+        /**
+         * Check whether a bin index falls within the current range selection
+         * (but is not one of the range endpoints).
+         *
+         * @param {number} pIndex
+         * @returns {boolean}
+         */
+        isIndexInRange(pIndex) {
+          if (!this.options.Selectable || this.options.SelectionMode !== 'range') {
+            return false;
+          }
+          return pIndex > this._selectionRangeStart && pIndex < this._selectionRangeEnd;
+        }
+
+        /**
+         * Get the current selection state.
+         *
+         * @returns {object} Selection descriptor
+         */
+        getSelection() {
+          if (this.options.SelectionMode === 'range') {
+            let tmpBins = this.getBins();
+            let tmpIndices = [];
+            for (let i = this._selectionRangeStart; i <= this._selectionRangeEnd; i++) {
+              tmpIndices.push(i);
+            }
+            return {
+              Mode: 'range',
+              RangeStart: this._selectionRangeStart,
+              RangeEnd: this._selectionRangeEnd,
+              SelectedIndices: tmpIndices,
+              StartLabel: (tmpBins[this._selectionRangeStart] || {})[this.options.LabelProperty],
+              EndLabel: (tmpBins[this._selectionRangeEnd] || {})[this.options.LabelProperty]
+            };
+          } else {
+            return {
+              Mode: this.options.SelectionMode,
+              SelectedIndices: Array.from(this._selectedIndices).sort((a, b) => a - b)
+            };
+          }
+        }
+
+        /**
+         * Programmatically set the selection.
+         *
+         * @param {object|Array} pSelection - For range: { Start, End }; for single/multiple: array of indices
+         */
+        setSelection(pSelection) {
+          if (this.options.SelectionMode === 'range') {
+            if (pSelection && typeof pSelection.Start === 'number' && typeof pSelection.End === 'number') {
+              this._selectionRangeStart = pSelection.Start;
+              this._selectionRangeEnd = pSelection.End;
+              this._syncSelectionFromRange();
+            }
+          } else if (Array.isArray(pSelection)) {
+            this._selectedIndices = new Set(pSelection);
+          }
+          this._writeSelectionToAddress();
+        }
+
+        /**
+         * Handle a bar click in single or multiple selection mode.
+         *
+         * @param {number} pIndex - The clicked bin index
+         */
+        handleBarClick(pIndex) {
+          if (this.options.SelectionMode === 'single') {
+            this._selectedIndices.clear();
+            this._selectedIndices.add(pIndex);
+          } else if (this.options.SelectionMode === 'multiple') {
+            if (this._selectedIndices.has(pIndex)) {
+              this._selectedIndices.delete(pIndex);
+            } else {
+              this._selectedIndices.add(pIndex);
+            }
+          }
+          this._writeSelectionToAddress();
+          this.onSelectionChange(this.getSelection());
+          this.renderHistogram();
+        }
+
+        /**
+         * Handle a bar click in range mode — moves the nearest handle.
+         *
+         * @param {number} pIndex - The clicked bin index
+         */
+        handleRangeBarClick(pIndex) {
+          let tmpDistStart = Math.abs(pIndex - this._selectionRangeStart);
+          let tmpDistEnd = Math.abs(pIndex - this._selectionRangeEnd);
+          if (tmpDistStart <= tmpDistEnd) {
+            this._selectionRangeStart = Math.min(pIndex, this._selectionRangeEnd);
+          } else {
+            this._selectionRangeEnd = Math.max(pIndex, this._selectionRangeStart);
+          }
+          this._syncSelectionFromRange();
+          this._writeSelectionToAddress();
+          this.onSelectionChange(this.getSelection());
+          this.renderHistogram();
+        }
+
+        /**
+         * Sync _selectedIndices from the range bounds (so getSelection is consistent).
+         */
+        _syncSelectionFromRange() {
+          this._selectedIndices.clear();
+          for (let i = this._selectionRangeStart; i <= this._selectionRangeEnd; i++) {
+            this._selectedIndices.add(i);
+          }
+        }
+
+        /**
+         * Write the current selection state to the configured SelectionDataAddress.
+         */
+        _writeSelectionToAddress() {
+          if (!this.options.SelectionDataAddress) {
+            return;
+          }
+          const tmpAddressSpace = {
+            Fable: this.fable,
+            Pict: this.fable,
+            AppData: this.AppData,
+            Bundle: this.Bundle,
+            Options: this.options
+          };
+          this.fable.manifest.setValueByHash(tmpAddressSpace, this.options.SelectionDataAddress, this.getSelection());
+        }
+
+        /**
+         * Hook for subclasses or consumers to react to selection changes.
+         *
+         * @param {object} pSelection - The new selection state
+         */
+        onSelectionChange(pSelection) {
+          // Override in subclass or assign externally
+        }
+
+        // --- Lifecycle Hooks ---
+
+        onBeforeInitialize() {
+          super.onBeforeInitialize();
+          return super.onBeforeInitialize();
+        }
+        onAfterRender(pRenderable) {
+          // Inject CSS
+          this.pict.CSSMap.injectCSS();
+          if (!this.initialRenderComplete) {
+            this.onAfterInitialRender();
+            this.initialRenderComplete = true;
+          }
+          return super.onAfterRender(pRenderable);
+        }
+        onAfterInitialRender() {
+          this.renderHistogram();
+        }
+
+        /**
+         * Render the histogram using the active renderer and wire events.
+         */
+        renderHistogram() {
+          // Ensure CSS is injected (covers both lifecycle and direct calls)
+          if (this.pict.CSSMap) {
+            this.pict.CSSMap.injectCSS();
+          }
+          this._renderer.render(this);
+          this._renderer.wireEvents(this);
+          this.initialRenderComplete = true;
+        }
+
+        // --- Data Marshaling ---
+
+        marshalToView() {
+          super.marshalToView();
+          if (this.initialRenderComplete) {
+            this.renderHistogram();
+          }
+        }
+        marshalFromView() {
+          super.marshalFromView();
+          this._writeSelectionToAddress();
+        }
+
+        // --- Public API ---
+
+        /**
+         * Change the orientation and re-render.
+         *
+         * @param {string} pOrientation - "vertical" or "horizontal"
+         */
+        setOrientation(pOrientation) {
+          if (pOrientation !== 'vertical' && pOrientation !== 'horizontal') {
+            this.log.warn(`PICT-Histogram invalid orientation: ${pOrientation}`);
+            return;
+          }
+          this.options.Orientation = pOrientation;
+          if (this.initialRenderComplete) {
+            this.renderHistogram();
+          }
+        }
+
+        /**
+         * Change the render mode and re-render.
+         *
+         * @param {string} pRenderMode - "browser", "consoleui", or "cli"
+         */
+        setRenderMode(pRenderMode) {
+          this.options.RenderMode = pRenderMode;
+          this._renderer = this._resolveRenderer();
+          if (this.initialRenderComplete) {
+            this.renderHistogram();
+          }
+        }
+
+        /**
+         * Convenience: get the text representation (useful for CLI/consoleui).
+         *
+         * @returns {string}
+         */
+        toText() {
+          if (this.options.Orientation === 'vertical') {
+            return libRendererConsoleUI.renderVertical(this);
+          } else {
+            return libRendererConsoleUI.renderHorizontal(this);
+          }
+        }
+      }
+      module.exports = PictSectionHistogram;
+      module.exports.default_configuration = _DefaultConfiguration;
+      module.exports.renderers = {
+        browser: libRendererBrowser,
+        consoleui: libRendererConsoleUI,
+        cli: libRendererCLI
+      };
+    }, {
+      "./Pict-Section-Histogram-DefaultConfiguration.js": 7,
+      "./renderers/Pict-Histogram-Renderer-Browser.js": 9,
+      "./renderers/Pict-Histogram-Renderer-CLI.js": 10,
+      "./renderers/Pict-Histogram-Renderer-ConsoleUI.js": 11,
+      "pict-view": 13
+    }],
+    9: [function (require, module, exports) {
+      /**
+       * Browser renderer for pict-section-histogram.
+       *
+       * Renders the histogram as HTML/CSS elements using the Pict ContentAssignment
+       * pipeline.  Also wires up interactive selection (click, drag-slider) via
+       * DOM event listeners.
+       *
+       * @module Pict-Histogram-Renderer-Browser
+       */
+
+      /**
+       * Build the HTML string for a single bar group (bar + optional labels).
+       *
+       * @param {object} pBin          - The bin data { Label, Value, ... }
+       * @param {number} pIndex        - Index of the bin
+       * @param {number} pBarSize      - Computed bar size in pixels
+       * @param {object} pOptions      - View options
+       * @param {boolean} pIsSelected  - Whether this bin is selected
+       * @param {boolean} pInRange     - Whether this bin is inside the range selection
+       * @param {number} pLabelWidth   - Fixed label width in pixels (horizontal mode)
+       * @returns {string} HTML fragment
+       */
+      function buildBarGroupHTML(pBin, pIndex, pBarSize, pOptions, pIsSelected, pInRange, pLabelWidth) {
+        let tmpLabel = pBin[pOptions.LabelProperty] || '';
+        let tmpValue = pBin[pOptions.ValueProperty] || 0;
+        let tmpVertical = pOptions.Orientation === 'vertical';
+        let tmpBarColor = pIsSelected ? pOptions.SelectedBarColor : pInRange ? pOptions.SelectionRangeColor : pOptions.BarColor;
+        let tmpSelectableClass = pOptions.Selectable ? ' pict-histogram-selectable' : '';
+        let tmpSelectedClass = pIsSelected ? ' pict-histogram-selected' : '';
+        let tmpInRangeClass = pInRange ? ' pict-histogram-in-range' : '';
+        let tmpFillMode = pOptions.FillContainer;
+        let tmpBarStyle = '';
+        if (tmpVertical) {
+          if (tmpFillMode) {
+            tmpBarStyle = `height:${pBarSize}px;background-color:${tmpBarColor};`;
+          } else {
+            tmpBarStyle = `height:${pBarSize}px;width:${pOptions.BarThickness}px;background-color:${tmpBarColor};`;
+          }
+        } else {
+          if (tmpFillMode) {
+            tmpBarStyle = `width:${pBarSize}px;background-color:${tmpBarColor};`;
+          } else {
+            tmpBarStyle = `width:${pBarSize}px;height:${pOptions.BarThickness}px;background-color:${tmpBarColor};`;
+          }
+        }
+        let tmpGroupWidth = pOptions.BarThickness + pOptions.BarGap;
+        let tmpGroupStyle = '';
+        if (tmpFillMode) {
+          // No fixed dimensions — CSS flex:1 handles sizing
+          tmpGroupStyle = '';
+        } else if (tmpVertical) {
+          tmpGroupStyle = `margin:0 ${pOptions.BarGap / 2}px;width:${tmpGroupWidth}px;`;
+        } else {
+          tmpGroupStyle = `margin:${pOptions.BarGap / 2}px 0;`;
+        }
+        let tmpHTML = `<div class="pict-histogram-bar-group" style="${tmpGroupStyle}" data-histogram-index="${pIndex}">`;
+        if (tmpVertical) {
+          // Value label above bar (skipped in fill mode — values don't fit in narrow columns)
+          if (pOptions.ShowValues && !tmpFillMode) {
+            tmpHTML += `<div class="pict-histogram-value-label" style="width:${tmpGroupWidth}px;">${tmpValue}</div>`;
+          }
+          // Bar
+          tmpHTML += `<div class="pict-histogram-bar${tmpSelectableClass}${tmpSelectedClass}${tmpInRangeClass}" style="${tmpBarStyle}" data-histogram-index="${pIndex}"></div>`;
+          // Bin label below bar (skipped in fill mode — labels rendered in a separate row)
+          if (pOptions.ShowLabels && !tmpFillMode) {
+            tmpHTML += `<div class="pict-histogram-bin-label" style="width:${tmpGroupWidth}px;">${tmpLabel}</div>`;
+          }
+        } else {
+          // Bin label to the left (fixed width so bars align)
+          if (pOptions.ShowLabels) {
+            let tmpLabelStyle = pLabelWidth ? `width:${pLabelWidth}px;min-width:${pLabelWidth}px;` : '';
+            tmpHTML += `<div class="pict-histogram-bin-label" style="${tmpLabelStyle}">${tmpLabel}</div>`;
+          }
+          // Bar
+          tmpHTML += `<div class="pict-histogram-bar${tmpSelectableClass}${tmpSelectedClass}${tmpInRangeClass}" style="${tmpBarStyle}" data-histogram-index="${pIndex}"></div>`;
+          // Value label to the right
+          if (pOptions.ShowValues) {
+            tmpHTML += `<div class="pict-histogram-value-label">${tmpValue}</div>`;
+          }
+        }
+        tmpHTML += '</div>';
+        return tmpHTML;
+      }
+
+      /**
+       * Build the HTML for the range-slider overlay (used in "range" selection mode).
+       *
+       * @param {object} pView - The histogram view instance
+       * @returns {string} HTML fragment
+       */
+      function buildRangeSliderHTML(pView) {
+        let tmpBins = pView.getBins();
+        if (!tmpBins || tmpBins.length === 0) {
+          return '';
+        }
+        let tmpRangeStart = pView._selectionRangeStart;
+        let tmpRangeEnd = pView._selectionRangeEnd;
+        let tmpMax = tmpBins.length - 1;
+
+        // Calculate percentage positions for the handles
+        let tmpStartPct = tmpMax > 0 ? tmpRangeStart / tmpMax * 100 : 0;
+        let tmpEndPct = tmpMax > 0 ? tmpRangeEnd / tmpMax * 100 : 100;
+        let tmpVertical = pView.options.Orientation === 'vertical';
+        let tmpHTML = '<div class="pict-histogram-range-slider-container">';
+        tmpHTML += '<div class="pict-histogram-range-track"></div>';
+        if (tmpVertical) {
+          tmpHTML += `<div class="pict-histogram-range-fill" style="left:${tmpStartPct}%;right:${100 - tmpEndPct}%;"></div>`;
+          tmpHTML += `<div class="pict-histogram-range-handle pict-histogram-range-handle-start" tabindex="0" style="left:${tmpStartPct}%;" data-handle="start"></div>`;
+          tmpHTML += `<div class="pict-histogram-range-handle pict-histogram-range-handle-end" tabindex="0" style="left:${tmpEndPct}%;" data-handle="end"></div>`;
+        } else {
+          tmpHTML += `<div class="pict-histogram-range-fill" style="top:${tmpStartPct}%;bottom:${100 - tmpEndPct}%;"></div>`;
+          tmpHTML += `<div class="pict-histogram-range-handle pict-histogram-range-handle-start" tabindex="0" style="top:${tmpStartPct}%;" data-handle="start"></div>`;
+          tmpHTML += `<div class="pict-histogram-range-handle pict-histogram-range-handle-end" tabindex="0" style="top:${tmpEndPct}%;" data-handle="end"></div>`;
+        }
+        tmpHTML += '</div>';
+        return tmpHTML;
+      }
+
+      /**
+       * Build the label row for FillContainer vertical mode.
+       *
+       * Labels are rendered in a separate flex row below the axis line, with
+       * automatic interval calculation to avoid overlap when there are many bins.
+       *
+       * @param {object} pView  - The histogram view instance
+       * @param {Array}  pBins  - The bin data array
+       * @returns {string} HTML fragment
+       */
+      function buildFillLabelRow(pView, pBins) {
+        if (!pBins || pBins.length === 0) {
+          return '';
+        }
+
+        // Determine label interval: explicit setting or auto-compute
+        let tmpLabelInterval = pView.options.LabelInterval || 0;
+        if (tmpLabelInterval <= 0) {
+          // Auto-compute: space labels approximately 80px apart
+          let tmpTargetElementSet = pView.services.ContentAssignment.getElement(pView.options.TargetElementAddress);
+          let tmpContainerWidth = 800;
+          if (tmpTargetElementSet && tmpTargetElementSet.length > 0 && tmpTargetElementSet[0]) {
+            tmpContainerWidth = tmpTargetElementSet[0].clientWidth || 800;
+          }
+          if (pBins.length > 0) {
+            let tmpBarWidth = tmpContainerWidth / pBins.length;
+            tmpLabelInterval = Math.max(1, Math.ceil(80 / tmpBarWidth));
+          } else {
+            tmpLabelInterval = 1;
+          }
+        }
+        let tmpHTML = '<div class="pict-histogram-label-row">';
+        for (let i = 0; i < pBins.length; i++) {
+          let tmpIsLabeled = i % tmpLabelInterval === 0;
+          if (tmpIsLabeled) {
+            let tmpLabel = pBins[i][pView.options.LabelProperty] || '';
+            // Span covers this label and the unlabeled bars until the next label
+            let tmpSpan = Math.min(tmpLabelInterval, pBins.length - i);
+            tmpHTML += `<div class="pict-histogram-fill-label" style="flex:${tmpSpan};">${tmpLabel}</div>`;
+            i += tmpSpan - 1;
+          }
+        }
+        tmpHTML += '</div>';
+        return tmpHTML;
+      }
+
+      /**
+       * Render the full histogram into the target element.
+       *
+       * @param {object} pView - The histogram view instance
+       */
+      function render(pView) {
+        let tmpBins = pView.getBins();
+        if (!tmpBins || tmpBins.length === 0) {
+          pView.services.ContentAssignment.assignContent(pView.options.TargetElementAddress, '<div class="pict-histogram-container"><em>No histogram data</em></div>');
+          return;
+        }
+        let tmpMaxValue = 0;
+        for (let i = 0; i < tmpBins.length; i++) {
+          let tmpVal = tmpBins[i][pView.options.ValueProperty] || 0;
+          if (tmpVal > tmpMaxValue) {
+            tmpMaxValue = tmpVal;
+          }
+        }
+        if (tmpMaxValue === 0) {
+          tmpMaxValue = 1;
+        }
+        let tmpVertical = pView.options.Orientation === 'vertical';
+        let tmpOrientationClass = tmpVertical ? 'pict-histogram-vertical' : 'pict-histogram-horizontal';
+        let tmpFillClass = pView.options.FillContainer ? ' pict-histogram-fill' : '';
+
+        // For horizontal mode (non-fill), measure the longest label so all labels share the same width
+        let tmpLabelWidth = 0;
+        if (!tmpVertical && pView.options.ShowLabels && !pView.options.FillContainer) {
+          for (let i = 0; i < tmpBins.length; i++) {
+            let tmpLabel = String(tmpBins[i][pView.options.LabelProperty] || '');
+            // Approximate character width at 11px font: ~6.5px per character
+            let tmpEstWidth = tmpLabel.length * 6.5 + 8;
+            if (tmpEstWidth > tmpLabelWidth) {
+              tmpLabelWidth = tmpEstWidth;
+            }
+          }
+          tmpLabelWidth = Math.max(tmpLabelWidth, 40);
+        }
+        let tmpHTML = `<div class="pict-histogram-container ${tmpOrientationClass}${tmpFillClass}">`;
+        tmpHTML += `<div class="pict-histogram-chart ${tmpOrientationClass}${tmpFillClass}">`;
+        for (let i = 0; i < tmpBins.length; i++) {
+          let tmpVal = tmpBins[i][pView.options.ValueProperty] || 0;
+          let tmpBarSize = Math.round(tmpVal / tmpMaxValue * pView.options.MaxBarSize);
+          if (tmpVal > 0 && tmpBarSize < 1) {
+            tmpBarSize = 1;
+          }
+          let tmpIsSelected = pView.isIndexSelected(i);
+          let tmpInRange = !tmpIsSelected && pView.isIndexInRange(i);
+          tmpHTML += buildBarGroupHTML(tmpBins[i], i, tmpBarSize, pView.options, tmpIsSelected, tmpInRange, tmpLabelWidth);
+        }
+        tmpHTML += '</div>';
+
+        // In FillContainer vertical mode, render axis line and label row separately
+        if (pView.options.FillContainer && tmpVertical && pView.options.ShowLabels) {
+          tmpHTML += '<div class="pict-histogram-axis-line"></div>';
+          tmpHTML += buildFillLabelRow(pView, tmpBins);
+        }
+
+        // Range slider for "range" selection mode
+        if (pView.options.Selectable && pView.options.SelectionMode === 'range') {
+          tmpHTML += buildRangeSliderHTML(pView);
+        }
+        tmpHTML += '</div>';
+        pView.services.ContentAssignment.assignContent(pView.options.TargetElementAddress, tmpHTML);
+      }
+
+      /**
+       * Wire up DOM event listeners for interactivity (click selection, range drag).
+       *
+       * @param {object} pView - The histogram view instance
+       */
+      function wireEvents(pView) {
+        if (!pView.options.Selectable) {
+          return;
+        }
+        let tmpTargetElementSet = pView.services.ContentAssignment.getElement(pView.options.TargetElementAddress);
+        if (!tmpTargetElementSet || tmpTargetElementSet.length < 1) {
+          return;
+        }
+        let tmpContainer = tmpTargetElementSet[0];
+        if (!tmpContainer) {
+          return;
+        }
+
+        // --- Bar click selection (single / multiple modes) ---
+        if (pView.options.SelectionMode === 'single' || pView.options.SelectionMode === 'multiple') {
+          let tmpBars = tmpContainer.querySelectorAll('.pict-histogram-bar[data-histogram-index]');
+          for (let i = 0; i < tmpBars.length; i++) {
+            tmpBars[i].addEventListener('click', pEvent => {
+              let tmpIndex = parseInt(pEvent.currentTarget.getAttribute('data-histogram-index'), 10);
+              if (isNaN(tmpIndex)) {
+                return;
+              }
+              pView.handleBarClick(tmpIndex);
+            });
+          }
+        }
+
+        // --- Range slider drag ---
+        if (pView.options.SelectionMode === 'range') {
+          // Also allow clicking bars to move nearest handle
+          let tmpBars = tmpContainer.querySelectorAll('.pict-histogram-bar[data-histogram-index]');
+          for (let i = 0; i < tmpBars.length; i++) {
+            tmpBars[i].addEventListener('click', pEvent => {
+              let tmpIndex = parseInt(pEvent.currentTarget.getAttribute('data-histogram-index'), 10);
+              if (isNaN(tmpIndex)) {
+                return;
+              }
+              pView.handleRangeBarClick(tmpIndex);
+            });
+          }
+          let tmpHandles = tmpContainer.querySelectorAll('.pict-histogram-range-handle');
+          for (let i = 0; i < tmpHandles.length; i++) {
+            wireRangeHandle(pView, tmpHandles[i], tmpContainer);
+          }
+        }
+      }
+
+      /**
+       * Wire drag behavior on a single range handle element.
+       *
+       * @param {object} pView        - The histogram view instance
+       * @param {Element} pHandle     - The handle DOM element
+       * @param {Element} pContainer  - The histogram container element
+       */
+      function wireRangeHandle(pView, pHandle, pContainer) {
+        let tmpHandleType = pHandle.getAttribute('data-handle'); // "start" or "end"
+        let tmpVertical = pView.options.Orientation === 'vertical';
+        let tmpDragging = false;
+        function getSliderBounds() {
+          // Re-query from pContainer every time because renderHistogram() replaces
+          // the inner HTML, detaching any previously-captured slider element.
+          let tmpSlider = pContainer.querySelector('.pict-histogram-range-slider-container');
+          if (!tmpSlider) {
+            return {
+              start: 0,
+              size: 1
+            };
+          }
+          let tmpRect = tmpSlider.getBoundingClientRect();
+          if (tmpVertical) {
+            return {
+              start: tmpRect.left,
+              size: tmpRect.width || 1
+            };
+          } else {
+            return {
+              start: tmpRect.top,
+              size: tmpRect.height || 1
+            };
+          }
+        }
+        function onPointerMove(pEvent) {
+          if (!tmpDragging) {
+            return;
+          }
+          let tmpBins = pView.getBins();
+          if (!tmpBins || tmpBins.length === 0) {
+            return;
+          }
+          let tmpBounds = getSliderBounds();
+          let tmpPos = tmpVertical ? pEvent.clientX : pEvent.clientY;
+          let tmpPct = (tmpPos - tmpBounds.start) / tmpBounds.size;
+          tmpPct = Math.max(0, Math.min(1, tmpPct));
+          let tmpIndex = Math.round(tmpPct * (tmpBins.length - 1));
+          if (tmpHandleType === 'start') {
+            if (tmpIndex > pView._selectionRangeEnd) {
+              tmpIndex = pView._selectionRangeEnd;
+            }
+            pView._selectionRangeStart = tmpIndex;
+          } else {
+            if (tmpIndex < pView._selectionRangeStart) {
+              tmpIndex = pView._selectionRangeStart;
+            }
+            pView._selectionRangeEnd = tmpIndex;
+          }
+          pView._syncSelectionFromRange();
+          pView.renderHistogram();
+        }
+        function onPointerUp() {
+          if (!tmpDragging) {
+            return;
+          }
+          tmpDragging = false;
+          if (typeof document !== 'undefined') {
+            document.removeEventListener('mousemove', onPointerMove);
+            document.removeEventListener('mouseup', onPointerUp);
+          }
+        }
+        pHandle.addEventListener('mousedown', pEvent => {
+          pEvent.preventDefault();
+          tmpDragging = true;
+          if (typeof document !== 'undefined') {
+            document.addEventListener('mousemove', onPointerMove);
+            document.addEventListener('mouseup', onPointerUp);
+          }
+        });
+      }
+      module.exports = {
+        render,
+        wireEvents
+      };
+    }, {}],
+    10: [function (require, module, exports) {
+      (function (process) {
+        (function () {
+          /**
+           * CLI renderer for pict-section-histogram.
+           *
+           * Renders the histogram as ANSI-colored text written directly to stdout
+           * (or through the Pict ContentAssignment pipeline if available).
+           *
+           * This mode is intended for command-line tools that print histogram output
+           * without a full terminal UI framework.
+           *
+           * @module Pict-Histogram-Renderer-CLI
+           */
+
+          // ANSI color codes (basic 16-color)
+          const ANSI_COLORS = {
+            'black': '\x1b[30m',
+            'red': '\x1b[31m',
+            'green': '\x1b[32m',
+            'yellow': '\x1b[33m',
+            'blue': '\x1b[34m',
+            'magenta': '\x1b[35m',
+            'cyan': '\x1b[36m',
+            'white': '\x1b[37m',
+            'reset': '\x1b[0m',
+            'bold': '\x1b[1m',
+            'dim': '\x1b[2m'
+          };
+
+          /**
+           * Map a CSS-ish color string to the nearest ANSI color.
+           *
+           * @param {string} pColor - A color string (name or hex)
+           * @returns {string} ANSI escape code
+           */
+          function colorToAnsi(pColor) {
+            if (!pColor) {
+              return ANSI_COLORS.blue;
+            }
+            let tmpLower = pColor.toLowerCase();
+
+            // Direct name match
+            if (ANSI_COLORS[tmpLower]) {
+              return ANSI_COLORS[tmpLower];
+            }
+
+            // Simple hex-to-nearest mapping
+            if (tmpLower.charAt(0) === '#' && tmpLower.length >= 7) {
+              let tmpR = parseInt(tmpLower.substring(1, 3), 16);
+              let tmpG = parseInt(tmpLower.substring(3, 5), 16);
+              let tmpB = parseInt(tmpLower.substring(5, 7), 16);
+
+              // Pick nearest basic color
+              if (tmpG > tmpR && tmpG > tmpB) {
+                return ANSI_COLORS.green;
+              }
+              if (tmpR > tmpG && tmpR > tmpB) {
+                return ANSI_COLORS.red;
+              }
+              if (tmpB > tmpR && tmpB > tmpG) {
+                return ANSI_COLORS.blue;
+              }
+              if (tmpR > 200 && tmpG > 200) {
+                return ANSI_COLORS.yellow;
+              }
+              if (tmpR > 200 && tmpB > 200) {
+                return ANSI_COLORS.magenta;
+              }
+              if (tmpG > 200 && tmpB > 200) {
+                return ANSI_COLORS.cyan;
+              }
+            }
+            return ANSI_COLORS.blue;
+          }
+
+          /**
+           * Render a vertical CLI histogram.
+           *
+           * @param {object} pView - The histogram view instance
+           * @returns {string} The ANSI text output
+           */
+          function renderVertical(pView) {
+            let tmpBins = pView.getBins();
+            let tmpOptions = pView.options;
+            let tmpHeight = tmpOptions.TextHeight || 15;
+            let tmpBarChar = tmpOptions.BarCharacter;
+            let tmpPartials = tmpOptions.BarPartialCharacters;
+            let tmpBarColor = colorToAnsi(tmpOptions.BarColor);
+            let tmpSelectedColor = colorToAnsi(tmpOptions.SelectedBarColor);
+            let tmpRangeColor = colorToAnsi(tmpOptions.SelectionRangeColor);
+            let tmpReset = ANSI_COLORS.reset;
+            if (!tmpBins || tmpBins.length === 0) {
+              return '(no data)\n';
+            }
+            let tmpMaxValue = 0;
+            for (let i = 0; i < tmpBins.length; i++) {
+              let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+              if (tmpVal > tmpMaxValue) {
+                tmpMaxValue = tmpVal;
+              }
+            }
+            if (tmpMaxValue === 0) {
+              tmpMaxValue = 1;
+            }
+            let tmpValueAxisWidth = String(tmpMaxValue).length + 1;
+            let tmpLines = [];
+            for (let tmpRow = tmpHeight; tmpRow >= 1; tmpRow--) {
+              let tmpLine = '';
+
+              // Axis labels
+              if (tmpRow === tmpHeight) {
+                tmpLine += ANSI_COLORS.dim + padLeft(String(tmpMaxValue), tmpValueAxisWidth) + '|' + tmpReset;
+              } else if (tmpRow === 1) {
+                tmpLine += ANSI_COLORS.dim + padLeft('0', tmpValueAxisWidth) + '|' + tmpReset;
+              } else if (tmpRow === Math.ceil(tmpHeight / 2)) {
+                tmpLine += ANSI_COLORS.dim + padLeft(String(Math.round(tmpMaxValue / 2)), tmpValueAxisWidth) + '|' + tmpReset;
+              } else {
+                tmpLine += ANSI_COLORS.dim + padLeft('', tmpValueAxisWidth) + '|' + tmpReset;
+              }
+              for (let i = 0; i < tmpBins.length; i++) {
+                let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+                let tmpBarHeight = tmpVal / tmpMaxValue * tmpHeight;
+                let tmpFullRows = Math.floor(tmpBarHeight);
+                let tmpFraction = tmpBarHeight - tmpFullRows;
+                let tmpIsSelected = pView.isIndexSelected(i);
+                let tmpInRange = !tmpIsSelected && pView.isIndexInRange(i);
+                let tmpColor = tmpIsSelected ? tmpSelectedColor : tmpInRange ? tmpRangeColor : tmpBarColor;
+                let tmpChar = ' ';
+                if (tmpRow <= tmpFullRows) {
+                  tmpChar = tmpBarChar;
+                } else if (tmpRow === tmpFullRows + 1 && tmpFraction > 0) {
+                  let tmpPartialIndex = Math.round(tmpFraction * (tmpPartials.length - 1));
+                  tmpChar = tmpPartials[tmpPartialIndex];
+                }
+                if (tmpChar !== ' ') {
+                  tmpLine += ' ' + tmpColor + tmpChar + tmpChar + tmpChar + tmpReset;
+                } else {
+                  tmpLine += '    ';
+                }
+              }
+              tmpLines.push(tmpLine);
+            }
+
+            // Bottom axis
+            let tmpAxisLine = ANSI_COLORS.dim + padLeft('', tmpValueAxisWidth) + '+';
+            for (let i = 0; i < tmpBins.length; i++) {
+              tmpAxisLine += '----';
+            }
+            tmpAxisLine += tmpReset;
+            tmpLines.push(tmpAxisLine);
+
+            // Labels
+            if (tmpOptions.ShowLabels) {
+              let tmpLabelLine = padLeft('', tmpValueAxisWidth) + ' ';
+              for (let i = 0; i < tmpBins.length; i++) {
+                let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+                tmpLabelLine += padCenter(tmpLabel.substring(0, 4), 4);
+              }
+              tmpLines.push(tmpLabelLine);
+            }
+
+            // Range selection info
+            if (tmpOptions.Selectable && tmpOptions.SelectionMode === 'range') {
+              let tmpStart = pView._selectionRangeStart;
+              let tmpEnd = pView._selectionRangeEnd;
+              let tmpStartLabel = tmpBins[tmpStart] ? tmpBins[tmpStart][tmpOptions.LabelProperty] : tmpStart;
+              let tmpEndLabel = tmpBins[tmpEnd] ? tmpBins[tmpEnd][tmpOptions.LabelProperty] : tmpEnd;
+              tmpLines.push('');
+              tmpLines.push(ANSI_COLORS.bold + '  Selection: ' + tmpStartLabel + ' - ' + tmpEndLabel + tmpReset);
+            }
+            return tmpLines.join('\n') + '\n';
+          }
+
+          /**
+           * Render a horizontal CLI histogram.
+           *
+           * @param {object} pView - The histogram view instance
+           * @returns {string} The ANSI text output
+           */
+          function renderHorizontal(pView) {
+            let tmpBins = pView.getBins();
+            let tmpOptions = pView.options;
+            let tmpWidth = tmpOptions.TextWidth || 60;
+            let tmpBarChar = tmpOptions.BarCharacter;
+            let tmpBarColor = colorToAnsi(tmpOptions.BarColor);
+            let tmpSelectedColor = colorToAnsi(tmpOptions.SelectedBarColor);
+            let tmpRangeColor = colorToAnsi(tmpOptions.SelectionRangeColor);
+            let tmpReset = ANSI_COLORS.reset;
+            if (!tmpBins || tmpBins.length === 0) {
+              return '(no data)\n';
+            }
+            let tmpMaxValue = 0;
+            let tmpMaxLabelLen = 0;
+            for (let i = 0; i < tmpBins.length; i++) {
+              let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+              if (tmpVal > tmpMaxValue) {
+                tmpMaxValue = tmpVal;
+              }
+              let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+              if (tmpLabel.length > tmpMaxLabelLen) {
+                tmpMaxLabelLen = tmpLabel.length;
+              }
+            }
+            if (tmpMaxValue === 0) {
+              tmpMaxValue = 1;
+            }
+            let tmpLabelWidth = Math.min(tmpMaxLabelLen, 12);
+            let tmpValueWidth = String(tmpMaxValue).length;
+            let tmpBarWidth = tmpWidth - tmpLabelWidth - tmpValueWidth - 4;
+            if (tmpBarWidth < 10) {
+              tmpBarWidth = 10;
+            }
+            let tmpLines = [];
+            for (let i = 0; i < tmpBins.length; i++) {
+              let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+              let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+              let tmpBarLen = Math.round(tmpVal / tmpMaxValue * tmpBarWidth);
+              let tmpIsSelected = pView.isIndexSelected(i);
+              let tmpInRange = !tmpIsSelected && pView.isIndexInRange(i);
+              let tmpColor = tmpIsSelected ? tmpSelectedColor : tmpInRange ? tmpRangeColor : tmpBarColor;
+              let tmpBar = '';
+              for (let j = 0; j < tmpBarLen; j++) {
+                tmpBar += tmpBarChar;
+              }
+              let tmpLine = ANSI_COLORS.dim + padRight(tmpLabel.substring(0, tmpLabelWidth), tmpLabelWidth) + ' |' + tmpReset;
+              tmpLine += tmpColor + tmpBar + tmpReset;
+              tmpLine += ' ' + tmpVal;
+              if (tmpIsSelected) {
+                tmpLine += ANSI_COLORS.bold + ' *' + tmpReset;
+              } else if (tmpInRange) {
+                tmpLine += ANSI_COLORS.dim + ' ~' + tmpReset;
+              }
+              tmpLines.push(tmpLine);
+            }
+
+            // Range info
+            if (tmpOptions.Selectable && tmpOptions.SelectionMode === 'range') {
+              let tmpStart = pView._selectionRangeStart;
+              let tmpEnd = pView._selectionRangeEnd;
+              let tmpStartLabel = tmpBins[tmpStart] ? tmpBins[tmpStart][tmpOptions.LabelProperty] : tmpStart;
+              let tmpEndLabel = tmpBins[tmpEnd] ? tmpBins[tmpEnd][tmpOptions.LabelProperty] : tmpEnd;
+              tmpLines.push('');
+              tmpLines.push(ANSI_COLORS.bold + '  Selection: ' + tmpStartLabel + ' - ' + tmpEndLabel + tmpReset);
+            }
+            return tmpLines.join('\n') + '\n';
+          }
+
+          /**
+           * Render in CLI mode.  Writes to ContentAssignment if available, otherwise
+           * falls back to process.stdout.
+           *
+           * @param {object} pView - The histogram view instance
+           */
+          function render(pView) {
+            let tmpText;
+            if (pView.options.Orientation === 'vertical') {
+              tmpText = renderVertical(pView);
+            } else {
+              tmpText = renderHorizontal(pView);
+            }
+
+            // Try ContentAssignment first (might be mocked in tests or bridged)
+            if (pView.services && pView.services.ContentAssignment) {
+              pView.services.ContentAssignment.assignContent(pView.options.TargetElementAddress, tmpText);
+            } else if (typeof process !== 'undefined' && process.stdout) {
+              process.stdout.write(tmpText);
+            }
+          }
+
+          // No interactive events in CLI mode
+          function wireEvents() {
+            // No-op for CLI
+          }
+
+          // --- Utility ---
+
+          function padLeft(pStr, pLen) {
+            let tmpStr = String(pStr);
+            while (tmpStr.length < pLen) {
+              tmpStr = ' ' + tmpStr;
+            }
+            return tmpStr;
+          }
+          function padRight(pStr, pLen) {
+            let tmpStr = String(pStr);
+            while (tmpStr.length < pLen) {
+              tmpStr = tmpStr + ' ';
+            }
+            return tmpStr;
+          }
+          function padCenter(pStr, pLen) {
+            let tmpStr = String(pStr);
+            while (tmpStr.length < pLen) {
+              tmpStr = tmpStr.length % 2 === 0 ? tmpStr + ' ' : ' ' + tmpStr;
+            }
+            return tmpStr;
+          }
+          module.exports = {
+            render,
+            wireEvents,
+            renderVertical,
+            renderHorizontal,
+            colorToAnsi,
+            ANSI_COLORS
+          };
+        }).call(this);
+      }).call(this, require('_process'));
+    }, {
+      "_process": 14
+    }],
+    11: [function (require, module, exports) {
+      /**
+       * Console UI (blessed) renderer for pict-section-histogram.
+       *
+       * Renders the histogram as text art through the Pict ContentAssignment
+       * pipeline, suitable for blessed/ncurses terminal UI widgets.
+       *
+       * The output is assigned via ContentAssignment so the pict-terminalui
+       * bridge (customAssignFunction) can project it into blessed boxes.
+       *
+       * @module Pict-Histogram-Renderer-ConsoleUI
+       */
+
+      /**
+       * Build a vertical text histogram.
+       *
+       * Each column is one bar.  Rows go from top (max value) to bottom (0).
+       * Uses block characters for fractional rows.
+       *
+       * @param {object} pView - The histogram view instance
+       * @returns {string} The rendered text block
+       */
+      function renderVertical(pView) {
+        let tmpBins = pView.getBins();
+        let tmpOptions = pView.options;
+        let tmpHeight = tmpOptions.TextHeight || 15;
+        let tmpBarChar = tmpOptions.BarCharacter;
+        let tmpPartials = tmpOptions.BarPartialCharacters;
+        let tmpEmptyChar = tmpOptions.EmptyCharacter;
+        if (!tmpBins || tmpBins.length === 0) {
+          return '(no data)';
+        }
+        let tmpMaxValue = 0;
+        for (let i = 0; i < tmpBins.length; i++) {
+          let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+          if (tmpVal > tmpMaxValue) {
+            tmpMaxValue = tmpVal;
+          }
+        }
+        if (tmpMaxValue === 0) {
+          tmpMaxValue = 1;
+        }
+
+        // Determine label width for the value axis
+        let tmpValueAxisWidth = String(tmpMaxValue).length + 1;
+
+        // Build the grid top-down
+        let tmpLines = [];
+        for (let tmpRow = tmpHeight; tmpRow >= 1; tmpRow--) {
+          let tmpLine = '';
+
+          // Value axis label (only on a few rows)
+          if (tmpRow === tmpHeight) {
+            tmpLine += padLeft(String(tmpMaxValue), tmpValueAxisWidth) + '|';
+          } else if (tmpRow === 1) {
+            tmpLine += padLeft('0', tmpValueAxisWidth) + '|';
+          } else if (tmpRow === Math.ceil(tmpHeight / 2)) {
+            tmpLine += padLeft(String(Math.round(tmpMaxValue / 2)), tmpValueAxisWidth) + '|';
+          } else {
+            tmpLine += padLeft('', tmpValueAxisWidth) + '|';
+          }
+          for (let i = 0; i < tmpBins.length; i++) {
+            let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+            let tmpBarHeight = tmpVal / tmpMaxValue * tmpHeight;
+            let tmpFullRows = Math.floor(tmpBarHeight);
+            let tmpFraction = tmpBarHeight - tmpFullRows;
+            let tmpChar = tmpEmptyChar;
+            if (tmpRow <= tmpFullRows) {
+              tmpChar = tmpBarChar;
+            } else if (tmpRow === tmpFullRows + 1 && tmpFraction > 0) {
+              let tmpPartialIndex = Math.round(tmpFraction * (tmpPartials.length - 1));
+              tmpChar = tmpPartials[tmpPartialIndex];
+            }
+
+            // Mark selected bins
+            let tmpIsSelected = pView.isIndexSelected(i);
+            let tmpInRange = !tmpIsSelected && pView.isIndexInRange(i);
+            if (tmpIsSelected && tmpChar !== tmpEmptyChar) {
+              tmpChar = '*';
+            } else if (tmpInRange && tmpChar !== tmpEmptyChar) {
+              tmpChar = '#';
+            }
+
+            // Each bar is 3 chars wide with 1 char gap
+            tmpLine += ' ' + tmpChar + tmpChar + tmpChar;
+          }
+          tmpLines.push(tmpLine);
+        }
+
+        // Bottom axis
+        let tmpAxisLine = padLeft('', tmpValueAxisWidth) + '+';
+        for (let i = 0; i < tmpBins.length; i++) {
+          tmpAxisLine += '----';
+        }
+        tmpLines.push(tmpAxisLine);
+
+        // Labels row
+        if (tmpOptions.ShowLabels) {
+          let tmpLabelLine = padLeft('', tmpValueAxisWidth) + ' ';
+          for (let i = 0; i < tmpBins.length; i++) {
+            let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+            tmpLabelLine += padCenter(tmpLabel.substring(0, 4), 4);
+          }
+          tmpLines.push(tmpLabelLine);
+        }
+
+        // Selection range indicator
+        if (tmpOptions.Selectable && tmpOptions.SelectionMode === 'range') {
+          let tmpRangeLine = padLeft('', tmpValueAxisWidth) + ' ';
+          for (let i = 0; i < tmpBins.length; i++) {
+            if (i === pView._selectionRangeStart) {
+              tmpRangeLine += ' [  ';
+            } else if (i === pView._selectionRangeEnd) {
+              tmpRangeLine += ' ]  ';
+            } else if (i > pView._selectionRangeStart && i < pView._selectionRangeEnd) {
+              tmpRangeLine += ' -  ';
+            } else {
+              tmpRangeLine += '    ';
+            }
+          }
+          tmpLines.push(tmpRangeLine);
+        }
+        return tmpLines.join('\n');
+      }
+
+      /**
+       * Build a horizontal text histogram.
+       *
+       * Each row is one bar growing rightward.
+       *
+       * @param {object} pView - The histogram view instance
+       * @returns {string} The rendered text block
+       */
+      function renderHorizontal(pView) {
+        let tmpBins = pView.getBins();
+        let tmpOptions = pView.options;
+        let tmpWidth = tmpOptions.TextWidth || 60;
+        let tmpBarChar = tmpOptions.BarCharacter;
+        let tmpPartials = tmpOptions.BarPartialCharacters;
+        if (!tmpBins || tmpBins.length === 0) {
+          return '(no data)';
+        }
+        let tmpMaxValue = 0;
+        let tmpMaxLabelLen = 0;
+        for (let i = 0; i < tmpBins.length; i++) {
+          let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+          if (tmpVal > tmpMaxValue) {
+            tmpMaxValue = tmpVal;
+          }
+          let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+          if (tmpLabel.length > tmpMaxLabelLen) {
+            tmpMaxLabelLen = tmpLabel.length;
+          }
+        }
+        if (tmpMaxValue === 0) {
+          tmpMaxValue = 1;
+        }
+        let tmpLabelWidth = Math.min(tmpMaxLabelLen, 12);
+        let tmpBarWidth = tmpWidth - tmpLabelWidth - 2; // space for " |"
+        if (tmpBarWidth < 10) {
+          tmpBarWidth = 10;
+        }
+        let tmpLines = [];
+        for (let i = 0; i < tmpBins.length; i++) {
+          let tmpVal = tmpBins[i][tmpOptions.ValueProperty] || 0;
+          let tmpLabel = String(tmpBins[i][tmpOptions.LabelProperty] || '');
+          let tmpBarLen = tmpVal / tmpMaxValue * tmpBarWidth;
+          let tmpFullChars = Math.floor(tmpBarLen);
+          let tmpFraction = tmpBarLen - tmpFullChars;
+          let tmpBar = '';
+          for (let j = 0; j < tmpFullChars; j++) {
+            tmpBar += tmpBarChar;
+          }
+          if (tmpFraction > 0 && tmpFullChars < tmpBarWidth) {
+            let tmpPartialIndex = Math.round(tmpFraction * (tmpPartials.length - 1));
+            tmpBar += tmpPartials[tmpPartialIndex];
+          }
+
+          // Mark selected
+          let tmpIsSelected = pView.isIndexSelected(i);
+          let tmpInRange = !tmpIsSelected && pView.isIndexInRange(i);
+          let tmpMarker = tmpIsSelected ? '*' : tmpInRange ? '~' : '';
+          let tmpValueStr = tmpOptions.ShowValues ? ' ' + tmpVal : '';
+          let tmpLine = padRight(tmpLabel.substring(0, tmpLabelWidth), tmpLabelWidth) + ' |' + tmpBar + tmpValueStr + tmpMarker;
+          tmpLines.push(tmpLine);
+        }
+
+        // Range indicator for range selection
+        if (tmpOptions.Selectable && tmpOptions.SelectionMode === 'range') {
+          tmpLines.push('');
+          tmpLines.push(padRight('', tmpLabelWidth) + '  Range: [' + pView._selectionRangeStart + ' - ' + pView._selectionRangeEnd + ']');
+        }
+        return tmpLines.join('\n');
+      }
+
+      /**
+       * Render via ContentAssignment for consoleui mode.
+       *
+       * @param {object} pView - The histogram view instance
+       */
+      function render(pView) {
+        let tmpText;
+        if (pView.options.Orientation === 'vertical') {
+          tmpText = renderVertical(pView);
+        } else {
+          tmpText = renderHorizontal(pView);
+        }
+        pView.services.ContentAssignment.assignContent(pView.options.TargetElementAddress, tmpText);
+      }
+
+      // No interactive events for consoleui — input is handled by the blessed widget layer
+      function wireEvents() {
+        // No-op for consoleui
+      }
+
+      // --- Utility ---
+
+      function padLeft(pStr, pLen) {
+        let tmpStr = String(pStr);
+        while (tmpStr.length < pLen) {
+          tmpStr = ' ' + tmpStr;
+        }
+        return tmpStr;
+      }
+      function padRight(pStr, pLen) {
+        let tmpStr = String(pStr);
+        while (tmpStr.length < pLen) {
+          tmpStr = tmpStr + ' ';
+        }
+        return tmpStr;
+      }
+      function padCenter(pStr, pLen) {
+        let tmpStr = String(pStr);
+        while (tmpStr.length < pLen) {
+          tmpStr = tmpStr.length % 2 === 0 ? tmpStr + ' ' : ' ' + tmpStr;
+        }
+        return tmpStr;
+      }
+      module.exports = {
+        render,
+        wireEvents,
+        renderVertical,
+        renderHorizontal
+      };
+    }, {}],
+    12: [function (require, module, exports) {
+      module.exports = {
+        "name": "pict-view",
+        "version": "1.0.67",
+        "description": "Pict View Base Class",
+        "main": "source/Pict-View.js",
+        "scripts": {
+          "test": "npx quack test",
+          "tests": "npx quack test -g",
+          "start": "node source/Pict-View.js",
+          "coverage": "npx quack coverage",
+          "build": "npx quack build",
+          "docker-dev-build": "docker build ./ -f Dockerfile_LUXURYCode -t pict-view-image:local",
+          "docker-dev-run": "docker run -it -d --name pict-view-dev -p 30001:8080 -p 38086:8086 -v \"$PWD/.config:/home/coder/.config\"  -v \"$PWD:/home/coder/pict-view\" -u \"$(id -u):$(id -g)\" -e \"DOCKER_USER=$USER\" pict-view-image:local",
+          "docker-dev-shell": "docker exec -it pict-view-dev /bin/bash",
+          "types": "tsc -p .",
+          "lint": "eslint source/**"
+        },
+        "types": "types/source/Pict-View.d.ts",
+        "repository": {
+          "type": "git",
+          "url": "git+https://github.com/stevenvelozo/pict-view.git"
+        },
+        "author": "steven velozo <steven@velozo.com>",
+        "license": "MIT",
+        "bugs": {
+          "url": "https://github.com/stevenvelozo/pict-view/issues"
+        },
+        "homepage": "https://github.com/stevenvelozo/pict-view#readme",
+        "devDependencies": {
+          "@eslint/js": "^9.39.1",
+          "browser-env": "^3.3.0",
+          "eslint": "^9.39.1",
+          "pict": "^1.0.348",
+          "quackage": "^1.0.58",
+          "typescript": "^5.9.3"
+        },
+        "mocha": {
+          "diff": true,
+          "extension": ["js"],
+          "package": "./package.json",
+          "reporter": "spec",
+          "slow": "75",
+          "timeout": "5000",
+          "ui": "tdd",
+          "watch-files": ["source/**/*.js", "test/**/*.js"],
+          "watch-ignore": ["lib/vendor"]
+        },
+        "dependencies": {
+          "fable": "^3.1.63",
+          "fable-serviceproviderbase": "^3.0.19"
+        }
+      };
+    }, {}],
+    13: [function (require, module, exports) {
+      const libFableServiceBase = require('fable-serviceproviderbase');
+      const libPackage = require('../package.json');
+      const defaultPictViewSettings = {
+        DefaultRenderable: false,
+        DefaultDestinationAddress: false,
+        DefaultTemplateRecordAddress: false,
+        ViewIdentifier: false,
+        // If this is set to true, when the App initializes this will.
+        // After the App initializes, initialize will be called as soon as it's added.
+        AutoInitialize: true,
+        AutoInitializeOrdinal: 0,
+        // If this is set to true, when the App autorenders (on load) this will.
+        // After the App initializes, render will be called as soon as it's added.
+        AutoRender: true,
+        AutoRenderOrdinal: 0,
+        AutoSolveWithApp: true,
+        AutoSolveOrdinal: 0,
+        CSSHash: false,
+        CSS: false,
+        CSSProvider: false,
+        CSSPriority: 500,
+        Templates: [],
+        DefaultTemplates: [],
+        Renderables: [],
+        Manifests: {}
+      };
+
+      /** @typedef {(error?: Error) => void} ErrorCallback */
+      /** @typedef {number | boolean} PictTimestamp */
+
+      /**
+       * @typedef {'replace' | 'append' | 'prepend' | 'append_once' | 'virtual-assignment'} RenderMethod
+       */
+      /**
+       * @typedef {Object} Renderable
+       *
+       * @property {string} RenderableHash - A unique hash for the renderable.
+       * @property {string} TemplateHash - The hash of the template to use for rendering this renderable.
+       * @property {string} [DefaultTemplateRecordAddress] - The default address for resolving the data record for this renderable.
+       * @property {string} [ContentDestinationAddress] - The default address (DOM CSS selector) for rendering the content of this renderable.
+       * @property {RenderMethod} [RenderMethod=replace] - The method to use when projecting the renderable to the DOM ('replace', 'append', 'prepend', 'append_once', 'virtual-assignment').
+       * @property {string} [TestAddress] - The address to use for testing the renderable.
+       * @property {string} [TransactionHash] - The transaction hash for the root renderable.
+       * @property {string} [RootRenderableViewHash] - The hash of the root renderable.
+       * @property {string} [Content] - The rendered content for this renderable, if applicable.
+       */
+
+      /**
+       * Represents a view in the Pict ecosystem.
+       */
+      class PictView extends libFableServiceBase {
+        /**
+         * @param {any} pFable - The Fable object that this service is attached to.
+         * @param {any} [pOptions] - (optional) The options for this service.
+         * @param {string} [pServiceHash] - (optional) The hash of the service.
+         */
+        constructor(pFable, pOptions, pServiceHash) {
+          // Intersect default options, parent constructor, service information
+          let tmpOptions = Object.assign({}, JSON.parse(JSON.stringify(defaultPictViewSettings)), pOptions);
+          super(pFable, tmpOptions, pServiceHash);
+          //FIXME: add types to fable and ancillaries
+          /** @type {any} */
+          this.fable;
+          /** @type {any} */
+          this.options;
+          /** @type {String} */
+          this.UUID;
+          /** @type {String} */
+          this.Hash;
+          /** @type {any} */
+          this.log;
+          const tmpHashIsUUID = this.Hash === this.UUID;
+          //NOTE: since many places are using the view UUID as the HTML element ID, we prefix it to avoid starting with a number
+          this.UUID = `V-${this.UUID}`;
+          if (tmpHashIsUUID) {
+            this.Hash = this.UUID;
+          }
+          if (!this.options.ViewIdentifier) {
+            this.options.ViewIdentifier = `AutoViewID-${this.fable.getUUID()}`;
+          }
+          this.serviceType = 'PictView';
+          /** @type {Record<string, any>} */
+          this._Package = libPackage;
+          // Convenience and consistency naming
+          /** @type {import('pict') & { log: any, instantiateServiceProviderWithoutRegistration: (hash: String) => any, instantiateServiceProviderIfNotExists: (hash: string) => any, TransactionTracking: import('pict/types/source/services/Fable-Service-TransactionTracking') }} */
+          this.pict = this.fable;
+          // Wire in the essential Pict application state
+          this.AppData = this.pict.AppData;
+          this.Bundle = this.pict.Bundle;
+
+          /** @type {PictTimestamp} */
+          this.initializeTimestamp = false;
+          /** @type {PictTimestamp} */
+          this.lastSolvedTimestamp = false;
+          /** @type {PictTimestamp} */
+          this.lastRenderedTimestamp = false;
+          /** @type {PictTimestamp} */
+          this.lastMarshalFromViewTimestamp = false;
+          /** @type {PictTimestamp} */
+          this.lastMarshalToViewTimestamp = false;
+          this.pict.instantiateServiceProviderIfNotExists('TransactionTracking');
+
+          // Load all templates from the array in the options
+          // Templates are in the form of {Hash:'Some-Template-Hash',Template:'Template content',Source:'TemplateSource'}
+          for (let i = 0; i < this.options.Templates.length; i++) {
+            let tmpTemplate = this.options.Templates[i];
+            if (!('Hash' in tmpTemplate) || !('Template' in tmpTemplate)) {
+              this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not load Template ${i} in the options array.`, tmpTemplate);
+            } else {
+              if (!tmpTemplate.Source) {
+                tmpTemplate.Source = `PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} options object.`;
+              }
+              this.pict.TemplateProvider.addTemplate(tmpTemplate.Hash, tmpTemplate.Template, tmpTemplate.Source);
+            }
+          }
+
+          // Load all default templates from the array in the options
+          // Templates are in the form of {Prefix:'',Postfix:'-List-Row',Template:'Template content',Source:'TemplateSourceString'}
+          for (let i = 0; i < this.options.DefaultTemplates.length; i++) {
+            let tmpDefaultTemplate = this.options.DefaultTemplates[i];
+            if (!('Postfix' in tmpDefaultTemplate) || !('Template' in tmpDefaultTemplate)) {
+              this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not load Default Template ${i} in the options array.`, tmpDefaultTemplate);
+            } else {
+              if (!tmpDefaultTemplate.Source) {
+                tmpDefaultTemplate.Source = `PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} options object.`;
+              }
+              this.pict.TemplateProvider.addDefaultTemplate(tmpDefaultTemplate.Prefix, tmpDefaultTemplate.Postfix, tmpDefaultTemplate.Template, tmpDefaultTemplate.Source);
+            }
+          }
+
+          // Load the CSS if it's available
+          if (this.options.CSS) {
+            let tmpCSSHash = this.options.CSSHash ? this.options.CSSHash : `View-${this.options.ViewIdentifier}`;
+            let tmpCSSProvider = this.options.CSSProvider ? this.options.CSSProvider : tmpCSSHash;
+            this.pict.CSSMap.addCSS(tmpCSSHash, this.options.CSS, tmpCSSProvider, this.options.CSSPriority);
+          }
+
+          // Load all renderables
+          // Renderables are launchable renderable instructions with templates
+          // They look as such: {Identifier:'ContentEntry', TemplateHash:'Content-Entry-Section-Main', ContentDestinationAddress:'#ContentSection', RecordAddress:'AppData.Content.DefaultText', ManifestTransformation:'ManyfestHash', ManifestDestinationAddress:'AppData.Content.DataToTransformContent'}
+          // The only parts that are necessary are Identifier and Template
+          // A developer can then do render('ContentEntry') and it just kinda works.  Or they can override the ContentDestinationAddress
+          /** @type {Record<String, Renderable>} */
+          this.renderables = {};
+          for (let i = 0; i < this.options.Renderables.length; i++) {
+            /** @type {Renderable} */
+            let tmpRenderable = this.options.Renderables[i];
+            this.addRenderable(tmpRenderable);
+          }
+        }
+
+        /**
+         * Adds a renderable to the view.
+         *
+         * @param {string | Renderable} pRenderableHash - The hash of the renderable, or a renderable object.
+         * @param {string} [pTemplateHash] - (optional) The hash of the template for the renderable.
+         * @param {string} [pDefaultTemplateRecordAddress] - (optional) The default data address for the template.
+         * @param {string} [pDefaultDestinationAddress] - (optional) The default destination address for the renderable.
+         * @param {RenderMethod} [pRenderMethod=replace] - (optional) The method to use when rendering the renderable (ex. 'replace').
+         */
+        addRenderable(pRenderableHash, pTemplateHash, pDefaultTemplateRecordAddress, pDefaultDestinationAddress, pRenderMethod) {
+          /** @type {Renderable} */
+          let tmpRenderable;
+          if (typeof pRenderableHash == 'object') {
+            // The developer passed in the renderable as an object.
+            // Use theirs instead!
+            tmpRenderable = pRenderableHash;
+          } else {
+            /** @type {RenderMethod} */
+            let tmpRenderMethod = typeof pRenderMethod !== 'string' ? pRenderMethod : 'replace';
+            tmpRenderable = {
+              RenderableHash: pRenderableHash,
+              TemplateHash: pTemplateHash,
+              DefaultTemplateRecordAddress: pDefaultTemplateRecordAddress,
+              ContentDestinationAddress: pDefaultDestinationAddress,
+              RenderMethod: tmpRenderMethod
+            };
+          }
+          if (typeof tmpRenderable.RenderableHash != 'string' || typeof tmpRenderable.TemplateHash != 'string') {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not load Renderable; RenderableHash or TemplateHash are invalid.`, tmpRenderable);
+          } else {
+            if (this.pict.LogNoisiness > 0) {
+              this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} adding renderable [${tmpRenderable.RenderableHash}] pointed to template ${tmpRenderable.TemplateHash}.`);
+            }
+            this.renderables[tmpRenderable.RenderableHash] = tmpRenderable;
+          }
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                        Code Section: Initialization                        */
+        /* -------------------------------------------------------------------------- */
+        /**
+         * Lifecycle hook that triggers before the view is initialized.
+         */
+        onBeforeInitialize() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onBeforeInitialize:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers before the view is initialized (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onBeforeInitializeAsync(fCallback) {
+          this.onBeforeInitialize();
+          return fCallback();
+        }
+
+        /**
+         * Lifecycle hook that triggers when the view is initialized.
+         */
+        onInitialize() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onInitialize:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers when the view is initialized (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onInitializeAsync(fCallback) {
+          this.onInitialize();
+          return fCallback();
+        }
+
+        /**
+         * Performs view initialization.
+         */
+        initialize() {
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow VIEW [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} initialize:`);
+          }
+          if (!this.initializeTimestamp) {
+            this.onBeforeInitialize();
+            this.onInitialize();
+            this.onAfterInitialize();
+            this.initializeTimestamp = this.pict.log.getTimeStamp();
+            return true;
+          } else {
+            this.log.warn(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} initialize called but initialization is already completed.  Aborting.`);
+            return false;
+          }
+        }
+
+        /**
+         * Performs view initialization (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        initializeAsync(fCallback) {
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow VIEW [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} initializeAsync:`);
+          }
+          if (!this.initializeTimestamp) {
+            let tmpAnticipate = this.pict.instantiateServiceProviderWithoutRegistration('Anticipate');
+            if (this.pict.LogNoisiness > 0) {
+              this.log.info(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} beginning initialization...`);
+            }
+            tmpAnticipate.anticipate(this.onBeforeInitializeAsync.bind(this));
+            tmpAnticipate.anticipate(this.onInitializeAsync.bind(this));
+            tmpAnticipate.anticipate(this.onAfterInitializeAsync.bind(this));
+            tmpAnticipate.wait(/** @param {Error} pError */
+            pError => {
+              if (pError) {
+                this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} initialization failed: ${pError.message || pError}`, {
+                  stack: pError.stack
+                });
+              }
+              this.initializeTimestamp = this.pict.log.getTimeStamp();
+              if (this.pict.LogNoisiness > 0) {
+                this.log.info(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} initialization complete.`);
+              }
+              return fCallback();
+            });
+          } else {
+            this.log.warn(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} async initialize called but initialization is already completed.  Aborting.`);
+            // TODO: Should this be an error?
+            return fCallback();
+          }
+        }
+        onAfterInitialize() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onAfterInitialize:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers after the view is initialized (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onAfterInitializeAsync(fCallback) {
+          this.onAfterInitialize();
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                            Code Section: Render                            */
+        /* -------------------------------------------------------------------------- */
+        /**
+         * Lifecycle hook that triggers before the view is rendered.
+         *
+         * @param {Renderable} pRenderable - The renderable that will be rendered.
+         */
+        onBeforeRender(pRenderable) {
+          // Overload this to mess with stuff before the content gets generated from the template
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onBeforeRender:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers before the view is rendered (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         * @param {Renderable} pRenderable - The renderable that will be rendered.
+         */
+        onBeforeRenderAsync(fCallback, pRenderable) {
+          this.onBeforeRender(pRenderable);
+          return fCallback();
+        }
+
+        /**
+         * Lifecycle hook that triggers before the view is projected into the DOM.
+         *
+         * @param {Renderable} pRenderable - The renderable that will be projected.
+         */
+        onBeforeProject(pRenderable) {
+          // Overload this to mess with stuff before the content gets generated from the template
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onBeforeProject:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers before the view is projected into the DOM (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         * @param {Renderable} pRenderable - The renderable that will be projected.
+         */
+        onBeforeProjectAsync(fCallback, pRenderable) {
+          this.onBeforeProject(pRenderable);
+          return fCallback();
+        }
+
+        /**
+         * Builds the render options for a renderable.
+         *
+         * For DRY purposes on the three flavors of render.
+         *
+         * @param {string|ErrorCallback} [pRenderableHash] - The hash of the renderable to render.
+         * @param {string|ErrorCallback} [pRenderDestinationAddress] - The address where the renderable will be rendered.
+         * @param {string|object|ErrorCallback} [pTemplateRecordAddress] - The address of (or actual obejct) where the data for the template is stored.
+         */
+        buildRenderOptions(pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress) {
+          let tmpRenderOptions = {
+            Valid: true
+          };
+          tmpRenderOptions.RenderableHash = typeof pRenderableHash === 'string' ? pRenderableHash : typeof this.options.DefaultRenderable == 'string' ? this.options.DefaultRenderable : false;
+          if (!tmpRenderOptions.RenderableHash) {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not find a suitable RenderableHash ${tmpRenderOptions.RenderableHash} (param ${pRenderableHash}because it is not a valid renderable.`);
+            tmpRenderOptions.Valid = false;
+          }
+          tmpRenderOptions.Renderable = this.renderables[tmpRenderOptions.RenderableHash];
+          if (!tmpRenderOptions.Renderable) {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not render ${tmpRenderOptions.RenderableHash} (param ${pRenderableHash}) because it does not exist.`);
+            tmpRenderOptions.Valid = false;
+          }
+          tmpRenderOptions.DestinationAddress = typeof pRenderDestinationAddress === 'string' ? pRenderDestinationAddress : typeof tmpRenderOptions.Renderable.ContentDestinationAddress === 'string' ? tmpRenderOptions.Renderable.ContentDestinationAddress : typeof this.options.DefaultDestinationAddress === 'string' ? this.options.DefaultDestinationAddress : false;
+          if (!tmpRenderOptions.DestinationAddress) {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not render ${tmpRenderOptions.RenderableHash} (param ${pRenderableHash}) because it does not have a valid destination address (param ${pRenderDestinationAddress}).`);
+            tmpRenderOptions.Valid = false;
+          }
+          if (typeof pTemplateRecordAddress === 'object') {
+            tmpRenderOptions.RecordAddress = 'Passed in as object';
+            tmpRenderOptions.Record = pTemplateRecordAddress;
+          } else {
+            tmpRenderOptions.RecordAddress = typeof pTemplateRecordAddress === 'string' ? pTemplateRecordAddress : typeof tmpRenderOptions.Renderable.DefaultTemplateRecordAddress === 'string' ? tmpRenderOptions.Renderable.DefaultTemplateRecordAddress : typeof this.options.DefaultTemplateRecordAddress === 'string' ? this.options.DefaultTemplateRecordAddress : false;
+            tmpRenderOptions.Record = typeof tmpRenderOptions.RecordAddress === 'string' ? this.pict.DataProvider.getDataByAddress(tmpRenderOptions.RecordAddress) : undefined;
+          }
+          return tmpRenderOptions;
+        }
+
+        /**
+         * Assigns the content to the destination address.
+         *
+         * For DRY purposes on the three flavors of render.
+         *
+         * @param {Renderable} pRenderable - The renderable to render.
+         * @param {string} pRenderDestinationAddress - The address where the renderable will be rendered.
+         * @param {string} pContent - The content to render.
+         * @returns {boolean} - Returns true if the content was assigned successfully.
+         * @memberof PictView
+         */
+        assignRenderContent(pRenderable, pRenderDestinationAddress, pContent) {
+          return this.pict.ContentAssignment.projectContent(pRenderable.RenderMethod, pRenderDestinationAddress, pContent, pRenderable.TestAddress);
+        }
+
+        /**
+         * Render a renderable from this view.
+         *
+         * @param {string} [pRenderableHash] - The hash of the renderable to render.
+         * @param {string} [pRenderDestinationAddress] - The address where the renderable will be rendered.
+         * @param {string|object} [pTemplateRecordAddress] - The address where the data for the template is stored.
+         * @param {Renderable} [pRootRenderable] - The root renderable for the render operation, if applicable.
+         * @return {boolean}
+         */
+        render(pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress, pRootRenderable) {
+          return this.renderWithScope(this, pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress, pRootRenderable);
+        }
+
+        /**
+         * Render a renderable from this view, providing a specifici scope for the template.
+         *
+         * @param {any} pScope - The scope to use for the template rendering.
+         * @param {string} [pRenderableHash] - The hash of the renderable to render.
+         * @param {string} [pRenderDestinationAddress] - The address where the renderable will be rendered.
+         * @param {string|object} [pTemplateRecordAddress] - The address where the data for the template is stored.
+         * @param {Renderable} [pRootRenderable] - The root renderable for the render operation, if applicable.
+         * @return {boolean}
+         */
+        renderWithScope(pScope, pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress, pRootRenderable) {
+          let tmpRenderableHash = typeof pRenderableHash === 'string' ? pRenderableHash : typeof this.options.DefaultRenderable == 'string' ? this.options.DefaultRenderable : false;
+          if (!tmpRenderableHash) {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not render ${tmpRenderableHash} (param ${pRenderableHash}) because it is not a valid renderable.`);
+            return false;
+          }
+
+          /** @type {Renderable} */
+          let tmpRenderable;
+          if (tmpRenderableHash == '__Virtual') {
+            tmpRenderable = {
+              RenderableHash: '__Virtual',
+              TemplateHash: this.renderables[this.options.DefaultRenderable].TemplateHash,
+              ContentDestinationAddress: typeof pRenderDestinationAddress === 'string' ? pRenderDestinationAddress : typeof tmpRenderable.ContentDestinationAddress === 'string' ? tmpRenderable.ContentDestinationAddress : typeof this.options.DefaultDestinationAddress === 'string' ? this.options.DefaultDestinationAddress : null,
+              RenderMethod: 'virtual-assignment',
+              TransactionHash: pRootRenderable && pRootRenderable.TransactionHash,
+              RootRenderableViewHash: pRootRenderable && pRootRenderable.RootRenderableViewHash
+            };
+          } else {
+            tmpRenderable = Object.assign({}, this.renderables[tmpRenderableHash]);
+            tmpRenderable.ContentDestinationAddress = typeof pRenderDestinationAddress === 'string' ? pRenderDestinationAddress : typeof tmpRenderable.ContentDestinationAddress === 'string' ? tmpRenderable.ContentDestinationAddress : typeof this.options.DefaultDestinationAddress === 'string' ? this.options.DefaultDestinationAddress : null;
+          }
+          if (!tmpRenderable.TransactionHash) {
+            tmpRenderable.TransactionHash = `ViewRender-V-${this.options.ViewIdentifier}-R-${tmpRenderableHash}-U-${this.pict.getUUID()}`;
+            tmpRenderable.RootRenderableViewHash = this.Hash;
+            this.pict.TransactionTracking.registerTransaction(tmpRenderable.TransactionHash);
+          }
+          if (!tmpRenderable) {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not render ${tmpRenderableHash} (param ${pRenderableHash}) because it does not exist.`);
+            return false;
+          }
+          if (!tmpRenderable.ContentDestinationAddress) {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not render ${tmpRenderableHash} (param ${pRenderableHash}) because it does not have a valid destination address.`);
+            return false;
+          }
+          let tmpRecordAddress;
+          let tmpRecord;
+          if (typeof pTemplateRecordAddress === 'object') {
+            tmpRecord = pTemplateRecordAddress;
+            tmpRecordAddress = 'Passed in as object';
+          } else {
+            tmpRecordAddress = typeof pTemplateRecordAddress === 'string' ? pTemplateRecordAddress : typeof tmpRenderable.DefaultTemplateRecordAddress === 'string' ? tmpRenderable.DefaultTemplateRecordAddress : typeof this.options.DefaultTemplateRecordAddress === 'string' ? this.options.DefaultTemplateRecordAddress : false;
+            tmpRecord = typeof tmpRecordAddress === 'string' ? this.pict.DataProvider.getDataByAddress(tmpRecordAddress) : undefined;
+          }
+
+          // Execute the developer-overridable pre-render behavior
+          this.onBeforeRender(tmpRenderable);
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow VIEW [${this.UUID}]::[${this.Hash}] Renderable[${tmpRenderableHash}] Destination[${tmpRenderable.ContentDestinationAddress}] TemplateRecordAddress[${tmpRecordAddress}] render:`);
+          }
+          if (this.pict.LogNoisiness > 0) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} Beginning Render of Renderable[${tmpRenderableHash}] to Destination [${tmpRenderable.ContentDestinationAddress}]...`);
+          }
+          // Generate the content output from the template and data
+          tmpRenderable.Content = this.pict.parseTemplateByHash(tmpRenderable.TemplateHash, tmpRecord, null, [this], pScope, {
+            RootRenderable: typeof pRootRenderable === 'object' ? pRootRenderable : tmpRenderable
+          });
+          if (this.pict.LogNoisiness > 0) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} Assigning Renderable[${tmpRenderableHash}] content length ${tmpRenderable.Content.length} to Destination [${tmpRenderable.ContentDestinationAddress}] using render method [${tmpRenderable.RenderMethod}].`);
+          }
+          this.onBeforeProject(tmpRenderable);
+          this.onProject(tmpRenderable);
+          if (tmpRenderable.RenderMethod !== 'virtual-assignment') {
+            this.onAfterProject(tmpRenderable);
+
+            // Execute the developer-overridable post-render behavior
+            this.onAfterRender(tmpRenderable);
+          }
+          return true;
+        }
+
+        /**
+         * Render a renderable from this view.
+         *
+         * @param {string|ErrorCallback} [pRenderableHash] - The hash of the renderable to render.
+         * @param {string|ErrorCallback} [pRenderDestinationAddress] - The address where the renderable will be rendered.
+         * @param {string|object|ErrorCallback} [pTemplateRecordAddress] - The address where the data for the template is stored.
+         * @param {Renderable|ErrorCallback} [pRootRenderable] - The root renderable for the render operation, if applicable.
+         * @param {ErrorCallback} [fCallback] - The callback to call when the async operation is complete.
+         *
+         * @return {void}
+         */
+        renderAsync(pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress, pRootRenderable, fCallback) {
+          return this.renderWithScopeAsync(this, pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress, pRootRenderable, fCallback);
+        }
+
+        /**
+         * Render a renderable from this view.
+         *
+         * @param {any} pScope - The scope to use for the template rendering.
+         * @param {string|ErrorCallback} [pRenderableHash] - The hash of the renderable to render.
+         * @param {string|ErrorCallback} [pRenderDestinationAddress] - The address where the renderable will be rendered.
+         * @param {string|object|ErrorCallback} [pTemplateRecordAddress] - The address where the data for the template is stored.
+         * @param {Renderable|ErrorCallback} [pRootRenderable] - The root renderable for the render operation, if applicable.
+         * @param {ErrorCallback} [fCallback] - The callback to call when the async operation is complete.
+         *
+         * @return {void}
+         */
+        renderWithScopeAsync(pScope, pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress, pRootRenderable, fCallback) {
+          let tmpRenderableHash = typeof pRenderableHash === 'string' ? pRenderableHash : typeof this.options.DefaultRenderable == 'string' ? this.options.DefaultRenderable : false;
+
+          // Allow the callback to be passed in as the last parameter no matter what
+          /** @type {ErrorCallback} */
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : typeof pTemplateRecordAddress === 'function' ? pTemplateRecordAddress : typeof pRenderDestinationAddress === 'function' ? pRenderDestinationAddress : typeof pRenderableHash === 'function' ? pRenderableHash : typeof pRootRenderable === 'function' ? pRootRenderable : null;
+          if (!tmpCallback) {
+            this.log.warn(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.Name} renderAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.Name} renderAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          if (!tmpRenderableHash) {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not asynchronously render ${tmpRenderableHash} (param ${pRenderableHash}because it is not a valid renderable.`);
+            return tmpCallback(new Error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not asynchronously render ${tmpRenderableHash} (param ${pRenderableHash}because it is not a valid renderable.`));
+          }
+
+          /** @type {Renderable} */
+          let tmpRenderable;
+          if (tmpRenderableHash == '__Virtual') {
+            tmpRenderable = {
+              RenderableHash: '__Virtual',
+              TemplateHash: this.renderables[this.options.DefaultRenderable].TemplateHash,
+              ContentDestinationAddress: typeof pRenderDestinationAddress === 'string' ? pRenderDestinationAddress : typeof this.options.DefaultDestinationAddress === 'string' ? this.options.DefaultDestinationAddress : null,
+              RenderMethod: 'virtual-assignment',
+              TransactionHash: pRootRenderable && typeof pRootRenderable !== 'function' && pRootRenderable.TransactionHash,
+              RootRenderableViewHash: pRootRenderable && typeof pRootRenderable !== 'function' && pRootRenderable.RootRenderableViewHash
+            };
+          } else {
+            tmpRenderable = Object.assign({}, this.renderables[tmpRenderableHash]);
+            tmpRenderable.ContentDestinationAddress = typeof pRenderDestinationAddress === 'string' ? pRenderDestinationAddress : typeof tmpRenderable.ContentDestinationAddress === 'string' ? tmpRenderable.ContentDestinationAddress : typeof this.options.DefaultDestinationAddress === 'string' ? this.options.DefaultDestinationAddress : null;
+          }
+          if (!tmpRenderable.TransactionHash) {
+            tmpRenderable.TransactionHash = `ViewRender-V-${this.options.ViewIdentifier}-R-${tmpRenderableHash}-U-${this.pict.getUUID()}`;
+            tmpRenderable.RootRenderableViewHash = this.Hash;
+            this.pict.TransactionTracking.registerTransaction(tmpRenderable.TransactionHash);
+          }
+          if (!tmpRenderable) {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not render ${tmpRenderableHash} (param ${pRenderableHash}) because it does not exist.`);
+            return tmpCallback(new Error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not render ${tmpRenderableHash} (param ${pRenderableHash}) because it does not exist.`));
+          }
+          if (!tmpRenderable.ContentDestinationAddress) {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not render ${tmpRenderableHash} (param ${pRenderableHash}) because it does not have a valid destination address.`);
+            return tmpCallback(new Error(`Could not render ${tmpRenderableHash}`));
+          }
+          let tmpRecordAddress;
+          let tmpRecord;
+          if (typeof pTemplateRecordAddress === 'object') {
+            tmpRecord = pTemplateRecordAddress;
+            tmpRecordAddress = 'Passed in as object';
+          } else {
+            tmpRecordAddress = typeof pTemplateRecordAddress === 'string' ? pTemplateRecordAddress : typeof tmpRenderable.DefaultTemplateRecordAddress === 'string' ? tmpRenderable.DefaultTemplateRecordAddress : typeof this.options.DefaultTemplateRecordAddress === 'string' ? this.options.DefaultTemplateRecordAddress : false;
+            tmpRecord = typeof tmpRecordAddress === 'string' ? this.pict.DataProvider.getDataByAddress(tmpRecordAddress) : undefined;
+          }
+          if (this.pict.LogControlFlow) {
+            this.log.trace(`PICT-ControlFlow VIEW [${this.UUID}]::[${this.Hash}] Renderable[${tmpRenderableHash}] Destination[${tmpRenderable.ContentDestinationAddress}] TemplateRecordAddress[${tmpRecordAddress}] renderAsync:`);
+          }
+          if (this.pict.LogNoisiness > 2) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} Beginning Asynchronous Render (callback-style)...`);
+          }
+          let tmpAnticipate = this.fable.newAnticipate();
+          tmpAnticipate.anticipate(fOnBeforeRenderCallback => {
+            this.onBeforeRenderAsync(fOnBeforeRenderCallback, tmpRenderable);
+          });
+          tmpAnticipate.anticipate(fAsyncTemplateCallback => {
+            // Render the template (asynchronously)
+            this.pict.parseTemplateByHash(tmpRenderable.TemplateHash, tmpRecord, (pError, pContent) => {
+              if (pError) {
+                this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not render (asynchronously) ${tmpRenderableHash} (param ${pRenderableHash}) because it did not parse the template.`, pError);
+                return fAsyncTemplateCallback(pError);
+              }
+              tmpRenderable.Content = pContent;
+              return fAsyncTemplateCallback();
+            }, [this], pScope, {
+              RootRenderable: typeof pRootRenderable === 'object' ? pRootRenderable : tmpRenderable
+            });
+          });
+          tmpAnticipate.anticipate(fNext => {
+            this.onBeforeProjectAsync(fNext, tmpRenderable);
+          });
+          tmpAnticipate.anticipate(fNext => {
+            this.onProjectAsync(fNext, tmpRenderable);
+          });
+          if (tmpRenderable.RenderMethod !== 'virtual-assignment') {
+            tmpAnticipate.anticipate(fNext => {
+              this.onAfterProjectAsync(fNext, tmpRenderable);
+            });
+
+            // Execute the developer-overridable post-render behavior
+            tmpAnticipate.anticipate(fNext => {
+              this.onAfterRenderAsync(fNext, tmpRenderable);
+            });
+          }
+          tmpAnticipate.wait(tmpCallback);
+        }
+
+        /**
+         * Renders the default renderable.
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        renderDefaultAsync(fCallback) {
+          // Render the default renderable
+          this.renderAsync(fCallback);
+        }
+
+        /**
+         * @param {string} [pRenderableHash] - The hash of the renderable to render.
+         * @param {string} [pRenderDestinationAddress] - The address where the renderable will be rendered.
+         * @param {string|object} [pTemplateRecordAddress] - The address of (or actual obejct) where the data for the template is stored.
+         */
+        basicRender(pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress) {
+          return this.basicRenderWithScope(this, pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress);
+        }
+
+        /**
+         * @param {any} pScope - The scope to use for the template rendering.
+         * @param {string} [pRenderableHash] - The hash of the renderable to render.
+         * @param {string} [pRenderDestinationAddress] - The address where the renderable will be rendered.
+         * @param {string|object} [pTemplateRecordAddress] - The address of (or actual obejct) where the data for the template is stored.
+         */
+        basicRenderWithScope(pScope, pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress) {
+          let tmpRenderOptions = this.buildRenderOptions(pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress);
+          if (tmpRenderOptions.Valid) {
+            this.assignRenderContent(tmpRenderOptions.Renderable, tmpRenderOptions.DestinationAddress, this.pict.parseTemplateByHash(tmpRenderOptions.Renderable.TemplateHash, tmpRenderOptions.Record, null, [this], pScope, {
+              RootRenderable: tmpRenderOptions.Renderable
+            }));
+            return true;
+          } else {
+            this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not perform a basic render of ${tmpRenderOptions.RenderableHash} because it is not valid.`);
+            return false;
+          }
+        }
+
+        /**
+         * @param {string|ErrorCallback} [pRenderableHash] - The hash of the renderable to render.
+         * @param {string|ErrorCallback} [pRenderDestinationAddress] - The address where the renderable will be rendered.
+         * @param {string|Object|ErrorCallback} [pTemplateRecordAddress] - The address of (or actual obejct) where the data for the template is stored.
+         * @param {ErrorCallback} [fCallback] - The callback to call when the async operation is complete.
+         */
+        basicRenderAsync(pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress, fCallback) {
+          return this.basicRenderWithScopeAsync(this, pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress, fCallback);
+        }
+
+        /**
+         * @param {any} pScope - The scope to use for the template rendering.
+         * @param {string|ErrorCallback} [pRenderableHash] - The hash of the renderable to render.
+         * @param {string|ErrorCallback} [pRenderDestinationAddress] - The address where the renderable will be rendered.
+         * @param {string|Object|ErrorCallback} [pTemplateRecordAddress] - The address of (or actual obejct) where the data for the template is stored.
+         * @param {ErrorCallback} [fCallback] - The callback to call when the async operation is complete.
+         */
+        basicRenderWithScopeAsync(pScope, pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress, fCallback) {
+          // Allow the callback to be passed in as the last parameter no matter what
+          /** @type {ErrorCallback} */
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : typeof pTemplateRecordAddress === 'function' ? pTemplateRecordAddress : typeof pRenderDestinationAddress === 'function' ? pRenderDestinationAddress : typeof pRenderableHash === 'function' ? pRenderableHash : null;
+          if (!tmpCallback) {
+            this.log.warn(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.Name} basicRenderAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.Name} basicRenderAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          const tmpRenderOptions = this.buildRenderOptions(pRenderableHash, pRenderDestinationAddress, pTemplateRecordAddress);
+          if (tmpRenderOptions.Valid) {
+            this.pict.parseTemplateByHash(tmpRenderOptions.Renderable.TemplateHash, tmpRenderOptions.Record,
+            /**
+             * @param {Error} [pError] - The error that occurred during template parsing.
+             * @param {string} [pContent] - The content that was rendered from the template.
+             */
+            (pError, pContent) => {
+              if (pError) {
+                this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not render (asynchronously) ${tmpRenderOptions.RenderableHash} because it did not parse the template.`, pError);
+                return tmpCallback(pError);
+              }
+              this.assignRenderContent(tmpRenderOptions.Renderable, tmpRenderOptions.DestinationAddress, pContent);
+              return tmpCallback();
+            }, [this], pScope, {
+              RootRenderable: tmpRenderOptions.Renderable
+            });
+          } else {
+            let tmpErrorMessage = `PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} could not perform a basic render of ${tmpRenderOptions.RenderableHash} because it is not valid.`;
+            this.log.error(tmpErrorMessage);
+            return tmpCallback(new Error(tmpErrorMessage));
+          }
+        }
+
+        /**
+         * @param {Renderable} pRenderable - The renderable that was rendered.
+         */
+        onProject(pRenderable) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onProject:`);
+          }
+          if (pRenderable.RenderMethod === 'virtual-assignment') {
+            this.pict.TransactionTracking.pushToTransactionQueue(pRenderable.TransactionHash, {
+              ViewHash: this.Hash,
+              Renderable: pRenderable
+            }, 'Deferred-Post-Content-Assignment');
+          }
+          if (this.pict.LogNoisiness > 0) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} Assigning Renderable[${pRenderable.RenderableHash}] content length ${pRenderable.Content.length} to Destination [${pRenderable.ContentDestinationAddress}] using Async render method ${pRenderable.RenderMethod}.`);
+          }
+
+          // Assign the content to the destination address
+          this.pict.ContentAssignment.projectContent(pRenderable.RenderMethod, pRenderable.ContentDestinationAddress, pRenderable.Content, pRenderable.TestAddress);
+          this.lastRenderedTimestamp = this.pict.log.getTimeStamp();
+        }
+
+        /**
+         * Lifecycle hook that triggers after the view is projected into the DOM (async flow).
+         *
+         * @param {(error?: Error, content?: string) => void} fCallback - The callback to call when the async operation is complete.
+         * @param {Renderable} pRenderable - The renderable that is being projected.
+         */
+        onProjectAsync(fCallback, pRenderable) {
+          this.onProject(pRenderable);
+          return fCallback();
+        }
+
+        /**
+         * Lifecycle hook that triggers after the view is rendered.
+         *
+         * @param {Renderable} pRenderable - The renderable that was rendered.
+         */
+        onAfterRender(pRenderable) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onAfterRender:`);
+          }
+          if (pRenderable && pRenderable.RootRenderableViewHash === this.Hash) {
+            const tmpTransactionQueue = this.pict.TransactionTracking.clearTransactionQueue(pRenderable.TransactionHash) || [];
+            for (const tmpEvent of tmpTransactionQueue) {
+              const tmpView = this.pict.views[tmpEvent.Data.ViewHash];
+              if (!tmpView) {
+                this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onAfterRender: Could not find view for transaction hash ${pRenderable.TransactionHash} and ViewHash ${tmpEvent.Data.ViewHash}.`);
+                continue;
+              }
+              tmpView.onAfterProject();
+
+              // Execute the developer-overridable post-render behavior
+              tmpView.onAfterRender(tmpEvent.Data.Renderable);
+            }
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers after the view is rendered (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         * @param {Renderable} pRenderable - The renderable that was rendered.
+         */
+        onAfterRenderAsync(fCallback, pRenderable) {
+          this.onAfterRender(pRenderable);
+          const tmpAnticipate = this.fable.newAnticipate();
+          if (pRenderable && pRenderable.RootRenderableViewHash === this.Hash) {
+            const queue = this.pict.TransactionTracking.clearTransactionQueue(pRenderable.TransactionHash) || [];
+            for (const event of queue) {
+              /** @type {PictView} */
+              const tmpView = this.pict.views[event.Data.ViewHash];
+              if (!tmpView) {
+                this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onAfterRenderAsync: Could not find view for transaction hash ${pRenderable.TransactionHash} and ViewHash ${event.Data.ViewHash}.`);
+                continue;
+              }
+              tmpAnticipate.anticipate(tmpView.onAfterProjectAsync.bind(tmpView));
+              tmpAnticipate.anticipate(fNext => {
+                tmpView.onAfterRenderAsync(fNext, event.Data.Renderable);
+              });
+
+              // Execute the developer-overridable post-render behavior
+            }
+          }
+          return tmpAnticipate.wait(fCallback);
+        }
+
+        /**
+         * Lifecycle hook that triggers after the view is projected into the DOM.
+         *
+         * @param {Renderable} pRenderable - The renderable that was projected.
+         */
+        onAfterProject(pRenderable) {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onAfterProject:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers after the view is projected into the DOM (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         * @param {Renderable} pRenderable - The renderable that was projected.
+         */
+        onAfterProjectAsync(fCallback, pRenderable) {
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                            Code Section: Solver                            */
+        /* -------------------------------------------------------------------------- */
+        /**
+         * Lifecycle hook that triggers before the view is solved.
+         */
+        onBeforeSolve() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onBeforeSolve:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers before the view is solved (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onBeforeSolveAsync(fCallback) {
+          this.onBeforeSolve();
+          return fCallback();
+        }
+
+        /**
+         * Lifecycle hook that triggers when the view is solved.
+         */
+        onSolve() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onSolve:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers when the view is solved (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onSolveAsync(fCallback) {
+          this.onSolve();
+          return fCallback();
+        }
+
+        /**
+         * Performs view solving and triggers lifecycle hooks.
+         *
+         * @return {boolean} - True if the view was solved successfully, false otherwise.
+         */
+        solve() {
+          if (this.pict.LogNoisiness > 2) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} executing solve() function...`);
+          }
+          this.onBeforeSolve();
+          this.onSolve();
+          this.onAfterSolve();
+          this.lastSolvedTimestamp = this.pict.log.getTimeStamp();
+          return true;
+        }
+
+        /**
+         * Performs view solving and triggers lifecycle hooks (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        solveAsync(fCallback) {
+          let tmpAnticipate = this.pict.instantiateServiceProviderWithoutRegistration('Anticipate');
+
+          /** @type {ErrorCallback} */
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : null;
+          if (!tmpCallback) {
+            this.log.warn(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.Name} solveAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.Name} solveAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          tmpAnticipate.anticipate(this.onBeforeSolveAsync.bind(this));
+          tmpAnticipate.anticipate(this.onSolveAsync.bind(this));
+          tmpAnticipate.anticipate(this.onAfterSolveAsync.bind(this));
+          tmpAnticipate.wait(pError => {
+            if (this.pict.LogNoisiness > 2) {
+              this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} solveAsync() complete.`);
+            }
+            this.lastSolvedTimestamp = this.pict.log.getTimeStamp();
+            return tmpCallback(pError);
+          });
+        }
+
+        /**
+         * Lifecycle hook that triggers after the view is solved.
+         */
+        onAfterSolve() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onAfterSolve:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers after the view is solved (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onAfterSolveAsync(fCallback) {
+          this.onAfterSolve();
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                     Code Section: Marshal From View                        */
+        /* -------------------------------------------------------------------------- */
+        /**
+         * Lifecycle hook that triggers before data is marshaled from the view.
+         *
+         * @return {boolean} - True if the operation was successful, false otherwise.
+         */
+        onBeforeMarshalFromView() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onBeforeMarshalFromView:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers before data is marshaled from the view (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onBeforeMarshalFromViewAsync(fCallback) {
+          this.onBeforeMarshalFromView();
+          return fCallback();
+        }
+
+        /**
+         * Lifecycle hook that triggers when data is marshaled from the view.
+         */
+        onMarshalFromView() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onMarshalFromView:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers when data is marshaled from the view (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onMarshalFromViewAsync(fCallback) {
+          this.onMarshalFromView();
+          return fCallback();
+        }
+
+        /**
+         * Marshals data from the view.
+         *
+         * @return {boolean} - True if the operation was successful, false otherwise.
+         */
+        marshalFromView() {
+          if (this.pict.LogNoisiness > 2) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} executing solve() function...`);
+          }
+          this.onBeforeMarshalFromView();
+          this.onMarshalFromView();
+          this.onAfterMarshalFromView();
+          this.lastMarshalFromViewTimestamp = this.pict.log.getTimeStamp();
+          return true;
+        }
+
+        /**
+         * Marshals data from the view (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        marshalFromViewAsync(fCallback) {
+          let tmpAnticipate = this.pict.instantiateServiceProviderWithoutRegistration('Anticipate');
+
+          /** @type {ErrorCallback} */
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : null;
+          if (!tmpCallback) {
+            this.log.warn(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.Name} marshalFromViewAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.Name} marshalFromViewAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          tmpAnticipate.anticipate(this.onBeforeMarshalFromViewAsync.bind(this));
+          tmpAnticipate.anticipate(this.onMarshalFromViewAsync.bind(this));
+          tmpAnticipate.anticipate(this.onAfterMarshalFromViewAsync.bind(this));
+          tmpAnticipate.wait(pError => {
+            if (this.pict.LogNoisiness > 2) {
+              this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} marshalFromViewAsync() complete.`);
+            }
+            this.lastMarshalFromViewTimestamp = this.pict.log.getTimeStamp();
+            return tmpCallback(pError);
+          });
+        }
+
+        /**
+         * Lifecycle hook that triggers after data is marshaled from the view.
+         */
+        onAfterMarshalFromView() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onAfterMarshalFromView:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers after data is marshaled from the view (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onAfterMarshalFromViewAsync(fCallback) {
+          this.onAfterMarshalFromView();
+          return fCallback();
+        }
+
+        /* -------------------------------------------------------------------------- */
+        /*                     Code Section: Marshal To View                          */
+        /* -------------------------------------------------------------------------- */
+        /**
+         * Lifecycle hook that triggers before data is marshaled into the view.
+         */
+        onBeforeMarshalToView() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onBeforeMarshalToView:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers before data is marshaled into the view (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onBeforeMarshalToViewAsync(fCallback) {
+          this.onBeforeMarshalToView();
+          return fCallback();
+        }
+
+        /**
+         * Lifecycle hook that triggers when data is marshaled into the view.
+         */
+        onMarshalToView() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onMarshalToView:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers when data is marshaled into the view (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onMarshalToViewAsync(fCallback) {
+          this.onMarshalToView();
+          return fCallback();
+        }
+
+        /**
+         * Marshals data into the view.
+         *
+         * @return {boolean} - True if the operation was successful, false otherwise.
+         */
+        marshalToView() {
+          if (this.pict.LogNoisiness > 2) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} executing solve() function...`);
+          }
+          this.onBeforeMarshalToView();
+          this.onMarshalToView();
+          this.onAfterMarshalToView();
+          this.lastMarshalToViewTimestamp = this.pict.log.getTimeStamp();
+          return true;
+        }
+
+        /**
+         * Marshals data into the view (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        marshalToViewAsync(fCallback) {
+          let tmpAnticipate = this.pict.instantiateServiceProviderWithoutRegistration('Anticipate');
+
+          /** @type {ErrorCallback} */
+          let tmpCallback = typeof fCallback === 'function' ? fCallback : null;
+          if (!tmpCallback) {
+            this.log.warn(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.Name} marshalToViewAsync was called without a valid callback.  A callback will be generated but this could lead to race conditions.`);
+            tmpCallback = pError => {
+              if (pError) {
+                this.log.error(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.Name} marshalToViewAsync Auto Callback Error: ${pError}`, pError);
+              }
+            };
+          }
+          tmpAnticipate.anticipate(this.onBeforeMarshalToViewAsync.bind(this));
+          tmpAnticipate.anticipate(this.onMarshalToViewAsync.bind(this));
+          tmpAnticipate.anticipate(this.onAfterMarshalToViewAsync.bind(this));
+          tmpAnticipate.wait(pError => {
+            if (this.pict.LogNoisiness > 2) {
+              this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} marshalToViewAsync() complete.`);
+            }
+            this.lastMarshalToViewTimestamp = this.pict.log.getTimeStamp();
+            return tmpCallback(pError);
+          });
+        }
+
+        /**
+         * Lifecycle hook that triggers after data is marshaled into the view.
+         */
+        onAfterMarshalToView() {
+          if (this.pict.LogNoisiness > 3) {
+            this.log.trace(`PictView [${this.UUID}]::[${this.Hash}] ${this.options.ViewIdentifier} onAfterMarshalToView:`);
+          }
+          return true;
+        }
+
+        /**
+         * Lifecycle hook that triggers after data is marshaled into the view (async flow).
+         *
+         * @param {ErrorCallback} fCallback - The callback to call when the async operation is complete.
+         */
+        onAfterMarshalToViewAsync(fCallback) {
+          this.onAfterMarshalToView();
+          return fCallback();
+        }
+
+        /** @return {boolean} - True if the object is a PictView. */
+        get isPictView() {
+          return true;
+        }
+      }
+      module.exports = PictView;
+    }, {
+      "../package.json": 12,
+      "fable-serviceproviderbase": 2
+    }],
+    14: [function (require, module, exports) {
+      // shim for using process in browser
+      var process = module.exports = {};
+
+      // cached from whatever global is present so that test runners that stub it
+      // don't break things.  But we need to wrap it in a try catch in case it is
+      // wrapped in strict mode code which doesn't define any globals.  It's inside a
+      // function because try/catches deoptimize in certain engines.
+
+      var cachedSetTimeout;
+      var cachedClearTimeout;
+      function defaultSetTimout() {
+        throw new Error('setTimeout has not been defined');
+      }
+      function defaultClearTimeout() {
+        throw new Error('clearTimeout has not been defined');
+      }
+      (function () {
+        try {
+          if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+          } else {
+            cachedSetTimeout = defaultSetTimout;
+          }
+        } catch (e) {
+          cachedSetTimeout = defaultSetTimout;
+        }
+        try {
+          if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+          } else {
+            cachedClearTimeout = defaultClearTimeout;
+          }
+        } catch (e) {
+          cachedClearTimeout = defaultClearTimeout;
+        }
+      })();
+      function runTimeout(fun) {
+        if (cachedSetTimeout === setTimeout) {
+          //normal enviroments in sane situations
+          return setTimeout(fun, 0);
+        }
+        // if setTimeout wasn't available but was latter defined
+        if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+          cachedSetTimeout = setTimeout;
+          return setTimeout(fun, 0);
+        }
+        try {
+          // when when somebody has screwed with setTimeout but no I.E. maddness
+          return cachedSetTimeout(fun, 0);
+        } catch (e) {
+          try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+          } catch (e) {
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+          }
+        }
+      }
+      function runClearTimeout(marker) {
+        if (cachedClearTimeout === clearTimeout) {
+          //normal enviroments in sane situations
+          return clearTimeout(marker);
+        }
+        // if clearTimeout wasn't available but was latter defined
+        if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+          cachedClearTimeout = clearTimeout;
+          return clearTimeout(marker);
+        }
+        try {
+          // when when somebody has screwed with setTimeout but no I.E. maddness
+          return cachedClearTimeout(marker);
+        } catch (e) {
+          try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+          } catch (e) {
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+          }
+        }
+      }
+      var queue = [];
+      var draining = false;
+      var currentQueue;
+      var queueIndex = -1;
+      function cleanUpNextTick() {
+        if (!draining || !currentQueue) {
+          return;
+        }
+        draining = false;
+        if (currentQueue.length) {
+          queue = currentQueue.concat(queue);
+        } else {
+          queueIndex = -1;
+        }
+        if (queue.length) {
+          drainQueue();
+        }
+      }
+      function drainQueue() {
+        if (draining) {
+          return;
+        }
+        var timeout = runTimeout(cleanUpNextTick);
+        draining = true;
+        var len = queue.length;
+        while (len) {
+          currentQueue = queue;
+          queue = [];
+          while (++queueIndex < len) {
+            if (currentQueue) {
+              currentQueue[queueIndex].run();
+            }
+          }
+          queueIndex = -1;
+          len = queue.length;
+        }
+        currentQueue = null;
+        draining = false;
+        runClearTimeout(timeout);
+      }
+      process.nextTick = function (fun) {
+        var args = new Array(arguments.length - 1);
+        if (arguments.length > 1) {
+          for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+          }
+        }
+        queue.push(new Item(fun, args));
+        if (queue.length === 1 && !draining) {
+          runTimeout(drainQueue);
+        }
+      };
+
+      // v8 likes predictible objects
+      function Item(fun, array) {
+        this.fun = fun;
+        this.array = array;
+      }
+      Item.prototype.run = function () {
+        this.fun.apply(null, this.array);
+      };
+      process.title = 'browser';
+      process.browser = true;
+      process.env = {};
+      process.argv = [];
+      process.version = ''; // empty string to avoid regexp issues
+      process.versions = {};
+      function noop() {}
+      process.on = noop;
+      process.addListener = noop;
+      process.once = noop;
+      process.off = noop;
+      process.removeListener = noop;
+      process.removeAllListeners = noop;
+      process.emit = noop;
+      process.prependListener = noop;
+      process.prependOnceListener = noop;
+      process.listeners = function (name) {
+        return [];
+      };
+      process.binding = function (name) {
+        throw new Error('process.binding is not supported');
+      };
+      process.cwd = function () {
+        return '/';
+      };
+      process.chdir = function (dir) {
+        throw new Error('process.chdir is not supported');
+      };
+      process.umask = function () {
+        return 0;
+      };
+    }, {}],
+    15: [function (require, module, exports) {
+      module.exports = {
+        "Name": "Retold Comprehension Loader",
+        "Hash": "ComprehensionLoader",
+        "MainViewportViewIdentifier": "ComprehensionLoader-Layout",
+        "MainViewportDestinationAddress": "#ComprehensionLoader-Application-Container",
+        "MainViewportDefaultDataAddress": "AppData.ComprehensionLoader",
+        "pict_configuration": {
+          "Product": "ComprehensionLoader"
+        },
+        "AutoRenderMainViewportViewAfterInitialize": false
+      };
+    }, {}],
+    16: [function (require, module, exports) {
+      const libPictApplication = require('pict-application');
+      const libProvider = require('./providers/Pict-Provider-ComprehensionLoader.js');
+      const libViewLayout = require('./views/PictView-ComprehensionLoader-Layout.js');
+      const libViewSession = require('./views/PictView-ComprehensionLoader-Session.js');
+      const libViewSchema = require('./views/PictView-ComprehensionLoader-Schema.js');
+      const libViewSource = require('./views/PictView-ComprehensionLoader-Source.js');
+      const libViewLoad = require('./views/PictView-ComprehensionLoader-Load.js');
+      const libViewHistogram = require('pict-section-histogram');
+      class ComprehensionLoaderApplication extends libPictApplication {
+        constructor(pFable, pOptions, pServiceHash) {
+          super(pFable, pOptions, pServiceHash);
+
+          // Register provider
+          this.pict.addProvider('ComprehensionLoader', libProvider.default_configuration, libProvider);
+
+          // Register views
+          this.pict.addView('ComprehensionLoader-Layout', libViewLayout.default_configuration, libViewLayout);
+          this.pict.addView('ComprehensionLoader-Session', libViewSession.default_configuration, libViewSession);
+          this.pict.addView('ComprehensionLoader-Schema', libViewSchema.default_configuration, libViewSchema);
+          this.pict.addView('ComprehensionLoader-Source', libViewSource.default_configuration, libViewSource);
+          this.pict.addView('ComprehensionLoader-Load', libViewLoad.default_configuration, libViewLoad);
+          this.pict.addView('ComprehensionLoader-StatusHistogram', {
+            ViewIdentifier: 'ComprehensionLoader-StatusHistogram',
+            TargetElementAddress: '#ComprehensionLoader-Throughput-Histogram',
+            DefaultDestinationAddress: '#ComprehensionLoader-Throughput-Histogram',
+            RenderOnLoad: false,
+            Selectable: false,
+            Orientation: 'vertical',
+            FillContainer: true,
+            ShowValues: false,
+            ShowLabels: true,
+            MaxBarSize: 80,
+            BarColor: '#4a90d9',
+            Bins: []
+          }, libViewHistogram);
+        }
+        onAfterInitializeAsync(fCallback) {
+          // Centralized state
+          this.pict.AppData.ComprehensionLoader = {
+            FetchedEntities: [],
+            LastReport: null,
+            ServerBusyAtLoad: false,
+            LoadPollTimer: null,
+            LiveStatusTimer: null,
+            StatusDetailExpanded: false,
+            StatusDetailTimer: null,
+            StatusDetailData: null,
+            LastLiveStatus: null,
+            PersistFields: ['serverURL', 'authMethod', 'authURI', 'checkURI', 'cookieName', 'cookieValueAddr', 'cookieValueTemplate', 'loginMarker', 'userName', 'password', 'schemaURL', 'comprehensionSourceMode', 'comprehensionURL']
+          };
+
+          // Make pict available for inline onclick handlers
+          window.pict = this.pict;
+
+          // Render layout (which chains child view renders via onAfterRender)
+          this.pict.views['ComprehensionLoader-Layout'].render();
+
+          // Post-render initialization
+          this.pict.providers.ComprehensionLoader.initPersistence();
+          this.pict.providers.ComprehensionLoader.startLiveStatusPolling();
+          this.pict.providers.ComprehensionLoader.initAccordionPreviews();
+          this.pict.providers.ComprehensionLoader.updateAllPreviews();
+          this.pict.views['ComprehensionLoader-Layout'].collapseAllSections();
+          this.pict.providers.ComprehensionLoader.initAutoProcess();
+          return fCallback();
+        }
+      }
+      module.exports = ComprehensionLoaderApplication;
+      module.exports.default_configuration = require('./Pict-Application-ComprehensionLoader-Configuration.json');
+    }, {
+      "./Pict-Application-ComprehensionLoader-Configuration.json": 15,
+      "./providers/Pict-Provider-ComprehensionLoader.js": 18,
+      "./views/PictView-ComprehensionLoader-Layout.js": 19,
+      "./views/PictView-ComprehensionLoader-Load.js": 20,
+      "./views/PictView-ComprehensionLoader-Schema.js": 21,
+      "./views/PictView-ComprehensionLoader-Session.js": 22,
+      "./views/PictView-ComprehensionLoader-Source.js": 23,
+      "pict-application": 4,
+      "pict-section-histogram": 8
+    }],
+    17: [function (require, module, exports) {
+      module.exports = {
+        ComprehensionLoaderApplication: require('./Pict-Application-ComprehensionLoader.js')
+      };
+      if (typeof window !== 'undefined') {
+        window.ComprehensionLoaderApplication = module.exports.ComprehensionLoaderApplication;
+      }
+    }, {
+      "./Pict-Application-ComprehensionLoader.js": 16
+    }],
+    18: [function (require, module, exports) {
+      const libPictProvider = require('pict-provider');
+      class ComprehensionLoaderProvider extends libPictProvider {
+        constructor(pFable, pOptions, pServiceHash) {
+          super(pFable, pOptions, pServiceHash);
+        }
+
+        // ================================================================
+        // API Helper
+        // ================================================================
+
+        api(pMethod, pPath, pBody) {
+          let tmpOpts = {
+            method: pMethod,
+            headers: {}
+          };
+          if (pBody) {
+            tmpOpts.headers['Content-Type'] = 'application/json';
+            tmpOpts.body = JSON.stringify(pBody);
+          }
+          return fetch(pPath, tmpOpts).then(function (pResponse) {
+            return pResponse.json();
+          });
+        }
+        setStatus(pElementId, pMessage, pType) {
+          let tmpEl = document.getElementById(pElementId);
+          if (!tmpEl) return;
+          tmpEl.className = 'status ' + (pType || 'info');
+          tmpEl.textContent = pMessage;
+          tmpEl.style.display = 'block';
+        }
+        escapeHtml(pStr) {
+          let tmpDiv = document.createElement('div');
+          tmpDiv.appendChild(document.createTextNode(pStr));
+          return tmpDiv.innerHTML;
+        }
+
+        // ================================================================
+        // Phase status indicators
+        // ================================================================
+
+        setSectionPhase(pSection, pState) {
+          let tmpEl = document.getElementById('phase' + pSection);
+          if (!tmpEl) return;
+          tmpEl.className = 'accordion-phase';
+          if (pState === 'ok') {
+            tmpEl.innerHTML = '&#10003;';
+            tmpEl.classList.add('visible', 'accordion-phase-ok');
+          } else if (pState === 'error') {
+            tmpEl.innerHTML = '&#10007;';
+            tmpEl.classList.add('visible', 'accordion-phase-error');
+          } else if (pState === 'busy') {
+            tmpEl.innerHTML = '<span class="phase-spinner"></span>';
+            tmpEl.classList.add('visible', 'accordion-phase-busy');
+          } else {
+            tmpEl.innerHTML = '';
+          }
+        }
+
+        // ================================================================
+        // Accordion Previews
+        // ================================================================
+
+        updateAllPreviews() {
+          // Section 1 — Remote Session
+          let tmpServerURL = document.getElementById('serverURL');
+          if (!tmpServerURL) return;
+          tmpServerURL = tmpServerURL.value;
+          let tmpUserName = document.getElementById('userName').value;
+          if (tmpServerURL) {
+            let tmpPreview1 = tmpServerURL;
+            if (tmpUserName) tmpPreview1 += ' as ' + tmpUserName;
+            document.getElementById('preview1').textContent = tmpPreview1;
+          } else {
+            document.getElementById('preview1').textContent = 'Configure remote server URL and credentials';
+          }
+
+          // Section 2 — Remote Schema
+          let tmpEntities = this.pict.AppData.ComprehensionLoader.FetchedEntities || [];
+          if (tmpEntities.length > 0) {
+            document.getElementById('preview2').textContent = tmpEntities.length + ' entit' + (tmpEntities.length === 1 ? 'y' : 'ies') + ' discovered';
+          } else {
+            let tmpSchemaURL = document.getElementById('schemaURL').value;
+            if (tmpSchemaURL) {
+              document.getElementById('preview2').textContent = 'Schema from ' + tmpSchemaURL;
+            } else {
+              document.getElementById('preview2').textContent = 'Fetch entity schema from the remote server';
+            }
+          }
+
+          // Section 3 — Comprehension Source
+          let tmpSourceMode = document.querySelector('input[name="comprehensionSourceMode"]:checked');
+          let tmpModeName = tmpSourceMode ? tmpSourceMode.value : 'url';
+          if (tmpModeName === 'url') {
+            let tmpURL = document.getElementById('comprehensionURL').value;
+            if (tmpURL) {
+              document.getElementById('preview3').textContent = 'URL: ' + tmpURL;
+            } else {
+              document.getElementById('preview3').textContent = 'Provide a comprehension JSON URL or upload files';
+            }
+          } else {
+            document.getElementById('preview3').textContent = 'File upload mode';
+          }
+
+          // Section 4 — Load
+          let tmpPreview4El = document.getElementById('preview4');
+          if (tmpPreview4El) {
+            tmpPreview4El.textContent = 'Push comprehension data to the remote server';
+          }
+        }
+        initAccordionPreviews() {
+          let tmpSelf = this;
+          let tmpPreviewFields = ['serverURL', 'userName', 'schemaURL', 'comprehensionURL'];
+          let tmpHandler = function () {
+            tmpSelf.updateAllPreviews();
+          };
+          for (let i = 0; i < tmpPreviewFields.length; i++) {
+            let tmpEl = document.getElementById(tmpPreviewFields[i]);
+            if (tmpEl) {
+              tmpEl.addEventListener('input', tmpHandler);
+              tmpEl.addEventListener('change', tmpHandler);
+            }
+          }
+          document.querySelectorAll('input[name="comprehensionSourceMode"]').forEach(function (pEl) {
+            pEl.addEventListener('change', tmpHandler);
+          });
+        }
+
+        // ================================================================
+        // LocalStorage Persistence
+        // ================================================================
+
+        saveField(pFieldId) {
+          let tmpEl = document.getElementById(pFieldId);
+          if (tmpEl) {
+            localStorage.setItem('comprehensionLoader_' + pFieldId, tmpEl.value);
+          }
+        }
+        restoreFields() {
+          let tmpPersistFields = this.pict.AppData.ComprehensionLoader.PersistFields;
+          for (let i = 0; i < tmpPersistFields.length; i++) {
+            let tmpId = tmpPersistFields[i];
+            let tmpSaved = localStorage.getItem('comprehensionLoader_' + tmpId);
+            if (tmpSaved !== null) {
+              let tmpEl = document.getElementById(tmpId);
+              if (tmpEl) tmpEl.value = tmpSaved;
+            }
+          }
+
+          // Restore source mode radio
+          let tmpSourceMode = localStorage.getItem('comprehensionLoader_comprehensionSourceMode');
+          if (tmpSourceMode === 'file') {
+            let tmpFileRadio = document.getElementById('sourceMode_file');
+            if (tmpFileRadio) tmpFileRadio.checked = true;
+          }
+        }
+        initPersistence() {
+          let tmpSelf = this;
+          this.restoreFields();
+          let tmpPersistFields = this.pict.AppData.ComprehensionLoader.PersistFields;
+          for (let i = 0; i < tmpPersistFields.length; i++) {
+            (function (pId) {
+              let tmpEl = document.getElementById(pId);
+              if (tmpEl) {
+                tmpEl.addEventListener('input', function () {
+                  tmpSelf.saveField(pId);
+                });
+                tmpEl.addEventListener('change', function () {
+                  tmpSelf.saveField(pId);
+                });
+              }
+            })(tmpPersistFields[i]);
+          }
+
+          // Persist source mode radio
+          document.querySelectorAll('input[name="comprehensionSourceMode"]').forEach(function (pEl) {
+            pEl.addEventListener('change', function () {
+              localStorage.setItem('comprehensionLoader_comprehensionSourceMode', this.value);
+            });
+          });
+
+          // Persist auto-process checkboxes
+          let tmpAutoIds = ['auto1', 'auto2', 'auto3', 'auto4'];
+          for (let a = 0; a < tmpAutoIds.length; a++) {
+            (function (pId) {
+              let tmpEl = document.getElementById(pId);
+              if (tmpEl) {
+                let tmpSaved = localStorage.getItem('comprehensionLoader_' + pId);
+                if (tmpSaved !== null) tmpEl.checked = tmpSaved === 'true';
+                tmpEl.addEventListener('change', function () {
+                  localStorage.setItem('comprehensionLoader_' + pId, this.checked);
+                });
+              }
+            })(tmpAutoIds[a]);
+          }
+        }
+
+        // ================================================================
+        // Live Status Indicator
+        // ================================================================
+
+        startLiveStatusPolling() {
+          let tmpAppData = this.pict.AppData.ComprehensionLoader;
+          if (tmpAppData.LiveStatusTimer) clearInterval(tmpAppData.LiveStatusTimer);
+          this.pollLiveStatus();
+          let tmpSelf = this;
+          tmpAppData.LiveStatusTimer = setInterval(function () {
+            tmpSelf.pollLiveStatus();
+          }, 1500);
+        }
+        pollLiveStatus() {
+          let tmpSelf = this;
+          this.api('GET', '/comprehension_load/load/live-status').then(function (pData) {
+            tmpSelf.renderLiveStatus(pData);
+          }).catch(function () {
+            tmpSelf.renderLiveStatus({
+              Phase: 'disconnected',
+              Message: 'Cannot reach server',
+              TotalPushed: 0,
+              TotalRecords: 0
+            });
+          });
+        }
+        renderLiveStatus(pData) {
+          // Cache the live status data for the detail view
+          this.pict.AppData.ComprehensionLoader.LastLiveStatus = pData;
+          let tmpBar = document.getElementById('liveStatusBar');
+          let tmpMsg = document.getElementById('liveStatusMessage');
+          let tmpMeta = document.getElementById('liveStatusMeta');
+          let tmpProgressFill = document.getElementById('liveStatusProgressFill');
+          if (!tmpBar) return;
+
+          // Update phase class (preserve expanded class if present)
+          let tmpWasExpanded = tmpBar.classList.contains('expanded');
+          tmpBar.className = 'live-status-bar phase-' + (pData.Phase || 'idle');
+          if (tmpWasExpanded) tmpBar.classList.add('expanded');
+
+          // Update message
+          tmpMsg.textContent = pData.Message || 'Idle';
+
+          // Update meta info
+          let tmpMetaParts = [];
+          if (pData.Phase === 'loading' || pData.Phase === 'stopping') {
+            if (pData.Elapsed) {
+              tmpMetaParts.push('<span class="live-status-meta-item">\u23F1 ' + pData.Elapsed + '</span>');
+            }
+            if (pData.ETA) {
+              tmpMetaParts.push('<span class="live-status-meta-item">~' + pData.ETA + ' remaining</span>');
+            }
+            if (pData.TotalEntities > 0) {
+              tmpMetaParts.push('<span class="live-status-meta-item"><strong>' + pData.Completed + '</strong> / ' + pData.TotalEntities + ' entities</span>');
+            }
+            if (pData.TotalPushed > 0) {
+              let tmpPushed = pData.TotalPushed.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+              if (pData.TotalRecords > 0) {
+                let tmpTotal = pData.TotalRecords.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                tmpMetaParts.push('<span class="live-status-meta-item"><strong>' + tmpPushed + '</strong> / ' + tmpTotal + ' records</span>');
+              } else {
+                tmpMetaParts.push('<span class="live-status-meta-item"><strong>' + tmpPushed + '</strong> records</span>');
+              }
+            }
+            if (pData.Errors > 0) {
+              tmpMetaParts.push('<span class="live-status-meta-item" style="color:#dc3545"><strong>' + pData.Errors + '</strong> error' + (pData.Errors === 1 ? '' : 's') + '</span>');
+            }
+          } else if (pData.Phase === 'complete') {
+            if (pData.TotalPushed > 0) {
+              let tmpPushed = pData.TotalPushed.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+              tmpMetaParts.push('<span class="live-status-meta-item"><strong>' + tmpPushed + '</strong> records pushed</span>');
+            }
+          }
+          tmpMeta.innerHTML = tmpMetaParts.join('');
+
+          // Update progress bar
+          let tmpPct = 0;
+          if (pData.Phase === 'loading' && pData.TotalRecords > 0 && pData.TotalPushed > 0) {
+            tmpPct = Math.min(pData.TotalPushed / pData.TotalRecords * 100, 99.9);
+          } else if (pData.Phase === 'loading' && pData.TotalEntities > 0) {
+            tmpPct = pData.Completed / pData.TotalEntities * 100;
+          } else if (pData.Phase === 'complete') {
+            tmpPct = 100;
+          }
+          tmpProgressFill.style.width = Math.min(100, Math.round(tmpPct)) + '%';
+
+          // Auto-expand the detail view when load starts
+          if ((pData.Phase === 'loading' || pData.Phase === 'stopping') && !this.pict.AppData.ComprehensionLoader.StatusDetailExpanded) {
+            let tmpLayoutView = this.pict.views['ComprehensionLoader-Layout'];
+            if (tmpLayoutView && typeof tmpLayoutView.toggleStatusDetail === 'function') {
+              tmpLayoutView.toggleStatusDetail();
+            }
+          }
+
+          // If the detail view is expanded, re-render it with fresh data
+          if (this.pict.AppData.ComprehensionLoader.StatusDetailExpanded) {
+            this.renderStatusDetail();
+          }
+
+          // Auto-fetch the load report when we detect a completed load but haven't loaded the report yet
+          if (pData.Phase === 'complete' && !this.pict.AppData.ComprehensionLoader.LastReport) {
+            let tmpSelf = this;
+            this.api('GET', '/comprehension_load/load/report').then(function (pReportData) {
+              if (pReportData && pReportData.ReportVersion) {
+                tmpSelf.pict.AppData.ComprehensionLoader.LastReport = pReportData;
+                if (tmpSelf.pict.AppData.ComprehensionLoader.StatusDetailExpanded) {
+                  tmpSelf.renderStatusDetail();
+                }
+              }
+            }).catch(function () {/* ignore fetch errors */});
+          }
+        }
+
+        // ================================================================
+        // Status Detail Expansion
+        // ================================================================
+
+        onStatusDetailExpanded() {
+          let tmpAppData = this.pict.AppData.ComprehensionLoader;
+          tmpAppData.StatusDetailExpanded = true;
+
+          // Immediate render from whatever data we have
+          this.renderStatusDetail();
+
+          // Start detail polling (poll /load/status for per-entity data)
+          if (tmpAppData.StatusDetailTimer) clearInterval(tmpAppData.StatusDetailTimer);
+          let tmpSelf = this;
+          tmpAppData.StatusDetailTimer = setInterval(function () {
+            tmpSelf.pollStatusDetail();
+          }, 2000);
+          this.pollStatusDetail();
+        }
+        onStatusDetailCollapsed() {
+          let tmpAppData = this.pict.AppData.ComprehensionLoader;
+          tmpAppData.StatusDetailExpanded = false;
+          if (tmpAppData.StatusDetailTimer) {
+            clearInterval(tmpAppData.StatusDetailTimer);
+            tmpAppData.StatusDetailTimer = null;
+          }
+        }
+        pollStatusDetail() {
+          let tmpSelf = this;
+          this.api('GET', '/comprehension_load/load/status').then(function (pData) {
+            tmpSelf.pict.AppData.ComprehensionLoader.StatusDetailData = pData;
+            tmpSelf.renderStatusDetail();
+          }).catch(function () {/* ignore poll errors */});
+        }
+        renderStatusDetail() {
+          let tmpContainer = document.getElementById('ComprehensionLoader-StatusDetail-Container');
+          if (!tmpContainer) return;
+          let tmpAppData = this.pict.AppData.ComprehensionLoader;
+          let tmpLiveStatus = tmpAppData.LastLiveStatus;
+          let tmpStatusData = tmpAppData.StatusDetailData;
+          let tmpReport = tmpAppData.LastReport;
+
+          // Determine data source: live during load, report after load
+          let tmpEntities = {};
+          let tmpThroughputSamples = [];
+          let tmpIsLive = false;
+          if (tmpLiveStatus && (tmpLiveStatus.Phase === 'loading' || tmpLiveStatus.Phase === 'stopping')) {
+            tmpIsLive = true;
+            if (tmpStatusData && tmpStatusData.Entities) tmpEntities = tmpStatusData.Entities;
+            if (tmpLiveStatus.ThroughputSamples) tmpThroughputSamples = tmpLiveStatus.ThroughputSamples;
+          } else if (tmpReport && tmpReport.ReportVersion) {
+            // Build entities object from report
+            for (let i = 0; i < tmpReport.Entities.length; i++) {
+              let tmpE = tmpReport.Entities[i];
+              tmpEntities[tmpE.Name] = tmpE;
+            }
+            tmpThroughputSamples = tmpReport.ThroughputSamples || [];
+          } else if (tmpStatusData && tmpStatusData.Entities) {
+            tmpEntities = tmpStatusData.Entities;
+            if (tmpLiveStatus && tmpLiveStatus.ThroughputSamples) {
+              tmpThroughputSamples = tmpLiveStatus.ThroughputSamples;
+            }
+          }
+
+          // Categorize entities
+          let tmpRunning = [];
+          let tmpPending = [];
+          let tmpCompleted = [];
+          let tmpErrors = [];
+          let tmpEntityNames = Object.keys(tmpEntities);
+          for (let i = 0; i < tmpEntityNames.length; i++) {
+            let tmpName = tmpEntityNames[i];
+            let tmpE = tmpEntities[tmpName];
+            if (tmpE.Status === 'Pushing') {
+              tmpRunning.push({
+                Name: tmpName,
+                Data: tmpE
+              });
+            } else if (tmpE.Status === 'Pending') {
+              tmpPending.push(tmpName);
+            } else if (tmpE.Status === 'Complete') {
+              tmpCompleted.push({
+                Name: tmpName,
+                Data: tmpE
+              });
+            } else if (tmpE.Status === 'Error') {
+              tmpErrors.push({
+                Name: tmpName,
+                Data: tmpE
+              });
+            }
+          }
+          let tmpHtml = '';
+
+          // === Section 1: Running Operations ===
+          if (tmpRunning.length > 0 || tmpPending.length > 0) {
+            tmpHtml += '<div class="status-detail-section">';
+            tmpHtml += '<div class="status-detail-section-title">Running</div>';
+            for (let i = 0; i < tmpRunning.length; i++) {
+              let tmpOp = tmpRunning[i];
+              let tmpPct = tmpOp.Data.Total > 0 ? Math.round(tmpOp.Data.Pushed / tmpOp.Data.Total * 100) : 0;
+              let tmpPushedFmt = this.formatNumber(tmpOp.Data.Pushed || 0);
+              let tmpTotalFmt = this.formatNumber(tmpOp.Data.Total || 0);
+              tmpHtml += '<div class="running-op-row">';
+              tmpHtml += '  <div class="running-op-name">' + this.escapeHtml(tmpOp.Name) + '</div>';
+              tmpHtml += '  <div class="running-op-bar"><div class="running-op-bar-fill" style="width:' + tmpPct + '%"></div></div>';
+              tmpHtml += '  <div class="running-op-count">' + tmpPushedFmt + ' / ' + tmpTotalFmt + ' (' + tmpPct + '%)</div>';
+              tmpHtml += '</div>';
+            }
+            if (tmpPending.length > 0) {
+              tmpHtml += '<div class="running-op-pending">' + tmpPending.length + ' entit' + (tmpPending.length === 1 ? 'y' : 'ies') + ' waiting</div>';
+            }
+            tmpHtml += '</div>';
+          }
+
+          // === Section 2: Completed Operations ===
+          if (tmpCompleted.length > 0) {
+            tmpHtml += '<div class="status-detail-section">';
+            tmpHtml += '<div class="status-detail-section-title">Completed (' + tmpCompleted.length + ')</div>';
+            for (let i = 0; i < tmpCompleted.length; i++) {
+              let tmpOp = tmpCompleted[i];
+              let tmpPushedFmt = this.formatNumber(tmpOp.Data.Pushed || tmpOp.Data.Total || 0);
+              tmpHtml += '<div class="completed-op-row">';
+              tmpHtml += '<div class="completed-op-header">';
+              tmpHtml += '  <span class="completed-op-checkmark">\u2713</span>';
+              tmpHtml += '  <span class="completed-op-name">' + this.escapeHtml(tmpOp.Name) + '</span>';
+              tmpHtml += '  <span class="completed-op-stats">' + tmpPushedFmt + ' records</span>';
+              tmpHtml += '</div>';
+              tmpHtml += '</div>';
+            }
+            tmpHtml += '</div>';
+          }
+
+          // === Section 3: Errors ===
+          if (tmpErrors.length > 0) {
+            tmpHtml += '<div class="status-detail-section">';
+            tmpHtml += '<div class="status-detail-section-title">Errors (' + tmpErrors.length + ')</div>';
+            for (let i = 0; i < tmpErrors.length; i++) {
+              let tmpOp = tmpErrors[i];
+              let tmpPushedFmt = this.formatNumber(tmpOp.Data.Pushed || 0);
+              let tmpTotalFmt = this.formatNumber(tmpOp.Data.Total || 0);
+              tmpHtml += '<div class="error-op-row">';
+              tmpHtml += '<div class="error-op-header">';
+              tmpHtml += '  <span style="color:#dc3545">\u2717</span>';
+              tmpHtml += '  <span class="error-op-name">' + this.escapeHtml(tmpOp.Name) + '</span>';
+              tmpHtml += '  <span class="error-op-status">' + tmpPushedFmt + ' / ' + tmpTotalFmt + '</span>';
+              tmpHtml += '</div>';
+              if (tmpOp.Data.ErrorMessage) {
+                tmpHtml += '<div class="error-op-message">' + this.escapeHtml(tmpOp.Data.ErrorMessage) + '</div>';
+              }
+              tmpHtml += '</div>';
+            }
+            tmpHtml += '</div>';
+          }
+          if (tmpHtml === '') {
+            if (tmpIsLive) {
+              tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">Load in progress, waiting for entity data\u2026</div>';
+            } else {
+              tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">No load data available. Run a load to see operation details here.</div>';
+            }
+          }
+          tmpContainer.innerHTML = tmpHtml;
+
+          // Update the throughput histogram
+          this.updateThroughputHistogram(tmpThroughputSamples);
+        }
+        updateThroughputHistogram(pSamples) {
+          let tmpHistContainer = document.getElementById('ComprehensionLoader-Throughput-Histogram');
+          if (!tmpHistContainer) return;
+          if (!pSamples || pSamples.length < 2) {
+            tmpHistContainer.style.display = 'none';
+            return;
+          }
+
+          // Compute raw deltas per interval
+          let tmpRawDeltas = [];
+          for (let i = 1; i < pSamples.length; i++) {
+            let tmpDelta = pSamples[i].pushed - pSamples[i - 1].pushed;
+            if (tmpDelta < 0) tmpDelta = 0;
+            tmpRawDeltas.push({
+              delta: tmpDelta,
+              t: pSamples[i].t
+            });
+          }
+
+          // Downsample if too many bars
+          let tmpContainerWidth = tmpHistContainer.clientWidth || 800;
+          let tmpMaxBars = Math.max(20, Math.floor(tmpContainerWidth / 6));
+          let tmpAggregated = tmpRawDeltas;
+          if (tmpRawDeltas.length > tmpMaxBars) {
+            let tmpBucketSize = Math.ceil(tmpRawDeltas.length / tmpMaxBars);
+            tmpAggregated = [];
+            for (let i = 0; i < tmpRawDeltas.length; i += tmpBucketSize) {
+              let tmpSum = 0;
+              let tmpLastT = 0;
+              for (let j = i; j < Math.min(i + tmpBucketSize, tmpRawDeltas.length); j++) {
+                tmpSum += tmpRawDeltas[j].delta;
+                tmpLastT = tmpRawDeltas[j].t;
+              }
+              tmpAggregated.push({
+                delta: tmpSum,
+                t: tmpLastT
+              });
+            }
+          }
+
+          // Check for data
+          let tmpHasData = false;
+          for (let i = 0; i < tmpAggregated.length; i++) {
+            if (tmpAggregated[i].delta > 0) {
+              tmpHasData = true;
+              break;
+            }
+          }
+          if (!tmpHasData) {
+            tmpHistContainer.style.display = 'none';
+            return;
+          }
+
+          // Build bins
+          let tmpStartT = pSamples[0].t;
+          let tmpBins = [];
+          for (let i = 0; i < tmpAggregated.length; i++) {
+            let tmpElapsedSec = Math.round((tmpAggregated[i].t - tmpStartT) / 1000);
+            tmpBins.push({
+              Label: this.formatElapsed(tmpElapsedSec),
+              Value: tmpAggregated[i].delta
+            });
+          }
+
+          // Update the histogram view
+          tmpHistContainer.style.display = '';
+          let tmpHistView = this.pict.views['ComprehensionLoader-StatusHistogram'];
+          if (tmpHistView) {
+            tmpHistView.setBins(tmpBins);
+            tmpHistView.renderHistogram();
+          }
+        }
+        formatElapsed(pSec) {
+          if (pSec < 60) return pSec + 's';
+          if (pSec < 3600) {
+            let tmpM = Math.floor(pSec / 60);
+            let tmpS = pSec % 60;
+            return tmpM + ':' + (tmpS < 10 ? '0' : '') + tmpS;
+          }
+          let tmpH = Math.floor(pSec / 3600);
+          let tmpM = Math.floor(pSec % 3600 / 60);
+          return tmpH + 'h' + (tmpM < 10 ? '0' : '') + tmpM;
+        }
+        formatCompact(pNum) {
+          if (pNum >= 1000000) return (pNum / 1000000).toFixed(1) + 'M';
+          if (pNum >= 10000) return (pNum / 1000).toFixed(0) + 'K';
+          if (pNum >= 1000) return (pNum / 1000).toFixed(1) + 'K';
+          return pNum.toString();
+        }
+        formatNumber(pNum) {
+          return pNum.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        // ================================================================
+        // Auto-Process
+        // ================================================================
+
+        initAutoProcess() {
+          let tmpSelf = this;
+          this.api('GET', '/comprehension_load/load/live-status').then(function (pData) {
+            if (pData.Phase === 'loading' || pData.Phase === 'stopping') {
+              tmpSelf.pict.AppData.ComprehensionLoader.ServerBusyAtLoad = true;
+              tmpSelf.setSectionPhase(4, 'busy');
+              tmpSelf.pict.views['ComprehensionLoader-Load'].startPolling();
+              return;
+            }
+            tmpSelf.runAutoProcessChain();
+          }).catch(function () {
+            // Server unreachable — don't auto-process
+          });
+        }
+        runAutoProcessChain() {
+          let tmpSelf = this;
+          let tmpDelay = 0;
+          let tmpStepDelay = 2000;
+          if (document.getElementById('auto1') && document.getElementById('auto1').checked) {
+            setTimeout(function () {
+              tmpSelf.pict.views['ComprehensionLoader-Session'].goAction();
+            }, tmpDelay);
+            tmpDelay += tmpStepDelay + 1500;
+          }
+          if (document.getElementById('auto2') && document.getElementById('auto2').checked) {
+            setTimeout(function () {
+              tmpSelf.pict.views['ComprehensionLoader-Schema'].fetchSchema();
+            }, tmpDelay);
+            tmpDelay += tmpStepDelay;
+          }
+          if (document.getElementById('auto3') && document.getElementById('auto3').checked) {
+            setTimeout(function () {
+              tmpSelf.pict.views['ComprehensionLoader-Source'].goAction();
+            }, tmpDelay);
+            tmpDelay += tmpStepDelay;
+          }
+          if (document.getElementById('auto4') && document.getElementById('auto4').checked) {
+            setTimeout(function () {
+              tmpSelf.pict.views['ComprehensionLoader-Load'].startLoad();
+            }, tmpDelay);
+          }
+        }
+      }
+      module.exports = ComprehensionLoaderProvider;
+      module.exports.default_configuration = {
+        ProviderIdentifier: 'ComprehensionLoader',
+        AutoInitialize: true,
+        AutoInitializeOrdinal: 0
+      };
+    }, {
+      "pict-provider": 6
+    }],
+    19: [function (require, module, exports) {
+      const libPictView = require('pict-view');
+      class ComprehensionLoaderLayoutView extends libPictView {
+        constructor(pFable, pOptions, pServiceHash) {
+          super(pFable, pOptions, pServiceHash);
+        }
+        onAfterRender() {
+          // Render all section views into their containers
+          this.pict.views['ComprehensionLoader-Session'].render();
+          this.pict.views['ComprehensionLoader-Schema'].render();
+          this.pict.views['ComprehensionLoader-Source'].render();
+          this.pict.views['ComprehensionLoader-Load'].render();
+          this.pict.CSSMap.injectCSS();
+        }
+        toggleSection(pSectionId) {
+          let tmpCard = document.getElementById(pSectionId);
+          if (!tmpCard) return;
+          tmpCard.classList.toggle('open');
+        }
+        expandAllSections() {
+          let tmpCards = document.querySelectorAll('.accordion-card');
+          for (let i = 0; i < tmpCards.length; i++) {
+            tmpCards[i].classList.add('open');
+          }
+        }
+        collapseAllSections() {
+          let tmpCards = document.querySelectorAll('.accordion-card');
+          for (let i = 0; i < tmpCards.length; i++) {
+            tmpCards[i].classList.remove('open');
+          }
+        }
+        toggleStatusDetail() {
+          let tmpDetail = document.getElementById('liveStatusDetail');
+          let tmpMeta = document.getElementById('liveStatusMeta');
+          let tmpMessage = document.getElementById('liveStatusMessage');
+          let tmpToggle = document.getElementById('liveStatusToggle');
+          let tmpBar = document.getElementById('liveStatusBar');
+          if (!tmpDetail) return;
+          let tmpIsExpanded = tmpDetail.style.display !== 'none';
+          if (tmpIsExpanded) {
+            tmpDetail.style.display = 'none';
+            tmpMeta.style.display = '';
+            tmpMessage.style.display = '';
+            tmpToggle.innerHTML = '&#9660;';
+            tmpBar.classList.remove('expanded');
+            this.pict.providers.ComprehensionLoader.onStatusDetailCollapsed();
+          } else {
+            tmpDetail.style.display = '';
+            tmpMeta.style.display = 'none';
+            tmpMessage.style.display = 'none';
+            tmpToggle.innerHTML = '&#9650;';
+            tmpBar.classList.add('expanded');
+            this.pict.providers.ComprehensionLoader.onStatusDetailExpanded();
+          }
+        }
+      }
+      module.exports = ComprehensionLoaderLayoutView;
+      module.exports.default_configuration = {
+        ViewIdentifier: 'ComprehensionLoader-Layout',
+        DefaultRenderable: 'ComprehensionLoader-Layout',
+        DefaultDestinationAddress: '#ComprehensionLoader-Application-Container',
+        CSS: /*css*/`
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
+h1 { margin-bottom: 20px; color: #1a1a1a; }
+h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px solid #ddd; padding-bottom: 6px; }
+
+.section { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+/* Accordion layout */
+.accordion-row { display: flex; gap: 0; margin-bottom: 16px; align-items: stretch; }
+.accordion-number {
+	flex: 0 0 48px; display: flex; align-items: flex-start; justify-content: center;
+	padding-top: 16px; font-size: 1.6em; font-weight: 700; color: #4a90d9;
+	user-select: none;
+}
+.accordion-card {
+	flex: 1; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	overflow: hidden; min-width: 0;
+}
+.accordion-header {
+	display: flex; align-items: center; padding: 14px 20px; cursor: pointer;
+	user-select: none; gap: 12px; transition: background 0.15s; line-height: 1.4;
+}
+.accordion-header:hover { background: #fafafa; }
+.accordion-title { font-weight: 600; color: #333; font-size: 1.05em; white-space: nowrap; }
+.accordion-preview { flex: 1; font-style: italic; color: #888; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.accordion-toggle {
+	flex: 0 0 20px; display: flex; align-items: center; justify-content: center;
+	border-radius: 4px; transition: background 0.15s, transform 0.25s; font-size: 0.7em; color: #888;
+}
+.accordion-header:hover .accordion-toggle { background: #eee; color: #555; }
+.accordion-card.open .accordion-toggle { transform: rotate(180deg); }
+.accordion-body { padding: 0 20px 20px; display: none; }
+.accordion-card.open .accordion-body { display: block; }
+.accordion-card.open .accordion-header { border-bottom: 1px solid #eee; }
+.accordion-card.open .accordion-preview { display: none; }
+
+/* Action controls (go link + auto checkbox) */
+.accordion-actions { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+.accordion-card.open .accordion-actions { display: none; }
+.accordion-go {
+	font-size: 0.82em; color: #4a90d9; cursor: pointer; text-decoration: none;
+	font-weight: 500; white-space: nowrap; padding: 2px 6px; border-radius: 3px;
+	transition: background 0.15s;
+}
+.accordion-go:hover { background: #e8f0fe; text-decoration: underline; }
+.accordion-auto {
+	font-size: 0.82em; color: #999; white-space: nowrap; cursor: pointer;
+}
+.accordion-auto .auto-label { display: none; }
+.accordion-auto:hover .auto-label { display: inline; }
+.accordion-auto input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; vertical-align: middle; position: relative; top: 0px; opacity: 0.75; transition: opacity 0.15s; }
+.accordion-auto:hover input[type="checkbox"] { opacity: 1; }
+.accordion-auto:hover { color: #666; }
+
+/* Phase status indicator */
+.accordion-phase {
+	flex: 0 0 auto; display: none; align-items: center; justify-content: center;
+	font-size: 0.85em; line-height: 1;
+}
+.accordion-phase.visible { display: flex; }
+.accordion-phase-ok { color: #28a745; }
+.accordion-phase-error { color: #dc3545; }
+.accordion-phase-busy { color: #28a745; }
+.accordion-phase-busy .phase-spinner {
+	display: inline-block; width: 14px; height: 14px;
+	border: 2px solid #28a745; border-top-color: transparent; border-radius: 50%;
+	animation: phase-spin 0.8s linear infinite; vertical-align: middle;
+}
+@keyframes phase-spin {
+	to { transform: rotate(360deg); }
+}
+
+.accordion-controls {
+	display: flex; gap: 8px; margin-bottom: 12px; justify-content: flex-end;
+}
+.accordion-controls button {
+	padding: 4px 10px; font-size: 0.82em; font-weight: 500; background: none;
+	border: 1px solid #ccc; border-radius: 4px; color: #666; cursor: pointer; margin: 0;
+}
+.accordion-controls button:hover { background: #f0f0f0; border-color: #aaa; color: #333; }
+
+label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9em; }
+input[type="text"], input[type="password"], input[type="number"] {
+	width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px;
+	font-size: 0.95em; margin-bottom: 10px;
+}
+input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus {
+	outline: none; border-color: #4a90d9;
+}
+
+button {
+	padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;
+	font-size: 0.9em; font-weight: 600; margin-right: 8px; margin-bottom: 8px;
+}
+button.primary { background: #4a90d9; color: #fff; }
+button.primary:hover { background: #357abd; }
+button.secondary { background: #6c757d; color: #fff; }
+button.secondary:hover { background: #5a6268; }
+button.danger { background: #dc3545; color: #fff; }
+button.danger:hover { background: #c82333; }
+button.success { background: #28a745; color: #fff; }
+button.success:hover { background: #218838; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.status { padding: 8px 12px; border-radius: 4px; margin-top: 10px; font-size: 0.9em; }
+.status.ok { background: #d4edda; color: #155724; }
+.status.error { background: #f8d7da; color: #721c24; }
+.status.info { background: #d1ecf1; color: #0c5460; }
+.status.warn { background: #fff3cd; color: #856404; }
+
+.inline-group { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
+.inline-group > div { flex: 1; }
+
+a { color: #4a90d9; }
+
+select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95em; margin-bottom: 10px; }
+
+.checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.checkbox-row input[type="checkbox"] { width: auto; margin: 0; }
+.checkbox-row label { display: inline; margin: 0; font-weight: normal; cursor: pointer; }
+
+/* Live Status Bar */
+.live-status-bar {
+	background: #fff; border-radius: 8px; margin-bottom: 16px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	position: sticky; top: 0; z-index: 100; border-left: 4px solid #6c757d;
+}
+.live-status-bar.phase-idle { border-left-color: #6c757d; }
+.live-status-bar.phase-disconnected { border-left-color: #dc3545; }
+.live-status-bar.phase-ready { border-left-color: #4a90d9; }
+.live-status-bar.phase-loading { border-left-color: #28a745; }
+.live-status-bar.phase-stopping { border-left-color: #ffc107; }
+.live-status-bar.phase-complete { border-left-color: #28a745; }
+
+.live-status-dot {
+	width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+	background: #6c757d;
+}
+.live-status-bar.phase-idle .live-status-dot { background: #6c757d; }
+.live-status-bar.phase-disconnected .live-status-dot { background: #dc3545; }
+.live-status-bar.phase-ready .live-status-dot { background: #4a90d9; }
+.live-status-bar.phase-loading .live-status-dot {
+	background: #28a745;
+	animation: live-pulse 1.5s ease-in-out infinite;
+}
+.live-status-bar.phase-stopping .live-status-dot {
+	background: #ffc107;
+	animation: live-pulse 0.8s ease-in-out infinite;
+}
+.live-status-bar.phase-complete .live-status-dot { background: #28a745; }
+
+@keyframes live-pulse {
+	0%, 100% { opacity: 1; transform: scale(1); }
+	50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.live-status-message { flex: 1; font-size: 0.92em; color: #333; line-height: 1.4; }
+
+.live-status-meta {
+	display: flex; gap: 16px; flex-shrink: 0; font-size: 0.82em; color: #666;
+}
+.live-status-meta-item { white-space: nowrap; }
+.live-status-meta-item strong { color: #333; }
+
+.live-status-progress-bar {
+	height: 3px; background: #e9ecef; border-radius: 2px; overflow: hidden;
+	position: absolute; bottom: 0; left: 0; right: 0;
+}
+.live-status-progress-fill {
+	height: 100%; background: #28a745; transition: width 1s ease;
+}
+/* Expandable status bar */
+.live-status-header {
+	display: flex; align-items: center; gap: 14px; cursor: pointer;
+	padding: 14px 20px; user-select: none;
+}
+.live-status-bar.expanded .live-status-header {
+	border-bottom: 1px solid #e9ecef; padding-bottom: 10px;
+}
+.live-status-expand-toggle {
+	flex: 0 0 20px; display: flex; align-items: center; justify-content: center;
+	font-size: 0.7em; color: #888; transition: transform 0.25s;
+}
+.live-status-bar.expanded .live-status-expand-toggle { transform: rotate(180deg); }
+
+.live-status-detail {
+	padding: 12px 20px 16px; max-height: 60vh; overflow-y: auto;
+}
+
+/* Status Detail Sections */
+.status-detail-section { margin-bottom: 14px; }
+.status-detail-section:last-child { margin-bottom: 0; }
+.status-detail-section-title {
+	font-size: 0.85em; font-weight: 600; color: #555; text-transform: uppercase;
+	letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 4px;
+	border-bottom: 1px solid #eee;
+}
+
+/* Running Operations */
+.running-op-row {
+	display: flex; align-items: center; gap: 12px; padding: 6px 0;
+	font-size: 0.9em;
+}
+.running-op-name { font-weight: 600; min-width: 180px; }
+.running-op-bar {
+	flex: 1; height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden;
+	min-width: 120px;
+}
+.running-op-bar-fill { height: 100%; background: #4a90d9; transition: width 0.5s ease; }
+.running-op-count { font-size: 0.85em; color: #666; white-space: nowrap; }
+.running-op-pending { color: #888; font-size: 0.85em; font-style: italic; padding: 4px 0; }
+
+/* Completed Operations */
+.completed-op-row { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.completed-op-row:last-child { border-bottom: none; }
+.completed-op-header {
+	display: flex; align-items: center; gap: 10px; font-size: 0.9em; margin-bottom: 4px;
+}
+.completed-op-name { font-weight: 600; }
+.completed-op-stats { color: #666; font-size: 0.85em; }
+.completed-op-checkmark { color: #28a745; }
+
+/* Error Operations */
+.error-op-row { padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9em; }
+.error-op-row:last-child { border-bottom: none; }
+.error-op-header { display: flex; align-items: center; gap: 8px; }
+.error-op-name { font-weight: 600; color: #dc3545; }
+.error-op-status { font-size: 0.82em; color: #dc3545; }
+.error-op-message { font-size: 0.82em; color: #888; margin-top: 2px; padding-left: 18px; }
+`,
+        Templates: [{
+          Hash: 'ComprehensionLoader-Layout',
+          Template: /*html*/`
+<h1>Retold Comprehension Loader</h1>
+
+<!-- Live Status Bar (Expandable) -->
+<div id="liveStatusBar" class="live-status-bar phase-idle" style="position:relative">
+	<div class="live-status-header" onclick="pict.views['ComprehensionLoader-Layout'].toggleStatusDetail()">
+		<div class="live-status-dot"></div>
+		<div class="live-status-message" id="liveStatusMessage">Idle</div>
+		<div class="live-status-meta" id="liveStatusMeta"></div>
+		<div class="live-status-expand-toggle" id="liveStatusToggle">&#9660;</div>
+	</div>
+	<div class="live-status-detail" id="liveStatusDetail" style="display:none">
+		<div id="ComprehensionLoader-Throughput-Histogram"></div>
+		<div id="ComprehensionLoader-StatusDetail-Container"></div>
+	</div>
+	<div class="live-status-progress-bar"><div class="live-status-progress-fill" id="liveStatusProgressFill" style="width:0%"></div></div>
+</div>
+
+<!-- Expand / Collapse All -->
+<div class="accordion-controls">
+	<button onclick="pict.views['ComprehensionLoader-Layout'].expandAllSections()">Expand All</button>
+	<button onclick="pict.views['ComprehensionLoader-Layout'].collapseAllSections()">Collapse All</button>
+</div>
+
+<!-- Section containers -->
+<div id="ComprehensionLoader-Section-Session"></div>
+<div id="ComprehensionLoader-Section-Schema"></div>
+<div id="ComprehensionLoader-Section-Source"></div>
+<div id="ComprehensionLoader-Section-Load"></div>
+`
+        }],
+        Renderables: [{
+          RenderableHash: 'ComprehensionLoader-Layout',
+          TemplateHash: 'ComprehensionLoader-Layout',
+          DestinationAddress: '#ComprehensionLoader-Application-Container'
+        }]
+      };
+    }, {
+      "pict-view": 13
+    }],
+    20: [function (require, module, exports) {
+      const libPictView = require('pict-view');
+      class ComprehensionLoaderLoadView extends libPictView {
+        constructor(pFable, pOptions, pServiceHash) {
+          super(pFable, pOptions, pServiceHash);
+        }
+        startLoad() {
+          this.pict.providers.ComprehensionLoader.setSectionPhase(4, 'busy');
+          this.pict.providers.ComprehensionLoader.setStatus('loadStatus', 'Starting load...', 'info');
+
+          // Clear previous report
+          this.pict.AppData.ComprehensionLoader.LastReport = null;
+          let tmpSelf = this;
+          this.pict.providers.ComprehensionLoader.api('POST', '/comprehension_load/load/start').then(function (pData) {
+            if (pData.Success) {
+              let tmpMsg = 'Load started for ' + pData.Entities.length + ' entities (' + tmpSelf.pict.providers.ComprehensionLoader.formatNumber(pData.TotalRecords) + ' records).';
+              tmpSelf.pict.providers.ComprehensionLoader.setStatus('loadStatus', tmpMsg, 'ok');
+              tmpSelf.startPolling();
+            } else {
+              tmpSelf.pict.providers.ComprehensionLoader.setStatus('loadStatus', 'Load start failed: ' + (pData.Error || 'Unknown error'), 'error');
+              tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(4, 'error');
+            }
+          }).catch(function (pError) {
+            tmpSelf.pict.providers.ComprehensionLoader.setStatus('loadStatus', 'Request failed: ' + pError.message, 'error');
+            tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(4, 'error');
+          });
+        }
+        stopLoad() {
+          let tmpSelf = this;
+          this.pict.providers.ComprehensionLoader.api('POST', '/comprehension_load/load/stop').then(function (pData) {
+            tmpSelf.pict.providers.ComprehensionLoader.setStatus('loadStatus', 'Load stop requested.', 'warn');
+          }).catch(function (pError) {
+            tmpSelf.pict.providers.ComprehensionLoader.setStatus('loadStatus', 'Request failed: ' + pError.message, 'error');
+          });
+        }
+        startPolling() {
+          if (this.pict.AppData.ComprehensionLoader.LoadPollTimer) clearInterval(this.pict.AppData.ComprehensionLoader.LoadPollTimer);
+          let tmpSelf = this;
+          this.pict.AppData.ComprehensionLoader.LoadPollTimer = setInterval(function () {
+            tmpSelf.pollLoadStatus();
+          }, 2000);
+          this.pollLoadStatus();
+        }
+        stopPolling() {
+          if (this.pict.AppData.ComprehensionLoader.LoadPollTimer) {
+            clearInterval(this.pict.AppData.ComprehensionLoader.LoadPollTimer);
+            this.pict.AppData.ComprehensionLoader.LoadPollTimer = null;
+          }
+        }
+        pollLoadStatus() {
+          let tmpSelf = this;
+          this.pict.providers.ComprehensionLoader.api('GET', '/comprehension_load/load/status').then(function (pData) {
+            tmpSelf.renderLoadProgress(pData);
+            if (!pData.Running) {
+              tmpSelf.stopPolling();
+              let tmpEntities = pData.Entities || {};
+              let tmpNames = Object.keys(tmpEntities);
+              if (tmpNames.length > 0) {
+                let tmpHasErrors = false;
+                for (let i = 0; i < tmpNames.length; i++) {
+                  if (tmpEntities[tmpNames[i]].Status === 'Error') tmpHasErrors = true;
+                }
+                if (tmpHasErrors) {
+                  tmpSelf.pict.providers.ComprehensionLoader.setStatus('loadStatus', 'Load finished with errors.', 'error');
+                  tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(4, 'error');
+                } else {
+                  tmpSelf.pict.providers.ComprehensionLoader.setStatus('loadStatus', 'Load complete.', 'ok');
+                  tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(4, 'ok');
+                }
+
+                // Fetch the structured report
+                tmpSelf.fetchLoadReport();
+              }
+            }
+          }).catch(function (pError) {
+            // Silently ignore poll errors
+          });
+        }
+        fetchLoadReport() {
+          let tmpSelf = this;
+          this.pict.providers.ComprehensionLoader.api('GET', '/comprehension_load/load/report').then(function (pData) {
+            if (pData && pData.ReportVersion) {
+              tmpSelf.pict.AppData.ComprehensionLoader.LastReport = pData;
+              tmpSelf.renderLoadReport(pData);
+            }
+          }).catch(function (pError) {
+            // Ignore report fetch errors
+          });
+        }
+        renderLoadReport(pReport) {
+          let tmpSection = document.getElementById('loadReportSection');
+          if (!tmpSection) return;
+          tmpSection.style.display = '';
+          let tmpCardsContainer = document.getElementById('reportSummaryCards');
+          let tmpOutcomeClass = 'outcome-' + pReport.Outcome.toLowerCase();
+          let tmpOutcomeColor = {
+            Success: '#28a745',
+            Partial: '#ffc107',
+            Error: '#dc3545',
+            Stopped: '#6c757d'
+          }[pReport.Outcome] || '#666';
+          let tmpDurationSec = pReport.RunTimestamps.DurationSeconds || 0;
+          let tmpDurationStr = tmpDurationSec < 60 ? tmpDurationSec + 's' : Math.floor(tmpDurationSec / 60) + 'm ' + tmpDurationSec % 60 + 's';
+          let tmpTotalPushed = this.pict.providers.ComprehensionLoader.formatNumber(pReport.Summary.TotalPushed);
+          let tmpTotalRecords = this.pict.providers.ComprehensionLoader.formatNumber(pReport.Summary.TotalRecords);
+          tmpCardsContainer.innerHTML = '' + '<div class="report-card ' + tmpOutcomeClass + '">' + '  <div class="card-label">Outcome</div>' + '  <div class="card-value" style="color:' + tmpOutcomeColor + '">' + pReport.Outcome + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Duration</div>' + '  <div class="card-value">' + tmpDurationStr + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Entities</div>' + '  <div class="card-value">' + pReport.Summary.Complete + ' / ' + pReport.Summary.TotalEntities + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Records Pushed</div>' + '  <div class="card-value">' + tmpTotalPushed + '</div>' + '  <div style="font-size:0.75em; color:#888">of ' + tmpTotalRecords + '</div>' + '</div>';
+
+          // Anomalies
+          let tmpAnomalyContainer = document.getElementById('reportAnomalies');
+          if (pReport.Anomalies.length === 0) {
+            tmpAnomalyContainer.innerHTML = '<div style="color:#28a745; font-weight:600; font-size:0.9em">No anomalies detected.</div>';
+          } else {
+            let tmpHtml = '<h4 style="margin:0 0 8px; color:#dc3545; font-size:0.95em">Anomalies (' + pReport.Anomalies.length + ')</h4>';
+            tmpHtml += '<table class="progress-table">';
+            tmpHtml += '<tr><th>Entity</th><th>Type</th><th>Message</th></tr>';
+            for (let i = 0; i < pReport.Anomalies.length; i++) {
+              let tmpAnomaly = pReport.Anomalies[i];
+              let tmpTypeColor = tmpAnomaly.Type === 'Error' ? '#dc3545' : '#6c757d';
+              tmpHtml += '<tr>';
+              tmpHtml += '<td><strong>' + this.pict.providers.ComprehensionLoader.escapeHtml(tmpAnomaly.Entity) + '</strong></td>';
+              tmpHtml += '<td style="color:' + tmpTypeColor + '">' + tmpAnomaly.Type + '</td>';
+              tmpHtml += '<td>' + this.pict.providers.ComprehensionLoader.escapeHtml(tmpAnomaly.Message) + '</td>';
+              tmpHtml += '</tr>';
+            }
+            tmpHtml += '</table>';
+            tmpAnomalyContainer.innerHTML = tmpHtml;
+          }
+
+          // Entity details
+          let tmpEntityContainer = document.getElementById('reportEntityDetails');
+          if (pReport.Entities && pReport.Entities.length > 0) {
+            let tmpHtml = '<h4 style="margin:0 0 8px; font-size:0.95em; color:#444">Entity Details</h4>';
+            tmpHtml += '<table class="progress-table">';
+            tmpHtml += '<tr><th>Entity</th><th>Duration</th><th>Records</th><th>Status</th></tr>';
+            for (let i = 0; i < pReport.Entities.length; i++) {
+              let tmpEntity = pReport.Entities[i];
+              let tmpDur = tmpEntity.DurationSeconds < 60 ? tmpEntity.DurationSeconds + 's' : Math.floor(tmpEntity.DurationSeconds / 60) + 'm ' + tmpEntity.DurationSeconds % 60 + 's';
+              let tmpRecs = this.pict.providers.ComprehensionLoader.formatNumber(tmpEntity.Pushed);
+              let tmpStatusColor = {
+                Complete: '#28a745',
+                Error: '#dc3545'
+              }[tmpEntity.Status] || '#666';
+              tmpHtml += '<tr>';
+              tmpHtml += '<td><strong>' + this.pict.providers.ComprehensionLoader.escapeHtml(tmpEntity.Name) + '</strong></td>';
+              tmpHtml += '<td>' + tmpDur + '</td>';
+              tmpHtml += '<td>' + tmpRecs + '</td>';
+              tmpHtml += '<td style="color:' + tmpStatusColor + '">' + tmpEntity.Status + '</td>';
+              tmpHtml += '</tr>';
+            }
+            tmpHtml += '</table>';
+            tmpEntityContainer.innerHTML = tmpHtml;
+          }
+        }
+        downloadReport() {
+          if (!this.pict.AppData.ComprehensionLoader.LastReport) {
+            this.pict.providers.ComprehensionLoader.setStatus('reportStatus', 'No report available.', 'warn');
+            return;
+          }
+          let tmpJson = JSON.stringify(this.pict.AppData.ComprehensionLoader.LastReport, null, '\t');
+          let tmpBlob = new Blob([tmpJson], {
+            type: 'application/json'
+          });
+          let tmpAnchor = document.createElement('a');
+          tmpAnchor.href = URL.createObjectURL(tmpBlob);
+          let tmpTimestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          tmpAnchor.download = 'ComprehensionLoader-Report-' + tmpTimestamp + '.json';
+          tmpAnchor.click();
+          URL.revokeObjectURL(tmpAnchor.href);
+          this.pict.providers.ComprehensionLoader.setStatus('reportStatus', 'Report downloaded.', 'ok');
+        }
+        copyReport() {
+          if (!this.pict.AppData.ComprehensionLoader.LastReport) {
+            this.pict.providers.ComprehensionLoader.setStatus('reportStatus', 'No report available.', 'warn');
+            return;
+          }
+          let tmpJson = JSON.stringify(this.pict.AppData.ComprehensionLoader.LastReport, null, '\t');
+          let tmpSelf = this;
+          navigator.clipboard.writeText(tmpJson).then(function () {
+            tmpSelf.pict.providers.ComprehensionLoader.setStatus('reportStatus', 'Report copied to clipboard.', 'ok');
+          });
+        }
+        renderLoadProgress(pData) {
+          let tmpContainer = document.getElementById('loadProgress');
+          let tmpEntities = pData.Entities || {};
+          let tmpEntityNames = Object.keys(tmpEntities);
+          if (tmpEntityNames.length === 0) {
+            tmpContainer.innerHTML = '';
+            return;
+          }
+          let tmpPushing = [];
+          let tmpPending = [];
+          let tmpCompleted = [];
+          let tmpErrors = [];
+          for (let i = 0; i < tmpEntityNames.length; i++) {
+            let tmpName = tmpEntityNames[i];
+            let tmpEntity = tmpEntities[tmpName];
+            if (tmpEntity.Status === 'Pushing') {
+              tmpPushing.push({
+                Name: tmpName,
+                Data: tmpEntity
+              });
+            } else if (tmpEntity.Status === 'Pending') {
+              tmpPending.push({
+                Name: tmpName,
+                Data: tmpEntity
+              });
+            } else if (tmpEntity.Status === 'Complete') {
+              tmpCompleted.push({
+                Name: tmpName,
+                Data: tmpEntity
+              });
+            } else {
+              tmpErrors.push({
+                Name: tmpName,
+                Data: tmpEntity
+              });
+            }
+          }
+          let tmpHtml = '';
+          let tmpSelf = this;
+          let fRenderRow = function (pName, pEntity) {
+            let tmpPct = 0;
+            if (pEntity.Total === 0 && pEntity.Status === 'Complete') {
+              tmpPct = 100;
+            } else if (pEntity.Total > 0) {
+              tmpPct = Math.round(pEntity.Pushed / pEntity.Total * 100);
+            }
+            let tmpBarColor = '#28a745';
+            if (pEntity.Status === 'Error') tmpBarColor = '#dc3545';else if (pEntity.Status === 'Pushing') tmpBarColor = '#4a90d9';else if (pEntity.Status === 'Pending') tmpBarColor = '#adb5bd';
+            let tmpRow = '<tr>';
+            tmpRow += '<td><strong>' + pName + '</strong></td>';
+            tmpRow += '<td>' + pEntity.Status + '</td>';
+            tmpRow += '<td>';
+            tmpRow += '<div class="progress-bar-container"><div class="progress-bar-fill" style="width:' + tmpPct + '%; background:' + tmpBarColor + '"></div></div>';
+            tmpRow += ' ' + tmpPct + '%';
+            tmpRow += '</td>';
+            tmpRow += '<td>' + (pEntity.Pushed || 0) + ' / ' + (pEntity.Total || 0) + '</td>';
+            tmpRow += '</tr>';
+            return tmpRow;
+          };
+          if (tmpPushing.length > 0) {
+            tmpHtml += '<div class="sync-section-header">Pushing</div>';
+            tmpHtml += '<table class="progress-table">';
+            tmpHtml += '<tr><th>Entity</th><th>Status</th><th>Progress</th><th>Pushed</th></tr>';
+            for (let i = 0; i < tmpPushing.length; i++) {
+              tmpHtml += fRenderRow(tmpPushing[i].Name, tmpPushing[i].Data);
+            }
+            tmpHtml += '</table>';
+          }
+          if (tmpPending.length > 0) {
+            tmpHtml += '<div class="sync-section-header">Next Up <span class="sync-section-count">' + tmpPending.length + '</span></div>';
+            let tmpShowCount = Math.min(8, tmpPending.length);
+            tmpHtml += '<table class="progress-table progress-table-muted">';
+            for (let i = 0; i < tmpShowCount; i++) {
+              tmpHtml += '<tr><td>' + tmpPending[i].Name + '</td>';
+              if (tmpPending[i].Data.Total > 0) {
+                tmpHtml += '<td class="sync-pending-count">' + tmpSelf.pict.providers.ComprehensionLoader.formatNumber(tmpPending[i].Data.Total) + ' records</td>';
+              } else {
+                tmpHtml += '<td class="sync-pending-count">\u2014</td>';
+              }
+              tmpHtml += '</tr>';
+            }
+            tmpHtml += '</table>';
+            if (tmpPending.length > tmpShowCount) {
+              tmpHtml += '<div class="sync-section-overflow">+ ' + (tmpPending.length - tmpShowCount) + ' more</div>';
+            }
+          }
+          if (tmpErrors.length > 0) {
+            tmpHtml += '<div class="sync-section-header sync-section-header-error">Errors <span class="sync-section-count">' + tmpErrors.length + '</span></div>';
+            tmpHtml += '<table class="progress-table">';
+            tmpHtml += '<tr><th>Entity</th><th>Status</th><th>Progress</th><th>Pushed</th></tr>';
+            for (let i = 0; i < tmpErrors.length; i++) {
+              tmpHtml += fRenderRow(tmpErrors[i].Name, tmpErrors[i].Data);
+            }
+            tmpHtml += '</table>';
+          }
+          if (tmpCompleted.length > 0) {
+            tmpHtml += '<div class="sync-section-header sync-section-header-ok">Completed <span class="sync-section-count">' + tmpCompleted.length + '</span></div>';
+            tmpHtml += '<table class="progress-table">';
+            tmpHtml += '<tr><th>Entity</th><th>Status</th><th>Progress</th><th>Pushed</th></tr>';
+            for (let i = 0; i < tmpCompleted.length; i++) {
+              tmpHtml += fRenderRow(tmpCompleted[i].Name, tmpCompleted[i].Data);
+            }
+            tmpHtml += '</table>';
+          }
+          tmpContainer.innerHTML = tmpHtml;
+        }
+      }
+      module.exports = ComprehensionLoaderLoadView;
+      module.exports.default_configuration = {
+        ViewIdentifier: 'ComprehensionLoader-Load',
+        DefaultRenderable: 'ComprehensionLoader-Load',
+        DefaultDestinationAddress: '#ComprehensionLoader-Section-Load',
+        CSS: /*css*/`
+.progress-table { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 4px; }
+.progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+.progress-table th { background: #f8f9fa; font-weight: 600; }
+.progress-table-muted td { color: #888; padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
+.progress-bar-container { width: 120px; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
+.progress-bar-fill { height: 100%; background: #28a745; transition: width 0.3s; }
+.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid #e0e0e0; }
+.sync-section-header:first-child { border-top: none; margin-top: 10px; }
+.sync-section-header-error { color: #dc3545; }
+.sync-section-header-ok { color: #28a745; }
+.sync-section-count { font-weight: 400; color: #999; font-size: 0.95em; }
+.sync-section-overflow { font-size: 0.8em; color: #aaa; padding: 2px 12px 6px; }
+.sync-pending-count { text-align: right; color: #aaa; font-size: 0.85em; }
+.report-card { background: #f8f9fa; border-radius: 8px; padding: 12px 16px; min-width: 140px; text-align: center; border: 1px solid #e9ecef; }
+.report-card .card-label { font-size: 0.8em; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.report-card .card-value { font-size: 1.4em; font-weight: 700; }
+.report-card.outcome-success { border-left: 4px solid #28a745; }
+.report-card.outcome-partial { border-left: 4px solid #ffc107; }
+.report-card.outcome-error { border-left: 4px solid #dc3545; }
+.report-card.outcome-stopped { border-left: 4px solid #6c757d; }
+`,
+        Templates: [{
+          Hash: 'ComprehensionLoader-Load',
+          Template: /*html*/`
+<div class="accordion-row">
+	<div class="accordion-number">4</div>
+	<div class="accordion-card" id="section4" data-section="4">
+		<div class="accordion-header" onclick="pict.views['ComprehensionLoader-Layout'].toggleSection('section4')">
+			<div class="accordion-title">Load</div>
+			<span class="accordion-phase" id="phase4"></span>
+			<div class="accordion-preview" id="preview4">Push comprehension data to the remote server</div>
+			<div class="accordion-actions">
+				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['ComprehensionLoader-Load'].startLoad()">go</span>
+				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto4"> <span class="auto-label">auto</span></label>
+			</div>
+			<div class="accordion-toggle">&#9660;</div>
+		</div>
+		<div class="accordion-body">
+			<div style="display:flex; gap:8px; margin-bottom:10px">
+				<button class="success" style="margin:0" onclick="pict.views['ComprehensionLoader-Load'].startLoad()">Start Load</button>
+				<button class="danger" style="margin:0" onclick="pict.views['ComprehensionLoader-Load'].stopLoad()">Stop Load</button>
+			</div>
+
+			<div id="loadStatus"></div>
+			<div id="loadProgress"></div>
+
+			<!-- Load Report (appears after load completes) -->
+			<div id="loadReportSection" style="display:none; margin-top:16px; padding-top:16px; border-top:2px solid #ddd">
+				<h3 style="margin:0 0 12px; font-size:1.1em">Load Report</h3>
+
+				<div id="reportSummaryCards" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px"></div>
+				<div id="reportAnomalies" style="margin-bottom:16px"></div>
+				<div id="reportEntityDetails" style="margin-bottom:16px"></div>
+
+				<div style="display:flex; gap:8px">
+					<button class="secondary" onclick="pict.views['ComprehensionLoader-Load'].downloadReport()">Download Report JSON</button>
+					<button class="secondary" onclick="pict.views['ComprehensionLoader-Load'].copyReport()">Copy Report</button>
+				</div>
+				<div id="reportStatus"></div>
+			</div>
+		</div>
+	</div>
+</div>
+`
+        }],
+        Renderables: [{
+          RenderableHash: 'ComprehensionLoader-Load',
+          TemplateHash: 'ComprehensionLoader-Load',
+          DestinationAddress: '#ComprehensionLoader-Section-Load'
+        }]
+      };
+    }, {
+      "pict-view": 13
+    }],
+    21: [function (require, module, exports) {
+      const libPictView = require('pict-view');
+      class ComprehensionLoaderSchemaView extends libPictView {
+        constructor(pFable, pOptions, pServiceHash) {
+          super(pFable, pOptions, pServiceHash);
+        }
+        fetchSchema() {
+          let tmpSchemaURL = document.getElementById('schemaURL').value.trim();
+          let tmpBody = {};
+          if (tmpSchemaURL) {
+            tmpBody.SchemaURL = tmpSchemaURL;
+          }
+          this.pict.providers.ComprehensionLoader.setSectionPhase(2, 'busy');
+          this.pict.providers.ComprehensionLoader.setStatus('schemaStatus', 'Fetching schema...', 'info');
+          this.pict.providers.ComprehensionLoader.api('POST', '/comprehension_load/schema/fetch', tmpBody).then(pData => {
+            if (pData.Success) {
+              this.pict.AppData.ComprehensionLoader.FetchedEntities = pData.Entities || [];
+              this.pict.providers.ComprehensionLoader.setStatus('schemaStatus', 'Fetched schema with ' + pData.EntityCount + ' entities from ' + pData.SchemaURL, 'ok');
+              this.pict.providers.ComprehensionLoader.setSectionPhase(2, 'ok');
+              this.renderEntityList();
+              this.pict.providers.ComprehensionLoader.updateAllPreviews();
+            } else {
+              this.pict.providers.ComprehensionLoader.setStatus('schemaStatus', 'Fetch failed: ' + (pData.Error || 'Unknown error'), 'error');
+              this.pict.providers.ComprehensionLoader.setSectionPhase(2, 'error');
+            }
+          }).catch(pError => {
+            this.pict.providers.ComprehensionLoader.setStatus('schemaStatus', 'Request failed: ' + pError.message, 'error');
+            this.pict.providers.ComprehensionLoader.setSectionPhase(2, 'error');
+          });
+        }
+        renderEntityList() {
+          let tmpEntities = this.pict.AppData.ComprehensionLoader.FetchedEntities || [];
+          let tmpContainer = document.getElementById('entityList');
+          if (!tmpContainer) return;
+          if (tmpEntities.length === 0) {
+            tmpContainer.innerHTML = '<div style="color:#888; font-size:0.9em">No entities found.</div>';
+            return;
+          }
+          let tmpHtml = '<div style="font-size:0.9em; color:#555">';
+          for (let i = 0; i < tmpEntities.length; i++) {
+            tmpHtml += '<span style="display:inline-block; background:#f0f0f0; border-radius:4px; padding:2px 8px; margin:2px 4px 2px 0; font-size:0.9em">';
+            tmpHtml += this.pict.providers.ComprehensionLoader.escapeHtml(tmpEntities[i]);
+            tmpHtml += '</span>';
+          }
+          tmpHtml += '</div>';
+          tmpContainer.innerHTML = tmpHtml;
+        }
+      }
+      module.exports = ComprehensionLoaderSchemaView;
+      module.exports.default_configuration = {
+        ViewIdentifier: 'ComprehensionLoader-Schema',
+        DefaultRenderable: 'ComprehensionLoader-Schema',
+        DefaultDestinationAddress: '#ComprehensionLoader-Section-Schema',
+        Templates: [{
+          Hash: 'ComprehensionLoader-Schema',
+          Template: /*html*/`
+<div class="accordion-row">
+	<div class="accordion-number">2</div>
+	<div class="accordion-card" id="section2" data-section="2">
+		<div class="accordion-header" onclick="pict.views['ComprehensionLoader-Layout'].toggleSection('section2')">
+			<div class="accordion-title">Remote Schema</div>
+			<span class="accordion-phase" id="phase2"></span>
+			<div class="accordion-preview" id="preview2">Fetch entity schema from the remote server</div>
+			<div class="accordion-actions">
+				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['ComprehensionLoader-Schema'].fetchSchema()">go</span>
+				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto2"> <span class="auto-label">auto</span></label>
+			</div>
+			<div class="accordion-toggle">&#9660;</div>
+		</div>
+		<div class="accordion-body">
+			<label for="schemaURL">Schema URL (leave blank for default: ServerURL + Retold/Models)</label>
+			<input type="text" id="schemaURL" placeholder="http://remote-server:8086/1.0/Retold/Models">
+
+			<button class="primary" onclick="pict.views['ComprehensionLoader-Schema'].fetchSchema()">Fetch Schema</button>
+			<div id="schemaStatus"></div>
+
+			<div id="entityList" style="margin-top:12px"></div>
+		</div>
+	</div>
+</div>
+`
+        }],
+        Renderables: [{
+          RenderableHash: 'ComprehensionLoader-Schema',
+          TemplateHash: 'ComprehensionLoader-Schema',
+          DestinationAddress: '#ComprehensionLoader-Section-Schema'
+        }]
+      };
+    }, {
+      "pict-view": 13
+    }],
+    22: [function (require, module, exports) {
+      const libPictView = require('pict-view');
+      class ComprehensionLoaderSessionView extends libPictView {
+        constructor(pFable, pOptions, pServiceHash) {
+          super(pFable, pOptions, pServiceHash);
+        }
+        configureSession() {
+          let tmpServerURL = document.getElementById('serverURL').value.trim();
+          if (!tmpServerURL) {
+            this.pict.providers.ComprehensionLoader.setStatus('sessionConfigStatus', 'Server URL is required.', 'error');
+            return;
+          }
+          let tmpBody = {
+            ServerURL: tmpServerURL.replace(/\/+$/, '') + '/1.0/'
+          };
+          let tmpAuthMethod = document.getElementById('authMethod').value.trim();
+          if (tmpAuthMethod) {
+            tmpBody.AuthenticationMethod = tmpAuthMethod;
+          }
+          let tmpAuthURI = document.getElementById('authURI').value.trim();
+          if (tmpAuthURI) {
+            tmpBody.AuthenticationURITemplate = tmpAuthURI;
+          }
+          let tmpCheckURI = document.getElementById('checkURI').value.trim();
+          if (tmpCheckURI) {
+            tmpBody.CheckSessionURITemplate = tmpCheckURI;
+          }
+          let tmpCookieName = document.getElementById('cookieName').value.trim();
+          if (tmpCookieName) {
+            tmpBody.CookieName = tmpCookieName;
+          }
+          let tmpCookieValueAddr = document.getElementById('cookieValueAddr').value.trim();
+          if (tmpCookieValueAddr) {
+            tmpBody.CookieValueAddress = tmpCookieValueAddr;
+          }
+          let tmpCookieValueTemplate = document.getElementById('cookieValueTemplate').value.trim();
+          if (tmpCookieValueTemplate) {
+            tmpBody.CookieValueTemplate = tmpCookieValueTemplate;
+          }
+          let tmpLoginMarker = document.getElementById('loginMarker').value.trim();
+          if (tmpLoginMarker) {
+            tmpBody.CheckSessionLoginMarker = tmpLoginMarker;
+          }
+          this.pict.providers.ComprehensionLoader.setStatus('sessionConfigStatus', 'Configuring session...', 'info');
+          this.pict.providers.ComprehensionLoader.api('POST', '/comprehension_load/session/configure', tmpBody).then(pData => {
+            if (pData.Success) {
+              this.pict.providers.ComprehensionLoader.setStatus('sessionConfigStatus', 'Session configured for ' + pData.ServerURL + ' (domain: ' + pData.DomainMatch + ')', 'ok');
+            } else {
+              this.pict.providers.ComprehensionLoader.setStatus('sessionConfigStatus', 'Configuration failed: ' + (pData.Error || 'Unknown error'), 'error');
+            }
+          }).catch(pError => {
+            this.pict.providers.ComprehensionLoader.setStatus('sessionConfigStatus', 'Request failed: ' + pError.message, 'error');
+          });
+        }
+        authenticate() {
+          let tmpUserName = document.getElementById('userName').value.trim();
+          let tmpPassword = document.getElementById('password').value.trim();
+          if (!tmpUserName || !tmpPassword) {
+            this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Username and password are required.', 'error');
+            this.pict.providers.ComprehensionLoader.setSectionPhase(1, 'error');
+            return;
+          }
+          this.pict.providers.ComprehensionLoader.setSectionPhase(1, 'busy');
+          this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Authenticating...', 'info');
+          this.pict.providers.ComprehensionLoader.api('POST', '/comprehension_load/session/authenticate', {
+            UserName: tmpUserName,
+            Password: tmpPassword
+          }).then(pData => {
+            if (pData.Success && pData.Authenticated) {
+              this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Authenticated successfully.', 'ok');
+              this.pict.providers.ComprehensionLoader.setSectionPhase(1, 'ok');
+            } else {
+              this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Authentication failed: ' + (pData.Error || 'Not authenticated'), 'error');
+              this.pict.providers.ComprehensionLoader.setSectionPhase(1, 'error');
+            }
+          }).catch(pError => {
+            this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Request failed: ' + pError.message, 'error');
+            this.pict.providers.ComprehensionLoader.setSectionPhase(1, 'error');
+          });
+        }
+        checkSession() {
+          this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Checking session...', 'info');
+          this.pict.providers.ComprehensionLoader.api('GET', '/comprehension_load/session/check').then(pData => {
+            if (pData.Authenticated) {
+              this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Session is active. Server: ' + (pData.ServerURL || 'N/A'), 'ok');
+            } else if (pData.Configured) {
+              this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Session configured but not authenticated.', 'warn');
+            } else {
+              this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'No session configured.', 'warn');
+            }
+          }).catch(pError => {
+            this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Request failed: ' + pError.message, 'error');
+          });
+        }
+        deauthenticate() {
+          this.pict.providers.ComprehensionLoader.api('POST', '/comprehension_load/session/deauthenticate').then(pData => {
+            this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Session deauthenticated.', 'info');
+            this.pict.providers.ComprehensionLoader.setSectionPhase(1, '');
+          }).catch(pError => {
+            this.pict.providers.ComprehensionLoader.setStatus('sessionAuthStatus', 'Request failed: ' + pError.message, 'error');
+          });
+        }
+        goAction() {
+          // Two-step: configure session, then authenticate after delay
+          this.pict.providers.ComprehensionLoader.setSectionPhase(1, 'busy');
+          this.configureSession();
+          setTimeout(() => {
+            this.authenticate();
+          }, 1500);
+        }
+      }
+      module.exports = ComprehensionLoaderSessionView;
+      module.exports.default_configuration = {
+        ViewIdentifier: 'ComprehensionLoader-Session',
+        DefaultRenderable: 'ComprehensionLoader-Session',
+        DefaultDestinationAddress: '#ComprehensionLoader-Section-Session',
+        Templates: [{
+          Hash: 'ComprehensionLoader-Session',
+          Template: /*html*/`
+<div class="accordion-row">
+	<div class="accordion-number">1</div>
+	<div class="accordion-card" id="section1" data-section="1">
+		<div class="accordion-header" onclick="pict.views['ComprehensionLoader-Layout'].toggleSection('section1')">
+			<div class="accordion-title">Remote Session</div>
+			<span class="accordion-phase" id="phase1"></span>
+			<div class="accordion-preview" id="preview1">Configure remote server URL and credentials</div>
+			<div class="accordion-actions">
+				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['ComprehensionLoader-Session'].goAction()">go</span>
+				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> <span class="auto-label">auto</span></label>
+			</div>
+			<div class="accordion-toggle">&#9660;</div>
+		</div>
+		<div class="accordion-body">
+			<div class="inline-group">
+				<div style="flex:2">
+					<label for="serverURL">Remote Server URL</label>
+					<input type="text" id="serverURL" placeholder="http://remote-server:8086" value="">
+				</div>
+				<div style="flex:1">
+					<label for="authMethod">Auth Method</label>
+					<input type="text" id="authMethod" placeholder="get" value="get">
+				</div>
+			</div>
+
+			<details style="margin-bottom:10px">
+				<summary style="cursor:pointer; font-size:0.9em; color:#666">Advanced Session Options</summary>
+				<div style="padding:10px 0">
+					<label for="authURI">Authentication URI Template (leave blank for default)</label>
+					<input type="text" id="authURI" placeholder="Authenticate/{~D:Record.UserName~}/{~D:Record.Password~}">
+					<label for="checkURI">Check Session URI Template</label>
+					<input type="text" id="checkURI" placeholder="CheckSession">
+					<label for="cookieName">Cookie Name</label>
+					<input type="text" id="cookieName" placeholder="SessionID" value="SessionID">
+					<label for="cookieValueAddr">Cookie Value Address</label>
+					<input type="text" id="cookieValueAddr" placeholder="SessionID" value="SessionID">
+					<label for="cookieValueTemplate">Cookie Value Template (overrides Address if set)</label>
+					<input type="text" id="cookieValueTemplate" placeholder="{~D:Record.SessionID~}">
+					<label for="loginMarker">Login Marker</label>
+					<input type="text" id="loginMarker" placeholder="LoggedIn" value="LoggedIn">
+				</div>
+			</details>
+
+			<button class="primary" onclick="pict.views['ComprehensionLoader-Session'].configureSession()">Configure Session</button>
+			<div id="sessionConfigStatus"></div>
+
+			<hr style="margin:16px 0; border:none; border-top:1px solid #eee">
+
+			<div class="inline-group">
+				<div>
+					<label for="userName">Username</label>
+					<input type="text" id="userName" placeholder="username">
+				</div>
+				<div>
+					<label for="password">Password</label>
+					<input type="password" id="password" placeholder="password">
+				</div>
+			</div>
+
+			<button class="success" onclick="pict.views['ComprehensionLoader-Session'].authenticate()">Authenticate</button>
+			<button class="secondary" onclick="pict.views['ComprehensionLoader-Session'].checkSession()">Check Session</button>
+			<button class="danger" onclick="pict.views['ComprehensionLoader-Session'].deauthenticate()">Deauthenticate</button>
+			<div id="sessionAuthStatus"></div>
+		</div>
+	</div>
+</div>
+`
+        }],
+        Renderables: [{
+          RenderableHash: 'ComprehensionLoader-Session',
+          TemplateHash: 'ComprehensionLoader-Session',
+          DestinationAddress: '#ComprehensionLoader-Section-Session'
+        }]
+      };
+    }, {
+      "pict-view": 13
+    }],
+    23: [function (require, module, exports) {
+      const libPictView = require('pict-view');
+      class ComprehensionLoaderSourceView extends libPictView {
+        constructor(pFable, pOptions, pServiceHash) {
+          super(pFable, pOptions, pServiceHash);
+        }
+        onAfterRender() {
+          // Restore source mode and toggle UI
+          let tmpSourceMode = localStorage.getItem('comprehensionLoader_comprehensionSourceMode');
+          if (tmpSourceMode === 'file') {
+            let tmpFileRadio = document.getElementById('sourceMode_file');
+            if (tmpFileRadio) tmpFileRadio.checked = true;
+          }
+          this.onSourceModeChange();
+        }
+        onSourceModeChange() {
+          let tmpMode = document.querySelector('input[name="comprehensionSourceMode"]:checked');
+          let tmpModeName = tmpMode ? tmpMode.value : 'url';
+          let tmpURLSection = document.getElementById('sourceURLSection');
+          let tmpFileSection = document.getElementById('sourceFileSection');
+          if (tmpURLSection) tmpURLSection.style.display = tmpModeName === 'url' ? '' : 'none';
+          if (tmpFileSection) tmpFileSection.style.display = tmpModeName === 'file' ? '' : 'none';
+          this.pict.providers.ComprehensionLoader.updateAllPreviews();
+        }
+        fetchFromURL() {
+          let tmpURL = document.getElementById('comprehensionURL').value.trim();
+          if (!tmpURL) {
+            this.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Comprehension URL is required.', 'error');
+            return;
+          }
+          this.pict.providers.ComprehensionLoader.setSectionPhase(3, 'busy');
+          this.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Fetching comprehension...', 'info');
+          let tmpSelf = this;
+
+          // Try browser fetch first, fall back to server proxy on CORS failure
+          fetch(tmpURL).then(function (pResponse) {
+            if (!pResponse.ok) throw new Error('HTTP ' + pResponse.status);
+            return pResponse.json();
+          }).then(function (pData) {
+            tmpSelf.sendComprehensionToServer(pData);
+          }).catch(function (pError) {
+            // CORS or network error — try server-side proxy
+            tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Direct fetch failed (' + pError.message + '), trying server proxy...', 'info');
+            tmpSelf.pict.providers.ComprehensionLoader.api('POST', '/comprehension_load/comprehension/proxy-fetch', {
+              URL: tmpURL
+            }).then(function (pProxyData) {
+              if (pProxyData.Success) {
+                tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Loaded via proxy: ' + pProxyData.EntityCount + ' entities, ' + tmpSelf.pict.providers.ComprehensionLoader.formatNumber(pProxyData.TotalRecords) + ' records.', 'ok');
+                tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(3, 'ok');
+                tmpSelf.renderComprehensionSummary(pProxyData);
+              } else {
+                tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Proxy fetch failed: ' + (pProxyData.Error || 'Unknown error'), 'error');
+                tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(3, 'error');
+              }
+            }).catch(function (pProxyError) {
+              tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Proxy request failed: ' + pProxyError.message, 'error');
+              tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(3, 'error');
+            });
+          });
+        }
+        loadFromFiles() {
+          let tmpFileInput = document.getElementById('comprehensionFiles');
+          if (!tmpFileInput || tmpFileInput.files.length === 0) {
+            this.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Please select one or more JSON files.', 'error');
+            return;
+          }
+          this.pict.providers.ComprehensionLoader.setSectionPhase(3, 'busy');
+          this.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Reading files...', 'info');
+          let tmpSelf = this;
+          let tmpFiles = tmpFileInput.files;
+          let tmpMergedData = {};
+          let tmpFilesRead = 0;
+          for (let i = 0; i < tmpFiles.length; i++) {
+            (function (pFile) {
+              let tmpReader = new FileReader();
+              tmpReader.onload = function (pEvent) {
+                try {
+                  let tmpParsed = JSON.parse(pEvent.target.result);
+
+                  // Merge entity keys from this file into the merged data
+                  let tmpKeys = Object.keys(tmpParsed);
+                  for (let k = 0; k < tmpKeys.length; k++) {
+                    let tmpKey = tmpKeys[k];
+                    if (Array.isArray(tmpParsed[tmpKey])) {
+                      if (!tmpMergedData[tmpKey]) {
+                        tmpMergedData[tmpKey] = [];
+                      }
+                      tmpMergedData[tmpKey] = tmpMergedData[tmpKey].concat(tmpParsed[tmpKey]);
+                    } else {
+                      tmpMergedData[tmpKey] = tmpParsed[tmpKey];
+                    }
+                  }
+                } catch (pParseError) {
+                  tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Error parsing ' + pFile.name + ': ' + pParseError.message, 'error');
+                  tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(3, 'error');
+                  return;
+                }
+                tmpFilesRead++;
+                if (tmpFilesRead === tmpFiles.length) {
+                  // All files read — send merged comprehension to server
+                  tmpSelf.sendComprehensionToServer(tmpMergedData);
+                }
+              };
+              tmpReader.onerror = function () {
+                tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Error reading ' + pFile.name, 'error');
+                tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(3, 'error');
+              };
+              tmpReader.readAsText(pFile);
+            })(tmpFiles[i]);
+          }
+        }
+        sendComprehensionToServer(pData) {
+          let tmpSelf = this;
+          this.pict.providers.ComprehensionLoader.api('POST', '/comprehension_load/comprehension/receive', {
+            Comprehension: pData
+          }).then(function (pResult) {
+            if (pResult.Success) {
+              tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Loaded: ' + pResult.EntityCount + ' entities, ' + tmpSelf.pict.providers.ComprehensionLoader.formatNumber(pResult.TotalRecords) + ' records.', 'ok');
+              tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(3, 'ok');
+              tmpSelf.renderComprehensionSummary(pResult);
+            } else {
+              tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Failed: ' + (pResult.Error || 'Unknown error'), 'error');
+              tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(3, 'error');
+            }
+          }).catch(function (pError) {
+            tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Request failed: ' + pError.message, 'error');
+            tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(3, 'error');
+          });
+        }
+        renderComprehensionSummary(pResult) {
+          let tmpContainer = document.getElementById('comprehensionSummary');
+          if (!tmpContainer) return;
+          let tmpHtml = '<table style="width:100%; border-collapse:collapse; margin-top:8px; font-size:0.9em">';
+          tmpHtml += '<thead><tr><th style="text-align:left; padding:6px 12px; border-bottom:2px solid #ddd">Entity</th>';
+          tmpHtml += '<th style="text-align:right; padding:6px 12px; border-bottom:2px solid #ddd">Records</th></tr></thead>';
+          tmpHtml += '<tbody>';
+          let tmpEntityList = pResult.EntityList || [];
+          let tmpRecordCounts = pResult.RecordCounts || {};
+          for (let i = 0; i < tmpEntityList.length; i++) {
+            let tmpName = tmpEntityList[i];
+            let tmpCount = tmpRecordCounts[tmpName] || 0;
+            tmpHtml += '<tr>';
+            tmpHtml += '<td style="padding:4px 12px; border-bottom:1px solid #f0f0f0">' + this.pict.providers.ComprehensionLoader.escapeHtml(tmpName) + '</td>';
+            tmpHtml += '<td style="padding:4px 12px; border-bottom:1px solid #f0f0f0; text-align:right; font-variant-numeric:tabular-nums">' + this.pict.providers.ComprehensionLoader.formatNumber(tmpCount) + '</td>';
+            tmpHtml += '</tr>';
+          }
+          tmpHtml += '</tbody>';
+          tmpHtml += '<tfoot><tr>';
+          tmpHtml += '<td style="padding:6px 12px; font-weight:600">Total</td>';
+          tmpHtml += '<td style="padding:6px 12px; text-align:right; font-weight:600; font-variant-numeric:tabular-nums">' + this.pict.providers.ComprehensionLoader.formatNumber(pResult.TotalRecords) + '</td>';
+          tmpHtml += '</tr></tfoot>';
+          tmpHtml += '</table>';
+          tmpContainer.innerHTML = tmpHtml;
+          tmpContainer.style.display = '';
+        }
+        clearComprehension() {
+          let tmpSelf = this;
+          this.pict.providers.ComprehensionLoader.api('POST', '/comprehension_load/comprehension/clear').then(function (pData) {
+            if (pData.Success) {
+              tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Comprehension data cleared.', 'info');
+              tmpSelf.pict.providers.ComprehensionLoader.setSectionPhase(3, '');
+              let tmpContainer = document.getElementById('comprehensionSummary');
+              if (tmpContainer) {
+                tmpContainer.innerHTML = '';
+                tmpContainer.style.display = 'none';
+              }
+            }
+          }).catch(function (pError) {
+            tmpSelf.pict.providers.ComprehensionLoader.setStatus('sourceStatus', 'Request failed: ' + pError.message, 'error');
+          });
+        }
+        goAction() {
+          let tmpMode = document.querySelector('input[name="comprehensionSourceMode"]:checked');
+          let tmpModeName = tmpMode ? tmpMode.value : 'url';
+          if (tmpModeName === 'url') {
+            this.fetchFromURL();
+          } else {
+            this.loadFromFiles();
+          }
+        }
+      }
+      module.exports = ComprehensionLoaderSourceView;
+      module.exports.default_configuration = {
+        ViewIdentifier: 'ComprehensionLoader-Source',
+        DefaultRenderable: 'ComprehensionLoader-Source',
+        DefaultDestinationAddress: '#ComprehensionLoader-Section-Source',
+        Templates: [{
+          Hash: 'ComprehensionLoader-Source',
+          Template: /*html*/`
+<div class="accordion-row">
+	<div class="accordion-number">3</div>
+	<div class="accordion-card" id="section3" data-section="3">
+		<div class="accordion-header" onclick="pict.views['ComprehensionLoader-Layout'].toggleSection('section3')">
+			<div class="accordion-title">Comprehension Source</div>
+			<span class="accordion-phase" id="phase3"></span>
+			<div class="accordion-preview" id="preview3">Provide a comprehension JSON URL or upload files</div>
+			<div class="accordion-actions">
+				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['ComprehensionLoader-Source'].goAction()">go</span>
+				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto3"> <span class="auto-label">auto</span></label>
+			</div>
+			<div class="accordion-toggle">&#9660;</div>
+		</div>
+		<div class="accordion-body">
+			<div style="margin-bottom:12px">
+				<label style="margin-bottom:6px">Source Mode</label>
+				<div style="display:flex; gap:16px; align-items:center">
+					<label style="font-weight:normal; margin:0; cursor:pointer">
+						<input type="radio" name="comprehensionSourceMode" id="sourceMode_url" value="url" checked onchange="pict.views['ComprehensionLoader-Source'].onSourceModeChange()"> URL
+						<span style="color:#888; font-size:0.85em">(fetch from a URL)</span>
+					</label>
+					<label style="font-weight:normal; margin:0; cursor:pointer">
+						<input type="radio" name="comprehensionSourceMode" id="sourceMode_file" value="file" onchange="pict.views['ComprehensionLoader-Source'].onSourceModeChange()"> File Upload
+						<span style="color:#888; font-size:0.85em">(load JSON from local files)</span>
+					</label>
+				</div>
+			</div>
+
+			<div id="sourceURLSection">
+				<label for="comprehensionURL">Comprehension JSON URL</label>
+				<input type="text" id="comprehensionURL" placeholder="http://example.com/comprehension.json">
+				<button class="primary" onclick="pict.views['ComprehensionLoader-Source'].fetchFromURL()">Fetch Comprehension</button>
+			</div>
+
+			<div id="sourceFileSection" style="display:none">
+				<label for="comprehensionFiles">Comprehension JSON File(s)</label>
+				<input type="file" id="comprehensionFiles" multiple accept=".json" style="margin-bottom:10px">
+				<div style="font-size:0.8em; color:#888; margin-bottom:10px">Multiple files will be merged (entity keys combined).</div>
+				<button class="primary" onclick="pict.views['ComprehensionLoader-Source'].loadFromFiles()">Load Files</button>
+			</div>
+
+			<button class="secondary" onclick="pict.views['ComprehensionLoader-Source'].clearComprehension()" style="margin-left:0">Clear Comprehension</button>
+			<div id="sourceStatus"></div>
+
+			<div id="comprehensionSummary" style="display:none"></div>
+		</div>
+	</div>
+</div>
+`
+        }],
+        Renderables: [{
+          RenderableHash: 'ComprehensionLoader-Source',
+          TemplateHash: 'ComprehensionLoader-Source',
+          DestinationAddress: '#ComprehensionLoader-Section-Source'
+        }]
+      };
+    }, {
+      "pict-view": 13
+    }]
+  }, {}, [17])(17);
+});
+//# sourceMappingURL=comprehension-loader.js.map

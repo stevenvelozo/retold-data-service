@@ -18,6 +18,7 @@ const libRetoldDataServiceMeadowIntegration = require('./services/meadow-integra
 const libRetoldDataServiceMigrationManager = require('./services/migration-manager/Retold-Data-Service-MigrationManager.js');
 const libRetoldDataServiceDataCloner = require('./services/data-cloner/Retold-Data-Service-DataCloner.js');
 const libRetoldDataServiceIntegrationTelemetry = require('./services/integration-telemetry/Retold-Data-Service-IntegrationTelemetry.js');
+const libRetoldDataServiceComprehensionLoader = require('./services/comprehension-loader/Retold-Data-Service-ComprehensionLoader.js');
 
 const defaultDataServiceSettings = (
 	{
@@ -53,7 +54,11 @@ const defaultDataServiceSettings = (
 				// Data cloner web UI (GET /clone/)
 				DataClonerWebUI: false,
 				// Integration telemetry API endpoints (/telemetry/*)
-				IntegrationTelemetry: false
+				IntegrationTelemetry: false,
+				// Comprehension loader API endpoints (/comprehension_load/*)
+				ComprehensionLoader: false,
+				// Comprehension loader web UI (GET /comprehension_load/)
+				ComprehensionLoaderWebUI: false
 			},
 
 		// Migration manager configuration
@@ -79,6 +84,13 @@ const defaultDataServiceSettings = (
 				RoutePrefix: '/telemetry',
 				// Default tenant identifier when none is provided
 				DefaultTenantID: 'default'
+			},
+
+		// Comprehension loader configuration
+		ComprehensionLoader:
+			{
+				// Route prefix for all comprehension loader endpoints (API + web UI)
+				RoutePrefix: '/comprehension_load'
 			}
 	});
 
@@ -141,6 +153,10 @@ class RetoldDataService extends libFableServiceProviderBase
 		// Register and instantiate the IntegrationTelemetry service
 		this.fable.serviceManager.addServiceType('RetoldDataServiceIntegrationTelemetry', libRetoldDataServiceIntegrationTelemetry);
 		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceIntegrationTelemetry');
+
+		// Register and instantiate the ComprehensionLoader service
+		this.fable.serviceManager.addServiceType('RetoldDataServiceComprehensionLoader', libRetoldDataServiceComprehensionLoader);
+		this.fable.serviceManager.instantiateServiceProvider('RetoldDataServiceComprehensionLoader');
 
 		// Expose the DAL and MeadowEndpoints from the service on this object and on fable for backward compatibility
 		this._DAL = this.fable.RetoldDataServiceMeadowEndpoints._DAL;
@@ -235,7 +251,7 @@ class RetoldDataService extends libFableServiceProviderBase
 			this.fable.log.info(`The Retold Data Service is initializing...`);
 
 			// Log endpoint configuration
-			let tmpGroupNames = ['ConnectionManager', 'ModelManagerWrite', 'Stricture', 'MeadowIntegration', 'MeadowEndpoints', 'MigrationManager', 'MigrationManagerWebUI', 'DataCloner', 'DataClonerWebUI', 'IntegrationTelemetry'];
+			let tmpGroupNames = ['ConnectionManager', 'ModelManagerWrite', 'Stricture', 'MeadowIntegration', 'MeadowEndpoints', 'MigrationManager', 'MigrationManagerWebUI', 'DataCloner', 'DataClonerWebUI', 'IntegrationTelemetry', 'ComprehensionLoader', 'ComprehensionLoaderWebUI'];
 			let tmpEnabledGroups = [];
 			let tmpDisabledGroups = [];
 			for (let i = 0; i < tmpGroupNames.length; i++)
@@ -334,6 +350,18 @@ class RetoldDataService extends libFableServiceProviderBase
 					if (this.isEndpointGroupEnabled('IntegrationTelemetry'))
 					{
 						this.fable.RetoldDataServiceIntegrationTelemetry.connectRoutes(this.fable.OratorServiceServer);
+					}
+
+					// ComprehensionLoader API routes (/comprehension_load/*)
+					if (this.isEndpointGroupEnabled('ComprehensionLoader'))
+					{
+						this.fable.RetoldDataServiceComprehensionLoader.connectRoutes(this.fable.OratorServiceServer);
+					}
+
+					// ComprehensionLoader Web UI routes (GET /comprehension_load/)
+					if (this.isEndpointGroupEnabled('ComprehensionLoaderWebUI'))
+					{
+						this.fable.RetoldDataServiceComprehensionLoader.connectWebUIRoutes(this.fable.OratorServiceServer);
 					}
 
 					return fInitCallback();

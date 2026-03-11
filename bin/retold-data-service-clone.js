@@ -227,7 +227,9 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 						MigrationManagerWebUI: true,
 						DataCloner: true,
 						DataClonerWebUI: true,
-						IntegrationTelemetry: true
+						IntegrationTelemetry: true,
+						ComprehensionLoader: true,
+						ComprehensionLoaderWebUI: true
 					}
 			});
 
