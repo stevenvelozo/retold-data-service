@@ -1527,6 +1527,7 @@ suite
 						let tmpSyncSettings = {
 							Product: 'SyncTestStandard',
 							ProductVersion: '1.0.0',
+							MeadowProvider: 'SQLite',
 							LogStreams: [{ streamtype: 'console', level: 'fatal' }],
 							SQLite: { SQLiteFilePath: ':memory:' }
 						};
@@ -1560,6 +1561,7 @@ suite
 								_SyncFable.Meadow = libMeadow.new(_SyncFable, 'SyncTest-Prototype');
 
 								// Set up MeadowSync
+								_SyncFable.ProgramConfiguration = {};
 								const libMeadowSync = require('../node_modules/meadow-integration/source/services/clone/Meadow-Service-Sync.js');
 								_SyncFable.serviceManager.addServiceType('MeadowSync', libMeadowSync);
 								_SyncFable.serviceManager.instantiateServiceProvider('MeadowSync',
@@ -1630,6 +1632,7 @@ suite
 						let tmpSyncSettings = {
 							Product: 'SyncTestAdvanced',
 							ProductVersion: '1.0.0',
+							MeadowProvider: 'SQLite',
 							LogStreams: [{ streamtype: 'console', level: 'fatal' }],
 							SQLite: { SQLiteFilePath: ':memory:' }
 						};
@@ -1663,6 +1666,7 @@ suite
 								_SyncFable.Meadow = libMeadow.new(_SyncFable, 'SyncTest-Prototype');
 
 								// Set up MeadowSync with advanced ID pagination enabled
+								_SyncFable.ProgramConfiguration = {};
 								const libMeadowSync = require('../node_modules/meadow-integration/source/services/clone/Meadow-Service-Sync.js');
 								_SyncFable.serviceManager.addServiceType('MeadowSync', libMeadowSync);
 								_SyncFable.serviceManager.instantiateServiceProvider('MeadowSync',
