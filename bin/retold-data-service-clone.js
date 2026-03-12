@@ -261,6 +261,7 @@ _Fable.MeadowSQLiteProvider.connectAsync(
 				}
 				_Fable.log.info(`Data Cloner running on port ${_Settings.APIServerPort}`);
 				_Fable.log.info(`Web UI:          http://localhost:${_Settings.APIServerPort}/clone/`);
+				_Fable.log.info(`Comprehension:   http://localhost:${_Settings.APIServerPort}/comprehension_load/`);
 				_Fable.log.info(`Migration Mgr:   http://localhost:${_Settings.APIServerPort}/meadow-migrationmanager/`);
 
 				// ---- Headless auto-run from config file ----
