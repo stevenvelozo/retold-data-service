@@ -164,6 +164,30 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 		// and mysql2-native (host, port, user, etc.) property names so it works
 		// with any version of the meadow-connection provider.
 		let tmpNormalizedConfig = Object.assign({}, pConfig);
+
+		// Expand a leading ~ to the user's home directory for file-based providers.
+		// Node.js does not expand ~ like the shell does, so paths such as
+		// "~/my-data/cloned.sqlite" would otherwise be treated as a literal
+		// relative path, creating the file in an unexpected location.
+		if (tmpNormalizedConfig.SQLiteFilePath && typeof(tmpNormalizedConfig.SQLiteFilePath) === 'string'
+			&& tmpNormalizedConfig.SQLiteFilePath.startsWith('~'))
+		{
+			const libOs = require('os');
+			const libPath = require('path');
+			const libFs = require('fs');
+			tmpNormalizedConfig.SQLiteFilePath = libPath.resolve(
+				libOs.homedir(),
+				tmpNormalizedConfig.SQLiteFilePath.slice(tmpNormalizedConfig.SQLiteFilePath.startsWith('~/') ? 2 : 1)
+			);
+			// Ensure the parent directory exists — SQLite will create the file
+			// but not intermediate directories.
+			let tmpDir = libPath.dirname(tmpNormalizedConfig.SQLiteFilePath);
+			if (!libFs.existsSync(tmpDir))
+			{
+				libFs.mkdirSync(tmpDir, { recursive: true });
+			}
+		}
+
 		if (pProviderName === 'MySQL' || pProviderName === 'MSSQL' || pProviderName === 'PostgreSQL')
 		{
 			if (tmpNormalizedConfig.host && !tmpNormalizedConfig.Server)
@@ -203,9 +227,43 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 		}
 		else
 		{
+			let tmpExistingProvider = this.fable[tmpRegistryEntry.serviceName];
+
+			// Check if the config actually changed — skip reconnect if identical
+			let tmpCurrentPath = tmpExistingProvider.options.SQLiteFilePath || '';
+			let tmpNewPath = tmpNormalizedConfig.SQLiteFilePath || '';
+			let tmpConfigChanged = (pProviderName === 'SQLite')
+				? (tmpNewPath !== tmpCurrentPath)
+				: (JSON.stringify(tmpNormalizedConfig) !== JSON.stringify(this._cloneState.ConnectionConfig || {}));
+
 			// Provider already exists — update its options with the new config
 			// so reconnects use the current settings.
-			this.fable[tmpRegistryEntry.serviceName].options[tmpRegistryEntry.configKey] = tmpNormalizedConfig;
+			tmpExistingProvider.options[tmpRegistryEntry.configKey] = tmpNormalizedConfig;
+
+			if (tmpConfigChanged)
+			{
+				// For SQLite, connectAsync reads SQLiteFilePath directly from
+				// this.options (set once in the constructor from fable.settings).
+				// Merge the normalized config onto options so the provider sees
+				// the updated path without needing a new instance.
+				if (pProviderName === 'SQLite')
+				{
+					Object.assign(tmpExistingProvider.options, tmpNormalizedConfig);
+				}
+
+				// Allow re-connection with updated settings by resetting the
+				// connected flag — connectAsync short-circuits when already connected.
+				tmpExistingProvider.connected = false;
+			}
+			else if (tmpExistingProvider.connected)
+			{
+				// Config unchanged and already connected — skip the connectAsync call
+				// entirely to avoid log spam from repeated auto-connect calls.
+				this._cloneState.ConnectionProvider = pProviderName;
+				this._cloneState.ConnectionConnected = true;
+				this._cloneState.ConnectionConfig = pConfig;
+				return fCallback();
+			}
 		}
 
 		this.fable[tmpRegistryEntry.serviceName].connectAsync(

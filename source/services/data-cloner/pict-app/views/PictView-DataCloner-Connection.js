@@ -89,31 +89,41 @@ class DataClonerConnectionView extends libPictView
 
 	connectProvider()
 	{
+		// Guard against re-entrant calls (e.g. rapid auto-connect polling)
+		if (this._connectInFlight)
+		{
+			return;
+		}
+		this._connectInFlight = true;
+
 		let tmpConnInfo = this.getProviderConfig();
 
 		this.pict.providers.DataCloner.setSectionPhase(1, 'busy');
 		this.pict.providers.DataCloner.setStatus('connectionStatus', 'Connecting to ' + tmpConnInfo.Provider + '...', 'info');
 
+		let tmpSelf = this;
 		this.pict.providers.DataCloner.api('POST', '/clone/connection/configure', tmpConnInfo)
 			.then(
 				(pData) =>
 				{
+					tmpSelf._connectInFlight = false;
 					if (pData.Success)
 					{
-						this.pict.providers.DataCloner.setStatus('connectionStatus', pData.Message, 'ok');
-						this.pict.providers.DataCloner.setSectionPhase(1, 'ok');
+						tmpSelf.pict.providers.DataCloner.setStatus('connectionStatus', pData.Message, 'ok');
+						tmpSelf.pict.providers.DataCloner.setSectionPhase(1, 'ok');
 					}
 					else
 					{
-						this.pict.providers.DataCloner.setStatus('connectionStatus', 'Connection failed: ' + (pData.Error || 'Unknown error'), 'error');
-						this.pict.providers.DataCloner.setSectionPhase(1, 'error');
+						tmpSelf.pict.providers.DataCloner.setStatus('connectionStatus', 'Connection failed: ' + (pData.Error || 'Unknown error'), 'error');
+						tmpSelf.pict.providers.DataCloner.setSectionPhase(1, 'error');
 					}
 				})
 			.catch(
 				(pError) =>
 				{
-					this.pict.providers.DataCloner.setStatus('connectionStatus', 'Request failed: ' + pError.message, 'error');
-					this.pict.providers.DataCloner.setSectionPhase(1, 'error');
+					tmpSelf._connectInFlight = false;
+					tmpSelf.pict.providers.DataCloner.setStatus('connectionStatus', 'Request failed: ' + pError.message, 'error');
+					tmpSelf.pict.providers.DataCloner.setSectionPhase(1, 'error');
 				});
 	}
 

@@ -15,6 +15,7 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 	let tmpPrefix = pDataClonerService.routePrefix;
 
 	let libFs = require('fs');
+	let _ProviderRegistry = require('./DataCloner-ProviderRegistry.js');
 
 	// POST /clone/schema/fetch
 	// Accepts either:
@@ -318,12 +319,16 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 				tmpFable.ProgramConfiguration = {};
 			}
 
-			tmpFable.serviceManager.instantiateServiceProvider('MeadowSync',
+			let tmpMeadowSync = tmpFable.serviceManager.instantiateServiceProvider('MeadowSync',
 				{
 					SyncEntityList: tmpTableNames,
 					PageSize: 100,
 					SyncDeletedRecords: tmpCloneState.SyncDeletedRecords
 				});
+			// Ensure the new instance is the default — instantiateServiceProvider
+			// only sets the default on the FIRST call for a given service type,
+			// so re-deploys would otherwise use the stale MeadowSync.
+			tmpFable.serviceManager.setDefaultServiceInstantiation('MeadowSync', tmpMeadowSync.Hash);
 
 			tmpFable.MeadowSync.loadMeadowSchema(tmpModelObject,
 				(pSyncInitError) =>
@@ -339,30 +344,417 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 					// Store the deployed model so sync mode switches can re-create entities
 					tmpCloneState.DeployedModelObject = tmpModelObject;
 
-					tmpFable.log.info(`Data Cloner: Loading model for CRUD endpoints...`);
+					// ---- Schema migration: detect and apply column deltas ----
+					let tmpMigrationResults = [];
 
-					// Load the filtered model so CRUD endpoints are available
-					tmpFable.RetoldDataServiceMeadowEndpoints.loadModel('RemoteClone', tmpModelObject, tmpCloneState.ConnectionProvider,
-						(pLoadError) =>
-						{
-							if (pLoadError)
+					let fFinalizeDeploy = () =>
+					{
+						tmpFable.log.info(`Data Cloner: Loading model for CRUD endpoints...`);
+
+						// Load the filtered model so CRUD endpoints are available
+						tmpFable.RetoldDataServiceMeadowEndpoints.loadModel('RemoteClone', tmpModelObject, tmpCloneState.ConnectionProvider,
+							(pLoadError) =>
 							{
-								tmpFable.log.error(`Data Cloner: Model load error: ${pLoadError}`);
+								if (pLoadError)
+								{
+									tmpFable.log.error(`Data Cloner: Model load error: ${pLoadError}`);
+								}
+								else
+								{
+									tmpFable.log.info(`Data Cloner: CRUD endpoints available for: [${tmpTableNames.join(', ')}]`);
+								}
+
+								let tmpTotalColumnsAdded = tmpMigrationResults.reduce((pSum, pR) => pSum + pR.ColumnsAdded.length, 0);
+								let tmpMessage = `${tmpInitializedEntities.length} / ${tmpTableNames.length} tables deployed.`;
+								if (tmpTotalColumnsAdded > 0)
+								{
+									tmpMessage += ` ${tmpTotalColumnsAdded} column(s) added via schema migration.`;
+								}
+								tmpMessage += ` meadow-integration sync ready.`;
+
+								pResponse.send(200,
+									{
+										Success: true,
+										TablesDeployed: tmpTableNames,
+										SyncEntities: tmpInitializedEntities,
+										MigrationsApplied: tmpMigrationResults,
+										Message: tmpMessage
+									});
+								return fNext();
+							});
+					};
+
+					// Resolve the active connection provider for introspection and SQL execution
+					let tmpProviderName = tmpCloneState.ConnectionProvider;
+					let tmpProviderRegistryEntry = _ProviderRegistry[tmpProviderName];
+					let tmpActiveProvider = tmpProviderRegistryEntry ? tmpFable[tmpProviderRegistryEntry.serviceName] : null;
+
+					if (!tmpFable.RetoldDataServiceMigrationManager || !tmpActiveProvider || !tmpActiveProvider.connected)
+					{
+						// Migration manager or provider not available — skip migration step
+						return fFinalizeDeploy();
+					}
+
+					let tmpMM = tmpFable.RetoldDataServiceMigrationManager;
+
+					tmpFable.log.info(`Data Cloner: Checking schema deltas for ${tmpTableNames.length} tables against ${tmpProviderName}...`);
+
+					tmpFable.Utility.eachLimit(tmpTableNames, 1,
+						(pTableName, fNextTable) =>
+						{
+							if (typeof(tmpActiveProvider.introspectTableColumns) !== 'function')
+							{
+								// Provider does not support introspection — skip
+								return fNextTable();
+							}
+
+							tmpActiveProvider.introspectTableColumns(pTableName,
+								(pIntrospectError, pActualColumns) =>
+								{
+									if (pIntrospectError || !Array.isArray(pActualColumns))
+									{
+										tmpFable.log.warn(`Data Cloner: Could not introspect ${pTableName}: ${pIntrospectError || 'no columns returned'}`);
+										return fNextTable();
+									}
+
+									// Build source schema (actual database) in the format SchemaDiff expects
+									let tmpSourceSchema = { Tables: [{ TableName: pTableName, Columns: pActualColumns }] };
+
+									// Build target schema (expected from remote model)
+									let tmpTargetSchema = tmpMM.normalizeSchemaForDiff({ Tables: { [pTableName]: tmpModelObject.Tables[pTableName] } });
+
+									let tmpDiff = tmpMM._schemaDiff.diffSchemas(tmpSourceSchema, tmpTargetSchema);
+
+									let tmpColumnsAdded = [];
+									if (tmpDiff.TablesModified && tmpDiff.TablesModified.length > 0)
+									{
+										for (let t = 0; t < tmpDiff.TablesModified.length; t++)
+										{
+											let tmpMod = tmpDiff.TablesModified[t];
+											if (Array.isArray(tmpMod.ColumnsAdded))
+											{
+												for (let c = 0; c < tmpMod.ColumnsAdded.length; c++)
+												{
+													tmpColumnsAdded.push(tmpMod.ColumnsAdded[c].Column);
+												}
+											}
+										}
+									}
+
+									if (tmpColumnsAdded.length < 1)
+									{
+										return fNextTable();
+									}
+
+									// Generate provider-appropriate ALTER TABLE statements
+									let tmpStatements = tmpMM._migrationGenerator.generateMigrationStatements(tmpDiff, tmpProviderName);
+
+									tmpFable.log.info(`Data Cloner: Migrating ${pTableName} — adding ${tmpColumnsAdded.length} column(s): [${tmpColumnsAdded.join(', ')}]`);
+
+									let tmpExecutedStatements = [];
+
+									// Filter out comment-only lines (e.g. "-- SQLite does not support ALTER COLUMN...")
+									// generated by MigrationGenerator for column modifications that can't be
+									// applied automatically.  We only want to execute actual SQL statements.
+									tmpStatements = tmpStatements.filter((pStmt) => !pStmt.trimStart().startsWith('--'));
+
+									// Execute statements provider-agnostically
+									let fExecNext = (pIndex) =>
+									{
+										if (pIndex >= tmpStatements.length)
+										{
+											tmpMigrationResults.push(
+												{
+													Table: pTableName,
+													ColumnsAdded: tmpColumnsAdded,
+													Statements: tmpExecutedStatements
+												});
+											return fNextTable();
+										}
+
+										let tmpSQL = tmpStatements[pIndex];
+
+										// SQLite: synchronous execution via better-sqlite3
+										if (tmpProviderName === 'SQLite' && tmpActiveProvider.db)
+										{
+											try
+											{
+												tmpActiveProvider.db.exec(tmpSQL);
+												tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
+												tmpExecutedStatements.push(tmpSQL);
+											}
+											catch (pExecError)
+											{
+												tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pExecError}`);
+											}
+											return fExecNext(pIndex + 1);
+										}
+
+										// MySQL / MSSQL / PostgreSQL: async execution via connection pool
+										// MySQL pool.query uses callbacks; MSSQL/PostgreSQL pool.query returns a promise.
+										if (tmpActiveProvider.pool)
+										{
+											let tmpQueryResult = tmpActiveProvider.pool.query(tmpSQL,
+												(pQueryError) =>
+												{
+													// Callback-style (MySQL) — only fires if pool.query
+													// accepted the callback parameter
+													if (pQueryError)
+													{
+														tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pQueryError}`);
+													}
+													else
+													{
+														tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
+														tmpExecutedStatements.push(tmpSQL);
+													}
+													return fExecNext(pIndex + 1);
+												});
+
+											// Promise-style (MSSQL / PostgreSQL) — if query returned a thenable,
+											// handle it; the callback above will not fire in this case.
+											if (tmpQueryResult && typeof(tmpQueryResult.then) === 'function')
+											{
+												tmpQueryResult
+													.then(() =>
+													{
+														tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
+														tmpExecutedStatements.push(tmpSQL);
+														return fExecNext(pIndex + 1);
+													})
+													.catch((pPromiseError) =>
+													{
+														tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pPromiseError}`);
+														return fExecNext(pIndex + 1);
+													});
+											}
+										}
+										else
+										{
+											tmpFable.log.warn(`Data Cloner: No execution handle available for ${tmpProviderName}; skipping: ${tmpSQL}`);
+											return fExecNext(pIndex + 1);
+										}
+									};
+
+									fExecNext(0);
+								});
+						},
+						() =>
+						{
+							if (tmpMigrationResults.length > 0)
+							{
+								let tmpTotalCols = tmpMigrationResults.reduce((pSum, pR) => pSum + pR.ColumnsAdded.length, 0);
+								tmpFable.log.info(`Data Cloner: Schema migration complete — ${tmpTotalCols} column(s) added across ${tmpMigrationResults.length} table(s).`);
 							}
 							else
 							{
-								tmpFable.log.info(`Data Cloner: CRUD endpoints available for: [${tmpTableNames.join(', ')}]`);
+								tmpFable.log.info(`Data Cloner: Schema migration check complete — no deltas detected.`);
+							}
+							return fFinalizeDeploy();
+						});
+				});
+		});
+
+	// GET /clone/schema/guid-index-audit — Check all deployed tables for missing GUID indices
+	pOratorServiceServer.get(`${tmpPrefix}/schema/guid-index-audit`,
+		(pRequest, pResponse, fNext) =>
+		{
+			if (!tmpCloneState.DeployedModelObject)
+			{
+				pResponse.send(400, { Success: false, Error: 'No schema deployed. Deploy tables first.' });
+				return fNext();
+			}
+
+			let tmpProviderName = tmpCloneState.ConnectionProvider;
+			let tmpProviderRegistryEntry = _ProviderRegistry[tmpProviderName];
+			let tmpActiveProvider = tmpProviderRegistryEntry ? tmpFable[tmpProviderRegistryEntry.serviceName] : null;
+
+			if (!tmpActiveProvider || !tmpActiveProvider.connected || typeof(tmpActiveProvider.introspectTableIndices) !== 'function')
+			{
+				pResponse.send(400, { Success: false, Error: 'No connected provider with introspection support available.' });
+				return fNext();
+			}
+
+			let tmpModelTables = tmpCloneState.DeployedModelObject.Tables || {};
+			let tmpTableNames = Object.keys(tmpModelTables);
+			let tmpResults = [];
+			let tmpMissingCount = 0;
+
+			tmpFable.Utility.eachLimit(tmpTableNames, 1,
+				(pTableName, fNextTable) =>
+				{
+					let tmpTableSchema = tmpModelTables[pTableName];
+					let tmpColumns = Array.isArray(tmpTableSchema.Columns) ? tmpTableSchema.Columns : [];
+
+					// Find GUID columns in the expected schema
+					let tmpGUIDColumns = tmpColumns.filter((pCol) => pCol.DataType === 'GUID');
+
+					if (tmpGUIDColumns.length < 1)
+					{
+						return fNextTable();
+					}
+
+					tmpActiveProvider.introspectTableIndices(pTableName,
+						(pError, pActualIndices) =>
+						{
+							if (pError)
+							{
+								tmpFable.log.warn(`GUID Index Audit: Could not introspect indices for ${pTableName}: ${pError}`);
+								return fNextTable();
 							}
 
-							pResponse.send(200,
+							let tmpIndices = Array.isArray(pActualIndices) ? pActualIndices : [];
+							let tmpTableResult = { Table: pTableName, GUIDColumns: [] };
+
+							for (let g = 0; g < tmpGUIDColumns.length; g++)
+							{
+								let tmpColName = tmpGUIDColumns[g].Column;
+								let tmpExpectedIndexName = `AK_M_${tmpColName}`;
+
+								// Check if any index covers this GUID column
+								let tmpMatchingIndex = tmpIndices.find((pIdx) =>
+									pIdx.Name === tmpExpectedIndexName ||
+									(Array.isArray(pIdx.Columns) && pIdx.Columns.indexOf(tmpColName) > -1));
+
+								let tmpHasIndex = !!tmpMatchingIndex;
+								if (!tmpHasIndex)
 								{
-									Success: true,
-									TablesDeployed: tmpTableNames,
-									SyncEntities: tmpInitializedEntities,
-									Message: `${tmpInitializedEntities.length} / ${tmpTableNames.length} tables deployed. meadow-integration sync ready.`
-								});
-							return fNext();
+									tmpMissingCount++;
+								}
+
+								tmpTableResult.GUIDColumns.push(
+									{
+										Column: tmpColName,
+										HasIndex: tmpHasIndex,
+										IndexName: tmpMatchingIndex ? tmpMatchingIndex.Name : null
+									});
+							}
+
+							tmpResults.push(tmpTableResult);
+							return fNextTable();
 						});
+				},
+				() =>
+				{
+					pResponse.send(200,
+						{
+							Success: true,
+							Tables: tmpResults,
+							MissingCount: tmpMissingCount,
+							Message: tmpMissingCount > 0
+								? `${tmpMissingCount} GUID column(s) across ${tmpResults.filter((pR) => pR.GUIDColumns.some((pC) => !pC.HasIndex)).length} table(s) are missing indices.`
+								: 'All GUID columns have indices.'
+						});
+					return fNext();
+				});
+		});
+
+	// POST /clone/schema/guid-index-create — Create missing GUID indices
+	pOratorServiceServer.post(`${tmpPrefix}/schema/guid-index-create`,
+		(pRequest, pResponse, fNext) =>
+		{
+			if (!tmpCloneState.DeployedModelObject)
+			{
+				pResponse.send(400, { Success: false, Error: 'No schema deployed. Deploy tables first.' });
+				return fNext();
+			}
+
+			let tmpProviderName = tmpCloneState.ConnectionProvider;
+			let tmpProviderRegistryEntry = _ProviderRegistry[tmpProviderName];
+			let tmpActiveProvider = tmpProviderRegistryEntry ? tmpFable[tmpProviderRegistryEntry.serviceName] : null;
+
+			if (!tmpActiveProvider || !tmpActiveProvider.connected)
+			{
+				pResponse.send(400, { Success: false, Error: 'No connected provider available.' });
+				return fNext();
+			}
+
+			// The schema provider has generateCreateIndexStatements and createIndex
+			let tmpSchemaProvider = tmpActiveProvider.schemaProvider || tmpActiveProvider;
+
+			if (typeof(tmpSchemaProvider.generateCreateIndexStatements) !== 'function' ||
+				typeof(tmpSchemaProvider.createIndex) !== 'function')
+			{
+				pResponse.send(400, { Success: false, Error: `Provider ${tmpProviderName} does not support index creation.` });
+				return fNext();
+			}
+
+			let tmpBody = pRequest.body || {};
+			let tmpFilterTables = Array.isArray(tmpBody.Tables) && tmpBody.Tables.length > 0 ? tmpBody.Tables : null;
+
+			let tmpModelTables = tmpCloneState.DeployedModelObject.Tables || {};
+			let tmpTableNames = tmpFilterTables || Object.keys(tmpModelTables);
+			let tmpCreatedIndices = [];
+
+			tmpFable.log.info(`Data Cloner: Creating missing GUID indices for ${tmpTableNames.length} tables...`);
+
+			tmpFable.Utility.eachLimit(tmpTableNames, 1,
+				(pTableName, fNextTable) =>
+				{
+					let tmpTableSchema = tmpModelTables[pTableName];
+					if (!tmpTableSchema)
+					{
+						return fNextTable();
+					}
+
+					// Generate all index statements for this table (provider-specific)
+					let tmpAllStatements = tmpSchemaProvider.generateCreateIndexStatements(tmpTableSchema);
+
+					// Filter to GUID indices only (AK_M_GUID*)
+					let tmpGUIDStatements = tmpAllStatements.filter((pStmt) => pStmt.Name && pStmt.Name.indexOf('AK_M_GUID') === 0);
+
+					if (tmpGUIDStatements.length < 1)
+					{
+						return fNextTable();
+					}
+
+					// createIndex is idempotent on all providers — safe to call even if index exists
+					let fCreateNext = (pIndex) =>
+					{
+						if (pIndex >= tmpGUIDStatements.length)
+						{
+							return fNextTable();
+						}
+
+						let tmpStmt = tmpGUIDStatements[pIndex];
+						tmpSchemaProvider.createIndex(tmpStmt,
+							(pCreateError) =>
+							{
+								if (pCreateError)
+								{
+									tmpFable.log.warn(`Data Cloner: Failed to create index ${tmpStmt.Name} on ${pTableName}: ${pCreateError}`);
+								}
+								else
+								{
+									tmpFable.log.info(`Data Cloner: Created index ${tmpStmt.Name} on ${pTableName}`);
+									tmpCreatedIndices.push(
+										{
+											Table: pTableName,
+											IndexName: tmpStmt.Name,
+											Statement: tmpStmt.Statement
+										});
+								}
+								return fCreateNext(pIndex + 1);
+							});
+					};
+
+					fCreateNext(0);
+				},
+				() =>
+				{
+					let tmpMessage = tmpCreatedIndices.length > 0
+						? `${tmpCreatedIndices.length} GUID index(es) created.`
+						: 'No new GUID indices were needed.';
+
+					tmpFable.log.info(`Data Cloner: ${tmpMessage}`);
+
+					pResponse.send(200,
+						{
+							Success: true,
+							IndicesCreated: tmpCreatedIndices,
+							Message: tmpMessage
+						});
+					return fNext();
 				});
 		});
 };

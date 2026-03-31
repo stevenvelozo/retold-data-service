@@ -27,7 +27,19 @@ class DataClonerDeployView extends libPictView
 			{
 				if (pData.Success)
 				{
-					tmpSelf.pict.providers.DataCloner.setStatus('deployStatus', pData.Message, 'ok');
+					let tmpStatusMsg = pData.Message;
+
+					// Append migration details if schema deltas were applied
+					if (Array.isArray(pData.MigrationsApplied) && pData.MigrationsApplied.length > 0)
+					{
+						let tmpDetails = pData.MigrationsApplied.map(function(pM)
+						{
+							return pM.Table + ': +' + pM.ColumnsAdded.join(', +');
+						});
+						tmpStatusMsg += '\nMigrations: ' + tmpDetails.join('; ');
+					}
+
+					tmpSelf.pict.providers.DataCloner.setStatus('deployStatus', tmpStatusMsg, 'ok');
 					tmpSelf.pict.providers.DataCloner.setSectionPhase(4, 'ok');
 					tmpSelf.pict.AppData.DataCloner.DeployedTables = pData.TablesDeployed || tmpSelectedTables;
 					tmpSelf.pict.providers.DataCloner.saveDeployedTables();
@@ -44,6 +56,95 @@ class DataClonerDeployView extends libPictView
 			{
 				tmpSelf.pict.providers.DataCloner.setStatus('deployStatus', 'Request failed: ' + pError.message, 'error');
 				tmpSelf.pict.providers.DataCloner.setSectionPhase(4, 'error');
+			});
+	}
+
+	auditGUIDIndices()
+	{
+		let tmpReportEl = document.getElementById('guidIndexReport');
+		if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:#888">Checking GUID indices...</span>';
+
+		let tmpSelf = this;
+		this.pict.providers.DataCloner.api('GET', '/clone/schema/guid-index-audit')
+			.then(function(pData)
+			{
+				if (!tmpReportEl) return;
+
+				if (!pData.Success)
+				{
+					tmpReportEl.innerHTML = '<span style="color:red">' + (pData.Error || 'Audit failed') + '</span>';
+					return;
+				}
+
+				if (pData.MissingCount === 0)
+				{
+					tmpReportEl.innerHTML = '<span style="color:green">All GUID columns have indices.</span>';
+					return;
+				}
+
+				let tmpHTML = '<div style="margin-top:6px"><strong>' + pData.Message + '</strong></div>';
+				tmpHTML += '<table style="font-size:0.85em; margin:6px 0; border-collapse:collapse; width:100%">';
+				tmpHTML += '<tr style="text-align:left; border-bottom:1px solid #ccc"><th style="padding:3px 8px">Table</th><th style="padding:3px 8px">GUID Column</th><th style="padding:3px 8px">Index</th></tr>';
+
+				for (let t = 0; t < pData.Tables.length; t++)
+				{
+					let tmpTable = pData.Tables[t];
+					for (let c = 0; c < tmpTable.GUIDColumns.length; c++)
+					{
+						let tmpCol = tmpTable.GUIDColumns[c];
+						let tmpStatus = tmpCol.HasIndex
+							? '<span style="color:green">' + tmpCol.IndexName + '</span>'
+							: '<span style="color:red">MISSING</span>';
+						tmpHTML += '<tr style="border-bottom:1px solid #eee"><td style="padding:3px 8px">' + tmpTable.Table + '</td><td style="padding:3px 8px">' + tmpCol.Column + '</td><td style="padding:3px 8px">' + tmpStatus + '</td></tr>';
+					}
+				}
+				tmpHTML += '</table>';
+				tmpHTML += '<button class="primary" style="margin-top:4px" onclick="pict.views[\'DataCloner-Deploy\'].createMissingGUIDIndices()">Create Missing Indices</button>';
+
+				tmpReportEl.innerHTML = tmpHTML;
+			})
+			.catch(function(pError)
+			{
+				if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:red">Request failed: ' + pError.message + '</span>';
+			});
+	}
+
+	createMissingGUIDIndices()
+	{
+		let tmpReportEl = document.getElementById('guidIndexReport');
+		if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:#888">Creating GUID indices...</span>';
+
+		let tmpSelf = this;
+		this.pict.providers.DataCloner.api('POST', '/clone/schema/guid-index-create')
+			.then(function(pData)
+			{
+				if (!tmpReportEl) return;
+
+				if (!pData.Success)
+				{
+					tmpReportEl.innerHTML = '<span style="color:red">' + (pData.Error || 'Index creation failed') + '</span>';
+					return;
+				}
+
+				let tmpHTML = '<div style="margin-top:6px; color:green"><strong>' + pData.Message + '</strong></div>';
+
+				if (pData.IndicesCreated && pData.IndicesCreated.length > 0)
+				{
+					tmpHTML += '<ul style="font-size:0.85em; margin:4px 0">';
+					for (let i = 0; i < pData.IndicesCreated.length; i++)
+					{
+						let tmpIdx = pData.IndicesCreated[i];
+						tmpHTML += '<li>' + tmpIdx.Table + ': ' + tmpIdx.IndexName + '</li>';
+					}
+					tmpHTML += '</ul>';
+				}
+
+				tmpHTML += '<button style="margin-top:4px" onclick="pict.views[\'DataCloner-Deploy\'].auditGUIDIndices()">Re-check</button>';
+				tmpReportEl.innerHTML = tmpHTML;
+			})
+			.catch(function(pError)
+			{
+				if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:red">Request failed: ' + pError.message + '</span>';
 			});
 	}
 
@@ -107,8 +208,10 @@ module.exports.default_configuration =
 		<div class="accordion-body">
 			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Creates the selected tables in the local database and sets up CRUD endpoints (e.g. GET /1.0/Documents).</p>
 			<button class="primary" onclick="pict.views['DataCloner-Deploy'].deploySchema()">Deploy Selected Tables</button>
+			<button onclick="pict.views['DataCloner-Deploy'].auditGUIDIndices()">Check GUID Indices</button>
 			<button class="danger" onclick="pict.views['DataCloner-Deploy'].resetDatabase()">Reset Database</button>
 			<div id="deployStatus"></div>
+			<div id="guidIndexReport"></div>
 		</div>
 	</div>
 </div>
