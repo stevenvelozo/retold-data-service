@@ -66,7 +66,30 @@ class IntegrationTelemetryStorageProviderBibliograph extends libIntegrationTelem
 			return fCallback();
 		}
 
-		this.bibliograph.createSource(pSourceHash,
+		let tmpBibliograph = this.bibliograph;
+
+		// Bibliograph FS Storage must be initialized before any operations.
+		// The service is instantiated in the getter but initialize() is async
+		// and must complete before createSource/read/write will work.
+		if (tmpBibliograph.BibliographStorage && !tmpBibliograph.BibliographStorage.Initialized)
+		{
+			return tmpBibliograph.BibliographStorage.initialize(
+				(pInitError) =>
+				{
+					if (pInitError)
+					{
+						this.fable.log.warn(`IntegrationTelemetry Bibliograph: Storage initialization error: ${pInitError}`);
+					}
+					tmpBibliograph.createSource(pSourceHash,
+						(pError) =>
+						{
+							this._sourceInitialized[pSourceHash] = true;
+							return fCallback();
+						});
+				});
+		}
+
+		tmpBibliograph.createSource(pSourceHash,
 			(pError) =>
 			{
 				// Ignore "already exists" style errors
