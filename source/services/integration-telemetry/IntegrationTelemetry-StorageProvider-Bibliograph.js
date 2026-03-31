@@ -71,9 +71,12 @@ class IntegrationTelemetryStorageProviderBibliograph extends libIntegrationTelem
 		// Bibliograph FS Storage must be initialized before any operations.
 		// The service is instantiated in the getter but initialize() is async
 		// and must complete before createSource/read/write will work.
-		if (tmpBibliograph.BibliographStorage && !tmpBibliograph.BibliographStorage.Initialized)
+		// The storage provider is registered on the fable instance, not
+		// on the Bibliograph service object itself.
+		let tmpStorage = this.fable.BibliographStorage;
+		if (tmpStorage && !tmpStorage.Initialized)
 		{
-			return tmpBibliograph.BibliographStorage.initialize(
+			return tmpStorage.initialize(
 				(pInitError) =>
 				{
 					if (pInitError)
