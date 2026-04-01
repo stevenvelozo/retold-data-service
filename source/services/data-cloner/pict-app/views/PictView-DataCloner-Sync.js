@@ -479,12 +479,12 @@ module.exports.default_configuration =
 	<div class="accordion-number">5</div>
 	<div class="accordion-card" id="section5" data-section="5">
 		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section5')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto5"> <span class="auto-label">auto</span></label>
 			<div class="accordion-title">Synchronize Data</div>
 			<span class="accordion-phase" id="phase5"></span>
 			<div class="accordion-preview" id="preview5">Initial sync, page size 100</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Sync'].startSync()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto5"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>

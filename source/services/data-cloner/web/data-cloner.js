@@ -1856,10 +1856,20 @@
         "BarThickness": 30,
         // Gap between bars in pixels (browser) or characters (cli/consoleui)
         "BarGap": 4,
+        // When true, bar groups expand to fill the container width (vertical) or
+        // height (horizontal) using CSS flex-grow instead of a fixed BarThickness.
+        // Labels and values overflow their column so they remain readable even when
+        // bars are very narrow.  Best suited for time-series or dense histograms.
+        "FillContainer": false,
         // Whether to show value labels on/above bars
         "ShowValues": true,
         // Whether to show bin labels (x-axis for vertical, y-axis for horizontal)
         "ShowLabels": true,
+        // In FillContainer mode, controls label density in the separate label row.
+        // 0 = auto-compute (space labels approximately 80px apart based on container
+        // width), N > 0 = show a label every N bars starting from index 0.
+        // Ignored when FillContainer is false (every bar shows its own label).
+        "LabelInterval": 0,
         // Color of the bars (CSS color for browser, ANSI color name for cli/consoleui)
         "BarColor": "#4A90D9",
         // Color of selected bars
@@ -2064,6 +2074,44 @@
 {
 	box-shadow: 0 0 0 3px rgba(74, 144, 217, 0.3);
 	outline: none;
+}
+.pict-histogram-container.pict-histogram-fill
+{
+	display: block;
+	width: 100%;
+}
+.pict-histogram-fill .pict-histogram-chart
+{
+	width: 100%;
+}
+.pict-histogram-fill .pict-histogram-bar-group
+{
+	flex: 1 1 0%;
+	min-width: 0;
+}
+.pict-histogram-fill .pict-histogram-bar
+{
+	width: 100%;
+}
+.pict-histogram-axis-line
+{
+	width: 100%;
+	height: 1px;
+	background: #ccc;
+}
+.pict-histogram-label-row
+{
+	display: flex;
+	width: 100%;
+}
+.pict-histogram-fill-label
+{
+	font-size: 10px;
+	color: #666;
+	text-align: center;
+	white-space: nowrap;
+	overflow: visible;
+	line-height: 16px;
 }
 `
       };
@@ -2484,29 +2532,41 @@
         let tmpSelectableClass = pOptions.Selectable ? ' pict-histogram-selectable' : '';
         let tmpSelectedClass = pIsSelected ? ' pict-histogram-selected' : '';
         let tmpInRangeClass = pInRange ? ' pict-histogram-in-range' : '';
+        let tmpFillMode = pOptions.FillContainer;
         let tmpBarStyle = '';
         if (tmpVertical) {
-          tmpBarStyle = `height:${pBarSize}px;width:${pOptions.BarThickness}px;background-color:${tmpBarColor};`;
+          if (tmpFillMode) {
+            tmpBarStyle = `height:${pBarSize}px;background-color:${tmpBarColor};`;
+          } else {
+            tmpBarStyle = `height:${pBarSize}px;width:${pOptions.BarThickness}px;background-color:${tmpBarColor};`;
+          }
         } else {
-          tmpBarStyle = `width:${pBarSize}px;height:${pOptions.BarThickness}px;background-color:${tmpBarColor};`;
+          if (tmpFillMode) {
+            tmpBarStyle = `width:${pBarSize}px;background-color:${tmpBarColor};`;
+          } else {
+            tmpBarStyle = `width:${pBarSize}px;height:${pOptions.BarThickness}px;background-color:${tmpBarColor};`;
+          }
         }
         let tmpGroupWidth = pOptions.BarThickness + pOptions.BarGap;
         let tmpGroupStyle = '';
-        if (tmpVertical) {
+        if (tmpFillMode) {
+          // No fixed dimensions — CSS flex:1 handles sizing
+          tmpGroupStyle = '';
+        } else if (tmpVertical) {
           tmpGroupStyle = `margin:0 ${pOptions.BarGap / 2}px;width:${tmpGroupWidth}px;`;
         } else {
           tmpGroupStyle = `margin:${pOptions.BarGap / 2}px 0;`;
         }
         let tmpHTML = `<div class="pict-histogram-bar-group" style="${tmpGroupStyle}" data-histogram-index="${pIndex}">`;
         if (tmpVertical) {
-          // Value label above bar
-          if (pOptions.ShowValues) {
+          // Value label above bar (skipped in fill mode — values don't fit in narrow columns)
+          if (pOptions.ShowValues && !tmpFillMode) {
             tmpHTML += `<div class="pict-histogram-value-label" style="width:${tmpGroupWidth}px;">${tmpValue}</div>`;
           }
           // Bar
           tmpHTML += `<div class="pict-histogram-bar${tmpSelectableClass}${tmpSelectedClass}${tmpInRangeClass}" style="${tmpBarStyle}" data-histogram-index="${pIndex}"></div>`;
-          // Bin label below bar
-          if (pOptions.ShowLabels) {
+          // Bin label below bar (skipped in fill mode — labels rendered in a separate row)
+          if (pOptions.ShowLabels && !tmpFillMode) {
             tmpHTML += `<div class="pict-histogram-bin-label" style="width:${tmpGroupWidth}px;">${tmpLabel}</div>`;
           }
         } else {
@@ -2561,6 +2621,52 @@
       }
 
       /**
+       * Build the label row for FillContainer vertical mode.
+       *
+       * Labels are rendered in a separate flex row below the axis line, with
+       * automatic interval calculation to avoid overlap when there are many bins.
+       *
+       * @param {object} pView  - The histogram view instance
+       * @param {Array}  pBins  - The bin data array
+       * @returns {string} HTML fragment
+       */
+      function buildFillLabelRow(pView, pBins) {
+        if (!pBins || pBins.length === 0) {
+          return '';
+        }
+
+        // Determine label interval: explicit setting or auto-compute
+        let tmpLabelInterval = pView.options.LabelInterval || 0;
+        if (tmpLabelInterval <= 0) {
+          // Auto-compute: space labels approximately 80px apart
+          let tmpTargetElementSet = pView.services.ContentAssignment.getElement(pView.options.TargetElementAddress);
+          let tmpContainerWidth = 800;
+          if (tmpTargetElementSet && tmpTargetElementSet.length > 0 && tmpTargetElementSet[0]) {
+            tmpContainerWidth = tmpTargetElementSet[0].clientWidth || 800;
+          }
+          if (pBins.length > 0) {
+            let tmpBarWidth = tmpContainerWidth / pBins.length;
+            tmpLabelInterval = Math.max(1, Math.ceil(80 / tmpBarWidth));
+          } else {
+            tmpLabelInterval = 1;
+          }
+        }
+        let tmpHTML = '<div class="pict-histogram-label-row">';
+        for (let i = 0; i < pBins.length; i++) {
+          let tmpIsLabeled = i % tmpLabelInterval === 0;
+          if (tmpIsLabeled) {
+            let tmpLabel = pBins[i][pView.options.LabelProperty] || '';
+            // Span covers this label and the unlabeled bars until the next label
+            let tmpSpan = Math.min(tmpLabelInterval, pBins.length - i);
+            tmpHTML += `<div class="pict-histogram-fill-label" style="flex:${tmpSpan};">${tmpLabel}</div>`;
+            i += tmpSpan - 1;
+          }
+        }
+        tmpHTML += '</div>';
+        return tmpHTML;
+      }
+
+      /**
        * Render the full histogram into the target element.
        *
        * @param {object} pView - The histogram view instance
@@ -2583,10 +2689,11 @@
         }
         let tmpVertical = pView.options.Orientation === 'vertical';
         let tmpOrientationClass = tmpVertical ? 'pict-histogram-vertical' : 'pict-histogram-horizontal';
+        let tmpFillClass = pView.options.FillContainer ? ' pict-histogram-fill' : '';
 
-        // For horizontal mode, measure the longest label so all labels share the same width
+        // For horizontal mode (non-fill), measure the longest label so all labels share the same width
         let tmpLabelWidth = 0;
-        if (!tmpVertical && pView.options.ShowLabels) {
+        if (!tmpVertical && pView.options.ShowLabels && !pView.options.FillContainer) {
           for (let i = 0; i < tmpBins.length; i++) {
             let tmpLabel = String(tmpBins[i][pView.options.LabelProperty] || '');
             // Approximate character width at 11px font: ~6.5px per character
@@ -2597,8 +2704,8 @@
           }
           tmpLabelWidth = Math.max(tmpLabelWidth, 40);
         }
-        let tmpHTML = `<div class="pict-histogram-container ${tmpOrientationClass}">`;
-        tmpHTML += `<div class="pict-histogram-chart ${tmpOrientationClass}">`;
+        let tmpHTML = `<div class="pict-histogram-container ${tmpOrientationClass}${tmpFillClass}">`;
+        tmpHTML += `<div class="pict-histogram-chart ${tmpOrientationClass}${tmpFillClass}">`;
         for (let i = 0; i < tmpBins.length; i++) {
           let tmpVal = tmpBins[i][pView.options.ValueProperty] || 0;
           let tmpBarSize = Math.round(tmpVal / tmpMaxValue * pView.options.MaxBarSize);
@@ -2610,6 +2717,12 @@
           tmpHTML += buildBarGroupHTML(tmpBins[i], i, tmpBarSize, pView.options, tmpIsSelected, tmpInRange, tmpLabelWidth);
         }
         tmpHTML += '</div>';
+
+        // In FillContainer vertical mode, render axis line and label row separately
+        if (pView.options.FillContainer && tmpVertical && pView.options.ShowLabels) {
+          tmpHTML += '<div class="pict-histogram-axis-line"></div>';
+          tmpHTML += buildFillLabelRow(pView, tmpBins);
+        }
 
         // Range slider for "range" selection mode
         if (pView.options.Selectable && pView.options.SelectionMode === 'range') {
@@ -5919,12 +6032,12 @@
 	<div class="accordion-number">1</div>
 	<div class="accordion-card" id="section1" data-section="1">
 		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section1')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> <span class="auto-label">auto</span></label>
 			<div class="accordion-title">Database Connection</div>
 			<span class="accordion-phase" id="phase1"></span>
 			<div class="accordion-preview" id="preview1">SQLite at data/cloned.sqlite</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Connection'].connectProvider()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
@@ -6277,12 +6390,12 @@
 	<div class="accordion-number">4</div>
 	<div class="accordion-card" id="section4" data-section="4">
 		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section4')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto4"> <span class="auto-label">auto</span></label>
 			<div class="accordion-title">Deploy Schema</div>
 			<span class="accordion-phase" id="phase4"></span>
 			<div class="accordion-preview" id="preview4">Create selected tables in the local database</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Deploy'].deploySchema()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto4"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
@@ -7272,12 +7385,12 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	<div class="accordion-number">3</div>
 	<div class="accordion-card" id="section3" data-section="3">
 		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section3')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto3"> <span class="auto-label">auto</span></label>
 			<div class="accordion-title">Remote Schema</div>
 			<span class="accordion-phase" id="phase3"></span>
 			<div class="accordion-preview" id="preview3">Fetch and select tables from the remote server</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Schema'].fetchSchema()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto3"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
@@ -7434,12 +7547,12 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	<div class="accordion-number">2</div>
 	<div class="accordion-card" id="section2" data-section="2">
 		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section2')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto2"> <span class="auto-label">auto</span></label>
 			<div class="accordion-title">Remote Session</div>
 			<span class="accordion-phase" id="phase2"></span>
 			<div class="accordion-preview" id="preview2">Configure remote server URL and credentials</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Session'].goAction()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto2"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
@@ -7886,12 +7999,12 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	<div class="accordion-number">5</div>
 	<div class="accordion-card" id="section5" data-section="5">
 		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section5')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto5"> <span class="auto-label">auto</span></label>
 			<div class="accordion-title">Synchronize Data</div>
 			<span class="accordion-phase" id="phase5"></span>
 			<div class="accordion-preview" id="preview5">Initial sync, page size 100</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Sync'].startSync()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto5"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>

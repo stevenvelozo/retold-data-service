@@ -198,12 +198,12 @@ module.exports.default_configuration =
 	<div class="accordion-number">3</div>
 	<div class="accordion-card" id="section3" data-section="3">
 		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section3')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto3"> <span class="auto-label">auto</span></label>
 			<div class="accordion-title">Remote Schema</div>
 			<span class="accordion-phase" id="phase3"></span>
 			<div class="accordion-preview" id="preview3">Fetch and select tables from the remote server</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Schema'].fetchSchema()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto3"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>

@@ -196,12 +196,12 @@ module.exports.default_configuration =
 	<div class="accordion-number">4</div>
 	<div class="accordion-card" id="section4" data-section="4">
 		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section4')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto4"> <span class="auto-label">auto</span></label>
 			<div class="accordion-title">Deploy Schema</div>
 			<span class="accordion-phase" id="phase4"></span>
 			<div class="accordion-preview" id="preview4">Create selected tables in the local database</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Deploy'].deploySchema()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto4"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>

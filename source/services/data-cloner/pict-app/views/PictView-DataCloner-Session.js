@@ -192,12 +192,12 @@ module.exports.default_configuration =
 	<div class="accordion-number">2</div>
 	<div class="accordion-card" id="section2" data-section="2">
 		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section2')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto2"> <span class="auto-label">auto</span></label>
 			<div class="accordion-title">Remote Session</div>
 			<span class="accordion-phase" id="phase2"></span>
 			<div class="accordion-preview" id="preview2">Configure remote server URL and credentials</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Session'].goAction()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto2"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>

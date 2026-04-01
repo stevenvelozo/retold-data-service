@@ -189,12 +189,12 @@ module.exports.default_configuration =
 	<div class="accordion-number">1</div>
 	<div class="accordion-card" id="section1" data-section="1">
 		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section1')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> <span class="auto-label">auto</span></label>
 			<div class="accordion-title">Database Connection</div>
 			<span class="accordion-phase" id="phase1"></span>
 			<div class="accordion-preview" id="preview1">SQLite at data/cloned.sqlite</div>
 			<div class="accordion-actions">
 				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Connection'].connectProvider()">go</span>
-				<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> <span class="auto-label">auto</span></label>
 			</div>
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
