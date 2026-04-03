@@ -426,6 +426,7 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 									let tmpDiff = tmpMM._schemaDiff.diffSchemas(tmpSourceSchema, tmpTargetSchema);
 
 									let tmpColumnsAdded = [];
+									let tmpColumnsModified = [];
 									if (tmpDiff.TablesModified && tmpDiff.TablesModified.length > 0)
 									{
 										for (let t = 0; t < tmpDiff.TablesModified.length; t++)
@@ -438,10 +439,17 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 													tmpColumnsAdded.push(tmpMod.ColumnsAdded[c].Column);
 												}
 											}
+											if (Array.isArray(tmpMod.ColumnsModified))
+											{
+												for (let c = 0; c < tmpMod.ColumnsModified.length; c++)
+												{
+													tmpColumnsModified.push(tmpMod.ColumnsModified[c].Column);
+												}
+											}
 										}
 									}
 
-									if (tmpColumnsAdded.length < 1)
+									if (tmpColumnsAdded.length < 1 && tmpColumnsModified.length < 1)
 									{
 										return fNextTable();
 									}
@@ -449,7 +457,16 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 									// Generate provider-appropriate ALTER TABLE statements
 									let tmpStatements = tmpMM._migrationGenerator.generateMigrationStatements(tmpDiff, tmpProviderName);
 
-									tmpFable.log.info(`Data Cloner: Migrating ${pTableName} — adding ${tmpColumnsAdded.length} column(s): [${tmpColumnsAdded.join(', ')}]`);
+									let tmpLogParts = [];
+									if (tmpColumnsAdded.length > 0)
+									{
+										tmpLogParts.push(`adding ${tmpColumnsAdded.length} column(s): [${tmpColumnsAdded.join(', ')}]`);
+									}
+									if (tmpColumnsModified.length > 0)
+									{
+										tmpLogParts.push(`modifying ${tmpColumnsModified.length} column(s): [${tmpColumnsModified.join(', ')}]`);
+									}
+									tmpFable.log.info(`Data Cloner: Migrating ${pTableName} — ${tmpLogParts.join('; ')}`);
 
 									let tmpExecutedStatements = [];
 
@@ -467,6 +484,7 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 												{
 													Table: pTableName,
 													ColumnsAdded: tmpColumnsAdded,
+													ColumnsModified: tmpColumnsModified,
 													Statements: tmpExecutedStatements
 												});
 											return fNextTable();
@@ -543,8 +561,18 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 						{
 							if (tmpMigrationResults.length > 0)
 							{
-								let tmpTotalCols = tmpMigrationResults.reduce((pSum, pR) => pSum + pR.ColumnsAdded.length, 0);
-								tmpFable.log.info(`Data Cloner: Schema migration complete — ${tmpTotalCols} column(s) added across ${tmpMigrationResults.length} table(s).`);
+								let tmpTotalAdded = tmpMigrationResults.reduce((pSum, pR) => pSum + pR.ColumnsAdded.length, 0);
+								let tmpTotalModified = tmpMigrationResults.reduce((pSum, pR) => pSum + (pR.ColumnsModified ? pR.ColumnsModified.length : 0), 0);
+								let tmpSummaryParts = [];
+								if (tmpTotalAdded > 0)
+								{
+									tmpSummaryParts.push(`${tmpTotalAdded} column(s) added`);
+								}
+								if (tmpTotalModified > 0)
+								{
+									tmpSummaryParts.push(`${tmpTotalModified} column(s) modified`);
+								}
+								tmpFable.log.info(`Data Cloner: Schema migration complete — ${tmpSummaryParts.join(', ')} across ${tmpMigrationResults.length} table(s).`);
 							}
 							else
 							{
