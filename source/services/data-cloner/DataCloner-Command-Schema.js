@@ -509,42 +509,68 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 										}
 
 										// MySQL / MSSQL / PostgreSQL: async execution via connection pool
-										// MySQL pool.query uses callbacks; MSSQL/PostgreSQL pool.query returns a promise.
 										if (tmpActiveProvider.pool)
 										{
-											let tmpQueryResult = tmpActiveProvider.pool.query(tmpSQL,
-												(pQueryError) =>
-												{
-													// Callback-style (MySQL) — only fires if pool.query
-													// accepted the callback parameter
-													if (pQueryError)
-													{
-														tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pQueryError}`);
-													}
-													else
-													{
-														tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
-														tmpExecutedStatements.push(tmpSQL);
-													}
-													return fExecNext(pIndex + 1);
-												});
+											// For MSSQL multi-statement batches (containing DECLARE,
+											// cursors, dynamic SQL with QUOTENAME, etc.), pool.query()
+											// wraps SQL in sp_executesql which cannot handle these
+											// constructs.  Use request.batch() instead, which sends
+											// raw T-SQL without wrapping.
+											let tmpIsBatch = (tmpProviderName === 'MSSQL') && tmpSQL.indexOf('DECLARE') >= 0
+												&& typeof(tmpActiveProvider.pool.request) === 'function';
 
-											// Promise-style (MSSQL / PostgreSQL) — if query returned a thenable,
-											// handle it; the callback above will not fire in this case.
-											if (tmpQueryResult && typeof(tmpQueryResult.then) === 'function')
+											if (tmpIsBatch)
 											{
-												tmpQueryResult
+												tmpActiveProvider.pool.request().batch(tmpSQL)
 													.then(() =>
 													{
 														tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
 														tmpExecutedStatements.push(tmpSQL);
 														return fExecNext(pIndex + 1);
 													})
-													.catch((pPromiseError) =>
+													.catch((pBatchError) =>
 													{
-														tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pPromiseError}`);
+														tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pBatchError}`);
 														return fExecNext(pIndex + 1);
 													});
+											}
+											else
+											{
+												// MySQL uses callbacks; MSSQL/PostgreSQL pool.query returns a promise.
+												let tmpQueryResult = tmpActiveProvider.pool.query(tmpSQL,
+													(pQueryError) =>
+													{
+														// Callback-style (MySQL) — only fires if pool.query
+														// accepted the callback parameter
+														if (pQueryError)
+														{
+															tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pQueryError}`);
+														}
+														else
+														{
+															tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
+															tmpExecutedStatements.push(tmpSQL);
+														}
+														return fExecNext(pIndex + 1);
+													});
+
+												// Promise-style (MSSQL / PostgreSQL) — if query returned a thenable,
+												// handle it; the callback above will not fire in this case.
+												if (tmpQueryResult && typeof(tmpQueryResult.then) === 'function')
+												{
+													tmpQueryResult
+														.then(() =>
+														{
+															tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
+															tmpExecutedStatements.push(tmpSQL);
+															return fExecNext(pIndex + 1);
+														})
+														.catch((pPromiseError) =>
+														{
+															tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pPromiseError}`);
+															return fExecNext(pIndex + 1);
+														});
+												}
 											}
 										}
 										else
