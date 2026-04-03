@@ -73,7 +73,7 @@
         "meadow-connection-mysql": "^1.0.14",
         "meadow-endpoints": "^4.0.15",
         "meadow-integration": "^1.0.21",
-        "meadow-migrationmanager": "^0.0.6",
+        "meadow-migrationmanager": "^0.0.7",
         "orator": "^6.0.4",
         "orator-http-proxy": "^1.0.5",
         "orator-serviceserver-restify": "^2.0.10",

@@ -511,66 +511,215 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 										// MySQL / MSSQL / PostgreSQL: async execution via connection pool
 										if (tmpActiveProvider.pool)
 										{
-											// For MSSQL multi-statement batches (containing DECLARE,
-											// cursors, dynamic SQL with QUOTENAME, etc.), pool.query()
-											// wraps SQL in sp_executesql which cannot handle these
-											// constructs.  Use request.batch() instead, which sends
-											// raw T-SQL without wrapping.
-											let tmpIsBatch = (tmpProviderName === 'MSSQL') && tmpSQL.indexOf('DECLARE') >= 0
-												&& typeof(tmpActiveProvider.pool.request) === 'function';
-
-											if (tmpIsBatch)
+											// Helper: run a single SQL statement via pool.query,
+											// handling both callback-style (MySQL) and promise-style
+											// (MSSQL / PostgreSQL) drivers.
+											let fRunQuery = (pSQL, fDone) =>
 											{
-												tmpActiveProvider.pool.request().batch(tmpSQL)
-													.then(() =>
+												let tmpQueryResult = tmpActiveProvider.pool.query(pSQL,
+													(pQueryError, pResult) =>
 													{
-														tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
-														tmpExecutedStatements.push(tmpSQL);
-														return fExecNext(pIndex + 1);
-													})
-													.catch((pBatchError) =>
-													{
-														tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pBatchError}`);
-														return fExecNext(pIndex + 1);
-													});
-											}
-											else
-											{
-												// MySQL uses callbacks; MSSQL/PostgreSQL pool.query returns a promise.
-												let tmpQueryResult = tmpActiveProvider.pool.query(tmpSQL,
-													(pQueryError) =>
-													{
-														// Callback-style (MySQL) — only fires if pool.query
-														// accepted the callback parameter
 														if (pQueryError)
 														{
-															tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pQueryError}`);
+															return fDone(pQueryError);
 														}
-														else
-														{
-															tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
-															tmpExecutedStatements.push(tmpSQL);
-														}
-														return fExecNext(pIndex + 1);
+														return fDone(null, pResult);
 													});
 
-												// Promise-style (MSSQL / PostgreSQL) — if query returned a thenable,
-												// handle it; the callback above will not fire in this case.
 												if (tmpQueryResult && typeof(tmpQueryResult.then) === 'function')
 												{
 													tmpQueryResult
-														.then(() =>
-														{
-															tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
-															tmpExecutedStatements.push(tmpSQL);
-															return fExecNext(pIndex + 1);
-														})
-														.catch((pPromiseError) =>
-														{
-															tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pPromiseError}`);
-															return fExecNext(pIndex + 1);
-														});
+														.then((pResult) => fDone(null, pResult))
+														.catch((pError) => fDone(pError));
 												}
+											};
+
+											// For MSSQL ALTER COLUMN, drop dependent objects first,
+											// then alter, then restore them.  Each step is a simple
+											// individual query that works with pool.query().
+											let tmpIsMSSQLAlterColumn = (tmpProviderName === 'MSSQL')
+												&& tmpSQL.indexOf('ALTER COLUMN') >= 0;
+
+											if (tmpIsMSSQLAlterColumn)
+											{
+												// Parse table and column names from the statement:
+												// ALTER TABLE [TableName] ALTER COLUMN [ColName] TYPE...
+												let tmpMatch = tmpSQL.match(/ALTER TABLE \[([^\]]+)\] ALTER COLUMN \[([^\]]+)\] (.+)/);
+												if (!tmpMatch)
+												{
+													tmpFable.log.warn(`Data Cloner: Could not parse ALTER COLUMN statement: ${tmpSQL}`);
+													return fExecNext(pIndex + 1);
+												}
+												let tmpTblName = tmpMatch[1];
+												let tmpColNameParsed = tmpMatch[2];
+												let tmpNewType = tmpMatch[3];
+
+												// Determine the default value to re-add after ALTER.
+												// Look it up from the diff's target schema via the
+												// MigrationGenerator helpers.
+												let tmpMigGen = tmpMM._migrationGenerator;
+												let tmpDefaultValue = null;
+												// Find the column in the diff to get its DataType and Size
+												for (let t = 0; t < tmpDiff.TablesModified.length; t++)
+												{
+													let tmpMod = tmpDiff.TablesModified[t];
+													if (tmpMod.TableName !== tmpTblName) continue;
+													let tmpAllModCols = (tmpMod.ColumnsModified || []);
+													for (let mc = 0; mc < tmpAllModCols.length; mc++)
+													{
+														if (tmpAllModCols[mc].Column === tmpColNameParsed)
+														{
+															let tmpTargetDataType = tmpAllModCols[mc].Changes.DataType
+																? tmpAllModCols[mc].Changes.DataType.To
+																: (tmpAllModCols[mc].DataType || null);
+															let tmpTargetSize = tmpAllModCols[mc].Changes.Size
+																? tmpAllModCols[mc].Changes.Size.To
+																: (tmpAllModCols[mc].hasOwnProperty('Size') ? tmpAllModCols[mc].Size : null);
+															if (tmpTargetDataType)
+															{
+																let tmpFullNative = tmpMigGen._mapDataTypeToNative(tmpTargetDataType, tmpTargetSize, 'MSSQL');
+																tmpDefaultValue = tmpMigGen._extractDefault(tmpFullNative);
+															}
+															break;
+														}
+													}
+												}
+
+												// Step 1: Query default constraint names on this column
+												let tmpDCQuery = `SELECT dc.name FROM sys.default_constraints dc INNER JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id WHERE dc.parent_object_id = OBJECT_ID(N'${tmpTblName}') AND c.name = N'${tmpColNameParsed}'`;
+
+												// Step 2: Query index info for indexes containing this column
+												let tmpIxQuery = `SELECT DISTINCT i.name AS IndexName, i.is_unique AS IsUnique FROM sys.indexes i INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id INNER JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id WHERE i.object_id = OBJECT_ID(N'${tmpTblName}') AND c.name = N'${tmpColNameParsed}' AND i.is_primary_key = 0 AND i.type IN (1, 2)`;
+
+												// Step 3: Query index column details (for recreation)
+												let tmpIxColQuery = `SELECT i.name AS IndexName, c.name AS ColName, ic.is_included_column AS IsIncluded, ic.key_ordinal AS KeyOrdinal, ic.index_column_id AS ColOrder FROM sys.indexes i INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id INNER JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id WHERE i.object_id = OBJECT_ID(N'${tmpTblName}') AND i.is_primary_key = 0 AND i.type IN (1, 2) AND i.index_id IN (SELECT ic2.index_id FROM sys.index_columns ic2 INNER JOIN sys.columns c2 ON ic2.object_id = c2.object_id AND ic2.column_id = c2.column_id WHERE ic2.object_id = OBJECT_ID(N'${tmpTblName}') AND c2.name = N'${tmpColNameParsed}') ORDER BY i.name, ic.is_included_column, ic.key_ordinal, ic.index_column_id`;
+
+												tmpFable.log.info(`Data Cloner: MSSQL ALTER COLUMN [${tmpColNameParsed}] — querying dependent objects...`);
+
+												// Run queries in sequence: get constraints, get indexes, drop, alter, recreate
+												fRunQuery(tmpDCQuery, (pDCErr, pDCResult) =>
+												{
+													let tmpConstraintNames = [];
+													if (!pDCErr && pDCResult && pDCResult.recordset)
+													{
+														tmpConstraintNames = pDCResult.recordset.map((pRow) => pRow.name);
+													}
+
+													fRunQuery(tmpIxQuery, (pIxErr, pIxResult) =>
+													{
+														let tmpIndexes = [];
+														if (!pIxErr && pIxResult && pIxResult.recordset)
+														{
+															tmpIndexes = pIxResult.recordset;
+														}
+
+														fRunQuery(tmpIxColQuery, (pIxColErr, pIxColResult) =>
+														{
+															let tmpIndexColumns = [];
+															if (!pIxColErr && pIxColResult && pIxColResult.recordset)
+															{
+																tmpIndexColumns = pIxColResult.recordset;
+															}
+
+															// Build the list of statements to execute in sequence:
+															// 1. Drop default constraints
+															// 2. Drop indexes
+															// 3. ALTER COLUMN
+															// 4. Recreate indexes
+															// 5. Re-add default constraint
+															let tmpPrePostStatements = [];
+
+															for (let dc = 0; dc < tmpConstraintNames.length; dc++)
+															{
+																tmpPrePostStatements.push({ phase: 'pre', sql: `ALTER TABLE [${tmpTblName}] DROP CONSTRAINT [${tmpConstraintNames[dc]}]` });
+															}
+
+															for (let ix = 0; ix < tmpIndexes.length; ix++)
+															{
+																tmpPrePostStatements.push({ phase: 'pre', sql: `DROP INDEX [${tmpIndexes[ix].IndexName}] ON [${tmpTblName}]` });
+															}
+
+															tmpPrePostStatements.push({ phase: 'alter', sql: tmpSQL });
+
+															// Recreate indexes
+															for (let ix = 0; ix < tmpIndexes.length; ix++)
+															{
+																let tmpIxName = tmpIndexes[ix].IndexName;
+																let tmpKeyCols = tmpIndexColumns
+																	.filter((pR) => pR.IndexName === tmpIxName && !pR.IsIncluded)
+																	.sort((a, b) => a.KeyOrdinal - b.KeyOrdinal)
+																	.map((pR) => `[${pR.ColName}]`);
+																let tmpInclCols = tmpIndexColumns
+																	.filter((pR) => pR.IndexName === tmpIxName && pR.IsIncluded)
+																	.sort((a, b) => a.ColOrder - b.ColOrder)
+																	.map((pR) => `[${pR.ColName}]`);
+																let tmpCreateIdx = (tmpIndexes[ix].IsUnique ? 'CREATE UNIQUE' : 'CREATE')
+																	+ ` INDEX [${tmpIxName}] ON [${tmpTblName}] (${tmpKeyCols.join(', ')})`;
+																if (tmpInclCols.length > 0)
+																{
+																	tmpCreateIdx += ` INCLUDE (${tmpInclCols.join(', ')})`;
+																}
+																tmpPrePostStatements.push({ phase: 'post', sql: tmpCreateIdx });
+															}
+
+															// Re-add default
+															if (tmpDefaultValue)
+															{
+																tmpPrePostStatements.push({ phase: 'post', sql: `ALTER TABLE [${tmpTblName}] ADD DEFAULT ${tmpDefaultValue} FOR [${tmpColNameParsed}]` });
+															}
+
+															if (tmpConstraintNames.length > 0 || tmpIndexes.length > 0)
+															{
+																tmpFable.log.info(`Data Cloner: MSSQL ALTER COLUMN [${tmpColNameParsed}] — dropping ${tmpConstraintNames.length} constraint(s), ${tmpIndexes.length} index(es) before alter`);
+															}
+
+															// Execute all statements in sequence
+															let fRunStep = (pStepIndex) =>
+															{
+																if (pStepIndex >= tmpPrePostStatements.length)
+																{
+																	tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
+																	tmpExecutedStatements.push(tmpSQL);
+																	return fExecNext(pIndex + 1);
+																}
+																let tmpStep = tmpPrePostStatements[pStepIndex];
+																fRunQuery(tmpStep.sql, (pStepErr) =>
+																{
+																	if (pStepErr)
+																	{
+																		tmpFable.log.warn(`Data Cloner: Migration step failed (${tmpStep.phase}): ${tmpStep.sql} — ${pStepErr}`);
+																		if (tmpStep.phase === 'alter')
+																		{
+																			// If the ALTER itself failed, skip post steps
+																			tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pStepErr}`);
+																			return fExecNext(pIndex + 1);
+																		}
+																	}
+																	return fRunStep(pStepIndex + 1);
+																});
+															};
+
+															fRunStep(0);
+														});
+													});
+												});
+											}
+											else
+											{
+												// Non-MSSQL-ALTER-COLUMN: standard single-statement execution
+												fRunQuery(tmpSQL, (pQueryError) =>
+												{
+													if (pQueryError)
+													{
+														tmpFable.log.warn(`Data Cloner: Migration failed: ${tmpSQL} — ${pQueryError}`);
+													}
+													else
+													{
+														tmpFable.log.info(`Data Cloner: Migration applied: ${tmpSQL}`);
+														tmpExecutedStatements.push(tmpSQL);
+													}
+													return fExecNext(pIndex + 1);
+												});
 											}
 										}
 										else
