@@ -60,6 +60,7 @@
     "homepage": "https://github.com/stevenvelozo/retold-data-service",
     "devDependencies": {
         "meadow-connection-sqlite": "^1.0.18",
+        "pict-docuserve": "^0.1.5",
         "puppeteer": "^24.40.0",
         "quackage": "^1.1.0",
         "stricture": "^4.0.2",
