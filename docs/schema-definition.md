@@ -43,7 +43,7 @@ $Name 200
 
 | Symbol | Meaning | Meadow Type |
 |--------|---------|-------------|
-| `!` | Table/entity name | — |
+| `!` | Table/entity name | -- |
 | `@` | Auto-increment ID | `AutoIdentity` |
 | `%` | Auto GUID | `AutoGUID` |
 | `&` | DateTime column | `CreateDate`, `UpdateDate`, `DeleteDate`, or `DateTime` |
@@ -121,8 +121,8 @@ This runs `cd test && npx stricture -i model/ddl/BookStore.ddl` to regenerate th
 | `Deleted` | Soft-delete flag | On Delete (set to 1) |
 | `DeleteDate` | Deletion timestamp | On Delete |
 | `DeleteIDUser` | Deleter user ID | On Delete |
-| `String` | Text data | — |
-| `Integer` | Numeric data | — |
-| `Decimal` | Decimal data | — |
-| `Boolean` | Boolean data | — |
-| `DateTime` | Date/time data | — |
+| `String` | Text data | -- |
+| `Integer` | Numeric data | -- |
+| `Decimal` | Decimal data | -- |
+| `Boolean` | Boolean data | -- |
+| `DateTime` | Date/time data | -- |

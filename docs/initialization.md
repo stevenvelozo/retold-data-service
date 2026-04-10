@@ -30,12 +30,12 @@ _Fable.RetoldDataService.initializeService(
 When `initializeService()` is called, the following steps run in order:
 
 ```
-1. onBeforeInitialize()       ← your custom hook
-2. Start Orator web server    ← if AutoStartOrator is true
-3. initializePersistenceEngine()  ← loads the storage provider module
-4. onInitialize()             ← your custom hook
-5. initializeDataEndpoints()  ← loads model, creates DAL + endpoints
-6. onAfterInitialize()        ← your custom hook
+1. onBeforeInitialize()       <- your custom hook
+2. Start Orator web server    <- if AutoStartOrator is true
+3. initializePersistenceEngine()  <- loads the storage provider module
+4. onInitialize()             <- your custom hook
+5. initializeDataEndpoints()  <- loads model, creates DAL + endpoints
+6. onAfterInitialize()        <- your custom hook
 ```
 
 ### Step 5: initializeDataEndpoints()

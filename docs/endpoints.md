@@ -7,8 +7,8 @@ Once initialized, Retold Data Service automatically creates RESTful endpoints fo
 All endpoints follow the Meadow Endpoints URL pattern:
 
 ```
-/{Version}/{Entity}         — singular entity operations (Read, Create, Update, Delete)
-/{Version}/{Entity}s        — plural entity operations (Reads, Count)
+/{Version}/{Entity}         -- singular entity operations (Read, Create, Update, Delete)
+/{Version}/{Entity}s        -- plural entity operations (Reads, Count)
 ```
 
 The version defaults to `1.0`.
