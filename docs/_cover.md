@@ -1,4 +1,4 @@
-# Retold Data Service <small>v2.0.11</small>
+# Retold Data Service
 
 > Schema-driven REST API generation for the Retold ecosystem
 
