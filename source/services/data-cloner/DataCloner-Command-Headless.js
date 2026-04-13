@@ -251,7 +251,9 @@ module.exports = (pDataClonerService, pConfig, pCLIOptions, fCallback) =>
 				PageSize: tmpSync.PageSize || 100,
 				SyncDeletedRecords: !!tmpSync.SyncDeletedRecords,
 				MaxRecordsPerEntity: tmpMaxRecords || tmpSync.MaxRecordsPerEntity || 0,
-				DateTimePrecisionMS: tmpSync.DateTimePrecisionMS
+				DateTimePrecisionMS: tmpSync.DateTimePrecisionMS,
+				BackSyncTimeLimit: tmpSync.BackSyncTimeLimit,
+				TrueUpPageSize: tmpSync.TrueUpPageSize
 			});
 
 		tmpFable.log.info(`Headless: Starting ${tmpSyncBody.SyncMode} sync...`);

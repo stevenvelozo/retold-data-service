@@ -7,6 +7,25 @@ class DataClonerSyncView extends libPictView
 		super(pFable, pOptions, pServiceHash);
 	}
 
+	onSyncModeChanged()
+	{
+		let tmpMode = document.querySelector('input[name="syncMode"]:checked').value;
+
+		// Hide all mode-specific option panels
+		let tmpPanels = document.querySelectorAll('[id^="syncModeOptions-"]');
+		for (let i = 0; i < tmpPanels.length; i++)
+		{
+			tmpPanels[i].style.display = 'none';
+		}
+
+		// Show the panel for the selected mode (if one exists)
+		let tmpPanel = document.getElementById('syncModeOptions-' + tmpMode);
+		if (tmpPanel)
+		{
+			tmpPanel.style.display = 'block';
+		}
+	}
+
 	startSync()
 	{
 		let tmpSelectedTables = this.pict.views['DataCloner-Schema'].getSelectedTables();
@@ -34,6 +53,18 @@ class DataClonerSyncView extends libPictView
 		if (tmpMaxRecords > 0) tmpPostBody.MaxRecordsPerEntity = tmpMaxRecords;
 		if (tmpLogToFile) tmpPostBody.LogToFile = true;
 		if (tmpAdvancedIDPagination) tmpPostBody.UseAdvancedIDPagination = true;
+
+		// Strategy-specific options
+		if (tmpSyncMode === 'OngoingEventualConsistency')
+		{
+			let tmpBackSyncTimeLimit = parseInt(document.getElementById('backSyncTimeLimit').value, 10);
+			if (tmpBackSyncTimeLimit > 0) tmpPostBody.BackSyncTimeLimit = tmpBackSyncTimeLimit;
+		}
+		if (tmpSyncMode === 'TrueUp')
+		{
+			let tmpTrueUpPageSize = parseInt(document.getElementById('trueUpPageSize').value, 10);
+			if (tmpTrueUpPageSize > 0) tmpPostBody.TrueUpPageSize = tmpTrueUpPageSize;
+		}
 		this.pict.providers.DataCloner.api('POST', '/clone/sync/start', tmpPostBody)
 			.then(function(pData)
 			{
@@ -507,16 +538,48 @@ module.exports.default_configuration =
 
 			<div style="margin-bottom:10px">
 				<label style="margin-bottom:6px">Sync Mode</label>
-				<div style="display:flex; gap:16px; align-items:center">
+				<div style="display:flex; gap:12px 20px; align-items:center; flex-wrap:wrap">
 					<label style="font-weight:normal; margin:0; cursor:pointer">
-						<input type="radio" name="syncMode" id="syncModeInitial" value="Initial" checked> Initial
-						<span style="color:#888; font-size:0.85em">(full clone — download all records)</span>
+						<input type="radio" name="syncMode" id="syncModeInitial" value="Initial" checked onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Initial
+						<span style="color:#888; font-size:0.85em">(full clone)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
-						<input type="radio" name="syncMode" id="syncModeOngoing" value="Ongoing"> Ongoing
-						<span style="color:#888; font-size:0.85em">(delta — only new/updated records since last sync)</span>
+						<input type="radio" name="syncMode" id="syncModeOngoing" value="Ongoing" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Ongoing
+						<span style="color:#888; font-size:0.85em">(delta sync)</span>
+					</label>
+					<label style="font-weight:normal; margin:0; cursor:pointer">
+						<input type="radio" name="syncMode" id="syncModeOngoingEventualConsistency" value="OngoingEventualConsistency" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Eventual
+						<span style="color:#888; font-size:0.85em">(time-budgeted back-sync)</span>
+					</label>
+					<label style="font-weight:normal; margin:0; cursor:pointer">
+						<input type="radio" name="syncMode" id="syncModeTrueUp" value="TrueUp" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> True-Up
+						<span style="color:#888; font-size:0.85em">(linear walk, one-time)</span>
+					</label>
+					<label style="font-weight:normal; margin:0; cursor:pointer">
+						<input type="radio" name="syncMode" id="syncModeComparisonOnly" value="ComparisonOnly" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Compare
+						<span style="color:#888; font-size:0.85em">(diff report, no sync)</span>
 					</label>
 				</div>
+			</div>
+
+			<div id="syncModeOptions-OngoingEventualConsistency" style="display:none; margin-bottom:10px">
+				<div style="display:flex; gap:8px; align-items:flex-end">
+					<div style="flex:0 0 220px">
+						<label for="backSyncTimeLimit">Back-Sync Time Budget (ms)</label>
+						<input type="number" id="backSyncTimeLimit" value="30000" min="1000" max="600000" style="margin-bottom:0">
+					</div>
+				</div>
+				<div style="font-size:0.8em; color:#888; padding-left:4px">Milliseconds devoted to backwards bisection per entity before pulling new records (default: 30000)</div>
+			</div>
+
+			<div id="syncModeOptions-TrueUp" style="display:none; margin-bottom:10px">
+				<div style="display:flex; gap:8px; align-items:flex-end">
+					<div style="flex:0 0 220px">
+						<label for="trueUpPageSize">True-Up Page Size</label>
+						<input type="number" id="trueUpPageSize" value="500" min="10" max="10000" style="margin-bottom:0">
+					</div>
+				</div>
+				<div style="font-size:0.8em; color:#888; padding-left:4px">Records per page for the linear keyset walk (default: 500)</div>
 			</div>
 
 			<div class="checkbox-row">

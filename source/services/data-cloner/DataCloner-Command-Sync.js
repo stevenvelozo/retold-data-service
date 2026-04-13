@@ -89,6 +89,36 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 				}
 			}
 
+			// Update BackSyncTimeLimit on MeadowSync and all sync entities
+			if (tmpBody.hasOwnProperty('BackSyncTimeLimit'))
+			{
+				let tmpBackSyncTimeLimit = parseInt(tmpBody.BackSyncTimeLimit, 10);
+				if (!isNaN(tmpBackSyncTimeLimit) && tmpBackSyncTimeLimit > 0)
+				{
+					tmpFable.MeadowSync.BackSyncTimeLimit = tmpBackSyncTimeLimit;
+					let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
+					for (let i = 0; i < tmpEntityNames.length; i++)
+					{
+						tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].BackSyncTimeLimit = tmpBackSyncTimeLimit;
+					}
+				}
+			}
+
+			// Update TrueUpPageSize on MeadowSync and all sync entities
+			if (tmpBody.hasOwnProperty('TrueUpPageSize'))
+			{
+				let tmpTrueUpPageSize = parseInt(tmpBody.TrueUpPageSize, 10);
+				if (!isNaN(tmpTrueUpPageSize) && tmpTrueUpPageSize > 0)
+				{
+					tmpFable.MeadowSync.TrueUpPageSize = tmpTrueUpPageSize;
+					let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
+					for (let i = 0; i < tmpEntityNames.length; i++)
+					{
+						tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].TrueUpPageSize = tmpTrueUpPageSize;
+					}
+				}
+			}
+
 			// If no tables specified, sync all entities
 			if (tmpSelectedTables.length === 0)
 			{
