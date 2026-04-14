@@ -6417,6 +6417,18 @@
           let tmpMaxRecords = parseInt(document.getElementById('syncMaxRecords').value, 10);
           if (tmpMaxRecords > 0) tmpConfig.Sync.MaxRecords = tmpMaxRecords;
           if (document.getElementById('syncAdvancedIDPagination').checked) tmpConfig.Sync.UseAdvancedIDPagination = true;
+
+          // Strategy-specific options
+          let tmpBackSyncEl = document.getElementById('backSyncTimeLimit');
+          if (tmpBackSyncEl) {
+            let tmpBackSyncTimeLimit = parseInt(tmpBackSyncEl.value, 10);
+            if (tmpBackSyncTimeLimit > 0) tmpConfig.Sync.BackSyncTimeLimit = tmpBackSyncTimeLimit;
+          }
+          let tmpTrueUpEl = document.getElementById('trueUpPageSize');
+          if (tmpTrueUpEl) {
+            let tmpTrueUpPageSize = parseInt(tmpTrueUpEl.value, 10);
+            if (tmpTrueUpPageSize > 0) tmpConfig.Sync.TrueUpPageSize = tmpTrueUpPageSize;
+          }
           return tmpConfig;
         }
         buildMeadowIntegrationConfig() {
@@ -6484,6 +6496,18 @@
           tmpConfig.Sync.SyncEntityList = tmpSelectedTables.length > 0 ? tmpSelectedTables : [];
           tmpConfig.Sync.SyncEntityOptions = {};
           if (document.getElementById('syncAdvancedIDPagination').checked) tmpConfig.Sync.UseAdvancedIDPagination = true;
+
+          // Strategy-specific options
+          let tmpBackSyncEl = document.getElementById('backSyncTimeLimit');
+          if (tmpBackSyncEl) {
+            let tmpBackSyncTimeLimit = parseInt(tmpBackSyncEl.value, 10);
+            if (tmpBackSyncTimeLimit > 0) tmpConfig.Sync.BackSyncTimeLimit = tmpBackSyncTimeLimit;
+          }
+          let tmpTrueUpEl = document.getElementById('trueUpPageSize');
+          if (tmpTrueUpEl) {
+            let tmpTrueUpPageSize = parseInt(tmpTrueUpEl.value, 10);
+            if (tmpTrueUpPageSize > 0) tmpConfig.Sync.TrueUpPageSize = tmpTrueUpPageSize;
+          }
 
           // ---- SessionManager ----
           tmpConfig.SessionManager = {

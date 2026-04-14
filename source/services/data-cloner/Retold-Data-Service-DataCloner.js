@@ -84,8 +84,10 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 				ThroughputTimer: null
 			});
 
-		// Create an isolated Pict instance for remote session management
-		this._Pict = new libPict(
+		// Create an isolated Pict instance for remote session management.
+		// Forward REST client connection settings from the parent fable so
+		// the session RestClient inherits keep-alive and timeout configuration.
+		let tmpPictSettings = (
 			{
 				Product: 'DataClonerSession',
 				TraceLog: true,
@@ -96,6 +98,19 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 						}
 					]
 			});
+		if (this.fable.settings.RestClientKeepAlive)
+		{
+			tmpPictSettings.RestClientKeepAlive = this.fable.settings.RestClientKeepAlive;
+		}
+		if (this.fable.settings.RestClientRequestTimeout)
+		{
+			tmpPictSettings.RestClientRequestTimeout = this.fable.settings.RestClientRequestTimeout;
+		}
+		if (this.fable.settings.RestClientMaxRequestTimeout)
+		{
+			tmpPictSettings.RestClientMaxRequestTimeout = this.fable.settings.RestClientMaxRequestTimeout;
+		}
+		this._Pict = new libPict(tmpPictSettings);
 
 		this._Pict.serviceManager.addServiceType('SessionManager', libPictSessionManager);
 		this._Pict.serviceManager.instantiateServiceProvider('SessionManager');
