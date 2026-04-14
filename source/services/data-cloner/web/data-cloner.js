@@ -3315,7 +3315,7 @@
     12: [function (require, module, exports) {
       module.exports = {
         "name": "pict-view",
-        "version": "1.0.67",
+        "version": "1.0.68",
         "description": "Pict View Base Class",
         "main": "source/Pict-View.js",
         "scripts": {
@@ -3345,8 +3345,8 @@
           "@eslint/js": "^9.39.1",
           "browser-env": "^3.3.0",
           "eslint": "^9.39.1",
-          "pict": "^1.0.348",
-          "quackage": "^1.0.58",
+          "pict": "^1.0.363",
+          "quackage": "^1.0.65",
           "typescript": "^5.9.3"
         },
         "mocha": {
@@ -3361,7 +3361,7 @@
           "watch-ignore": ["lib/vendor"]
         },
         "dependencies": {
-          "fable": "^3.1.63",
+          "fable": "^3.1.67",
           "fable-serviceproviderbase": "^3.0.19"
         }
       };
@@ -4139,6 +4139,10 @@
               // Execute the developer-overridable post-render behavior
               tmpView.onAfterRender(tmpEvent.Data.Renderable);
             }
+            // Queue is drained and nested child renders have each cleaned up
+            // their own transactions; remove this root render's entry from
+            // the tracking map so it does not leak.
+            this.pict.TransactionTracking.unregisterTransaction(pRenderable.TransactionHash);
           }
           return true;
         }
@@ -4150,9 +4154,17 @@
          * @param {Renderable} pRenderable - The renderable that was rendered.
          */
         onAfterRenderAsync(fCallback, pRenderable) {
+          // NOTE: this.onAfterRender(pRenderable) will itself clear the
+          // transaction queue and unregister the transaction if this view is
+          // the root renderable - see onAfterRender above. So by the time the
+          // loop below runs, the queue is already empty and there is nothing
+          // to drain. Keeping the async queue walk here defensively in case
+          // future subclasses override onAfterRender in ways that skip the
+          // drain, but the common path is now "sync drain, async no-op".
           this.onAfterRender(pRenderable);
           const tmpAnticipate = this.fable.newAnticipate();
-          if (pRenderable && pRenderable.RootRenderableViewHash === this.Hash) {
+          const tmpIsRootRenderable = pRenderable && pRenderable.RootRenderableViewHash === this.Hash;
+          if (tmpIsRootRenderable) {
             const queue = this.pict.TransactionTracking.clearTransactionQueue(pRenderable.TransactionHash) || [];
             for (const event of queue) {
               /** @type {PictView} */
@@ -4169,7 +4181,18 @@
               // Execute the developer-overridable post-render behavior
             }
           }
-          return tmpAnticipate.wait(fCallback);
+          return tmpAnticipate.wait(pError => {
+            // Nested virtual-assignment children have now settled their own
+            // onAfterRenderAsync chains (and unregistered their own
+            // transactions along the way). Ensure this root render's entry
+            // is also gone - unregisterTransaction is a no-op if the sync
+            // onAfterRender above already removed it, so this is safe to
+            // call unconditionally on the root path.
+            if (tmpIsRootRenderable && pRenderable && pRenderable.TransactionHash) {
+              this.pict.TransactionTracking.unregisterTransaction(pRenderable.TransactionHash);
+            }
+            return fCallback(pError);
+          });
         }
 
         /**
@@ -7513,6 +7536,21 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         constructor(pFable, pOptions, pServiceHash) {
           super(pFable, pOptions, pServiceHash);
         }
+        onSyncModeChanged() {
+          let tmpMode = document.querySelector('input[name="syncMode"]:checked').value;
+
+          // Hide all mode-specific option panels
+          let tmpPanels = document.querySelectorAll('[id^="syncModeOptions-"]');
+          for (let i = 0; i < tmpPanels.length; i++) {
+            tmpPanels[i].style.display = 'none';
+          }
+
+          // Show the panel for the selected mode (if one exists)
+          let tmpPanel = document.getElementById('syncModeOptions-' + tmpMode);
+          if (tmpPanel) {
+            tmpPanel.style.display = 'block';
+          }
+        }
         startSync() {
           let tmpSelectedTables = this.pict.views['DataCloner-Schema'].getSelectedTables();
           let tmpPageSize = parseInt(document.getElementById('pageSize').value, 10) || 100;
@@ -7541,6 +7579,16 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           if (tmpMaxRecords > 0) tmpPostBody.MaxRecordsPerEntity = tmpMaxRecords;
           if (tmpLogToFile) tmpPostBody.LogToFile = true;
           if (tmpAdvancedIDPagination) tmpPostBody.UseAdvancedIDPagination = true;
+
+          // Strategy-specific options
+          if (tmpSyncMode === 'OngoingEventualConsistency') {
+            let tmpBackSyncTimeLimit = parseInt(document.getElementById('backSyncTimeLimit').value, 10);
+            if (tmpBackSyncTimeLimit > 0) tmpPostBody.BackSyncTimeLimit = tmpBackSyncTimeLimit;
+          }
+          if (tmpSyncMode === 'TrueUp') {
+            let tmpTrueUpPageSize = parseInt(document.getElementById('trueUpPageSize').value, 10);
+            if (tmpTrueUpPageSize > 0) tmpPostBody.TrueUpPageSize = tmpTrueUpPageSize;
+          }
           this.pict.providers.DataCloner.api('POST', '/clone/sync/start', tmpPostBody).then(function (pData) {
             if (pData.Success) {
               let tmpMsg = pData.SyncMode + ' sync started for ' + pData.Tables.length + ' tables.';
@@ -7914,16 +7962,48 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 
 			<div style="margin-bottom:10px">
 				<label style="margin-bottom:6px">Sync Mode</label>
-				<div style="display:flex; gap:16px; align-items:center">
+				<div style="display:flex; gap:12px 20px; align-items:center; flex-wrap:wrap">
 					<label style="font-weight:normal; margin:0; cursor:pointer">
-						<input type="radio" name="syncMode" id="syncModeInitial" value="Initial" checked> Initial
-						<span style="color:#888; font-size:0.85em">(full clone — download all records)</span>
+						<input type="radio" name="syncMode" id="syncModeInitial" value="Initial" checked onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Initial
+						<span style="color:#888; font-size:0.85em">(full clone)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
-						<input type="radio" name="syncMode" id="syncModeOngoing" value="Ongoing"> Ongoing
-						<span style="color:#888; font-size:0.85em">(delta — only new/updated records since last sync)</span>
+						<input type="radio" name="syncMode" id="syncModeOngoing" value="Ongoing" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Ongoing
+						<span style="color:#888; font-size:0.85em">(delta sync)</span>
+					</label>
+					<label style="font-weight:normal; margin:0; cursor:pointer">
+						<input type="radio" name="syncMode" id="syncModeOngoingEventualConsistency" value="OngoingEventualConsistency" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Eventual
+						<span style="color:#888; font-size:0.85em">(time-budgeted back-sync)</span>
+					</label>
+					<label style="font-weight:normal; margin:0; cursor:pointer">
+						<input type="radio" name="syncMode" id="syncModeTrueUp" value="TrueUp" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> True-Up
+						<span style="color:#888; font-size:0.85em">(linear walk, one-time)</span>
+					</label>
+					<label style="font-weight:normal; margin:0; cursor:pointer">
+						<input type="radio" name="syncMode" id="syncModeComparisonOnly" value="ComparisonOnly" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Compare
+						<span style="color:#888; font-size:0.85em">(diff report, no sync)</span>
 					</label>
 				</div>
+			</div>
+
+			<div id="syncModeOptions-OngoingEventualConsistency" style="display:none; margin-bottom:10px">
+				<div style="display:flex; gap:8px; align-items:flex-end">
+					<div style="flex:0 0 220px">
+						<label for="backSyncTimeLimit">Back-Sync Time Budget (ms)</label>
+						<input type="number" id="backSyncTimeLimit" value="30000" min="1000" max="600000" style="margin-bottom:0">
+					</div>
+				</div>
+				<div style="font-size:0.8em; color:#888; padding-left:4px">Milliseconds devoted to backwards bisection per entity before pulling new records (default: 30000)</div>
+			</div>
+
+			<div id="syncModeOptions-TrueUp" style="display:none; margin-bottom:10px">
+				<div style="display:flex; gap:8px; align-items:flex-end">
+					<div style="flex:0 0 220px">
+						<label for="trueUpPageSize">True-Up Page Size</label>
+						<input type="number" id="trueUpPageSize" value="500" min="10" max="10000" style="margin-bottom:0">
+					</div>
+				</div>
+				<div style="font-size:0.8em; color:#888; padding-left:4px">Records per page for the linear keyset walk (default: 500)</div>
 			</div>
 
 			<div class="checkbox-row">
