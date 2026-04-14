@@ -1018,12 +1018,19 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 						let tmpTracker = tmpSyncEntity.operation.progressTrackers[`FullSync-${tmpTableName}`];
 						if (tmpTracker)
 						{
-							tmpProgress.Total = tmpTracker.TotalCount || 0;
+							// Clamp both to >= 0: Total can be estimated from
+							// Server.RecordCount - Local.RecordCount, which is
+							// negative when local has extra records (e.g. after
+							// server-side deletes).  A negative total in the
+							// progress report is nonsensical.
+							tmpProgress.Total = Math.max(tmpTracker.TotalCount || 0, 0);
 							tmpProgress.Synced = Math.max(tmpTracker.CurrentCount || 0, 0);
 						}
 					}
 
 					// Read per-record breakdown from the sync entity
+					let tmpEntityErrors = 0;
+					let tmpEntitySkipped = 0;
 					if (tmpSyncEntity && tmpSyncEntity.syncResults)
 					{
 						let tmpResults = tmpSyncEntity.syncResults;
@@ -1033,12 +1040,12 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 						tmpProgress.Deleted = tmpResults.Deleted || 0;
 						tmpProgress.ServerTotal = tmpResults.ServerRecordCount || 0;
 						tmpProgress.LocalCountBefore = tmpResults.LocalRecordCount || 0;
+						tmpEntityErrors = tmpResults.Errors || 0;
+						tmpEntitySkipped = tmpResults.Skipped || 0;
 					}
 
 					let tmpRESTErrors = this._cloneState.SyncRESTErrors[tmpTableName] || 0;
-					tmpProgress.Errors = tmpRESTErrors;
-
-					let tmpMissing = tmpProgress.Total - tmpProgress.Synced;
+					tmpProgress.Errors = tmpRESTErrors + tmpEntityErrors;
 
 					if (pError)
 					{
@@ -1048,25 +1055,35 @@ class RetoldDataServiceDataCloner extends libFableServiceProviderBase
 						this.logSyncEvent('TableError', `Sync [${tmpTableName}] — error: ${pError}`,
 							{ Table: tmpTableName, Total: tmpProgress.Total, Synced: tmpProgress.Synced, Error: `${pError}` });
 					}
-					else if (tmpRESTErrors > 0)
+					else if (tmpRESTErrors > 0 || tmpEntityErrors > 0)
 					{
-						tmpProgress.Status = 'Error';
-						tmpProgress.ErrorMessage = `${tmpRESTErrors} REST error(s) during sync`;
-						this.fable.log.warn(`Data Cloner: Sync [${tmpTableName}] — completed with ${tmpRESTErrors} REST error(s). ${tmpProgress.Synced}/${tmpProgress.Total} records synced.`);
-						this.logSyncEvent('TableError', `Sync [${tmpTableName}] — ${tmpRESTErrors} REST error(s).`,
-							{ Table: tmpTableName, Total: tmpProgress.Total, Synced: tmpProgress.Synced, RESTErrors: tmpRESTErrors });
-					}
-					else if (tmpProgress.Total > 0 && tmpMissing > 0)
-					{
-						tmpProgress.Status = 'Partial';
-						tmpProgress.Skipped = tmpMissing;
-						this.fable.log.warn(`Data Cloner: Sync [${tmpTableName}] — partial. ${tmpProgress.Synced}/${tmpProgress.Total} records synced, ${tmpMissing} skipped (GUID conflicts or other errors).`);
-						this.logSyncEvent('TablePartial', `Sync [${tmpTableName}] — partial. ${tmpMissing} skipped.`,
-							{ Table: tmpTableName, Total: tmpProgress.Total, Synced: tmpProgress.Synced, Skipped: tmpMissing });
+						// Only treat the sync as Partial/Error when the sync
+						// entity actually reported errors (REST fetch errors or
+						// per-record commit errors).  A count-mismatch between
+						// estimated Total and actual Synced is not itself an
+						// error — pre-count estimates can be stale (records
+						// were updated rather than added, local already has
+						// records past the server's max ID, etc.), and the
+						// sync code correctly downloads nothing in those
+						// cases.  Reporting "N skipped" for pure estimate
+						// drift is noisy and misleading.
+						let tmpPartialMessage = (tmpRESTErrors > 0 && tmpEntityErrors > 0)
+							? `${tmpRESTErrors} REST error(s) and ${tmpEntityErrors} record error(s) during sync`
+							: (tmpRESTErrors > 0)
+								? `${tmpRESTErrors} REST error(s) during sync`
+								: `${tmpEntityErrors} record error(s) during sync`;
+						tmpProgress.Status = (tmpRESTErrors > 0) ? 'Error' : 'Partial';
+						tmpProgress.ErrorMessage = tmpPartialMessage;
+						tmpProgress.Skipped = tmpEntitySkipped;
+						this.fable.log.warn(`Data Cloner: Sync [${tmpTableName}] — ${tmpPartialMessage}. ${tmpProgress.Synced}/${tmpProgress.Total} records synced.`);
+						this.logSyncEvent(tmpProgress.Status === 'Error' ? 'TableError' : 'TablePartial',
+							`Sync [${tmpTableName}] — ${tmpPartialMessage}.`,
+							{ Table: tmpTableName, Total: tmpProgress.Total, Synced: tmpProgress.Synced, RESTErrors: tmpRESTErrors, RecordErrors: tmpEntityErrors });
 					}
 					else
 					{
 						tmpProgress.Status = 'Complete';
+						tmpProgress.Skipped = tmpEntitySkipped;
 						this.fable.log.info(`Data Cloner: Sync [${tmpTableName}] — complete. ${tmpProgress.Synced}/${tmpProgress.Total} records synced.`);
 						this.logSyncEvent('TableComplete', `Sync [${tmpTableName}] — complete. ${tmpProgress.Synced}/${tmpProgress.Total} records.`,
 							{ Table: tmpTableName, Total: tmpProgress.Total, Synced: tmpProgress.Synced });
