@@ -1,6 +1,6 @@
 {
     "name": "retold-data-service",
-    "version": "2.0.40",
+    "version": "2.0.41",
     "description": "Serve up a whole model!",
     "main": "source/Retold-Data-Service.js",
     "bin": {
@@ -73,8 +73,8 @@
         "meadow": "^2.0.35",
         "meadow-connection-mysql": "^1.0.14",
         "meadow-endpoints": "^4.0.15",
-        "meadow-integration": "^1.0.33",
-        "meadow-migrationmanager": "^0.0.11",
+        "meadow-integration": "^1.0.34",
+        "meadow-migrationmanager": "^0.0.12",
         "orator": "^6.0.4",
         "orator-http-proxy": "^1.0.5",
         "orator-serviceserver-restify": "^2.0.10",
