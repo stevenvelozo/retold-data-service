@@ -53,6 +53,34 @@ class DataClonerConnectionView extends libPictView
 			// level is < 110 (the parser rejects OFFSET/FETCH syntax
 			// otherwise).
 			tmpConfig.LegacyPagination = document.getElementById('mssqlLegacyPagination').checked;
+
+			// Reliability tuning — pull from the advanced settings block.
+			// All are optional; the connection provider falls back to
+			// sensible defaults when a value is missing or zero.
+			let tmpReqSec = parseInt(document.getElementById('mssqlRequestTimeoutSec').value, 10);
+			if (tmpReqSec > 0) tmpConfig.RequestTimeoutMs = tmpReqSec * 1000;
+			let tmpConnSec = parseInt(document.getElementById('mssqlConnectionTimeoutSec').value, 10);
+			if (tmpConnSec > 0) tmpConfig.ConnectionTimeoutMs = tmpConnSec * 1000;
+
+			let tmpConnectAttempts = parseInt(document.getElementById('mssqlConnectMaxAttempts').value, 10);
+			let tmpDDLAttempts = parseInt(document.getElementById('mssqlDDLMaxAttempts').value, 10);
+			let tmpInitialDelaySec = parseInt(document.getElementById('mssqlRetryInitialDelaySec').value, 10);
+			let tmpMaxDelaySec = parseInt(document.getElementById('mssqlRetryMaxDelaySec').value, 10);
+
+			if (tmpConnectAttempts > 0 || tmpInitialDelaySec > 0 || tmpMaxDelaySec > 0)
+			{
+				tmpConfig.ConnectRetryOptions = {};
+				if (tmpConnectAttempts > 0) tmpConfig.ConnectRetryOptions.MaxAttempts = tmpConnectAttempts;
+				if (tmpInitialDelaySec > 0) tmpConfig.ConnectRetryOptions.InitialDelayMs = tmpInitialDelaySec * 1000;
+				if (tmpMaxDelaySec > 0) tmpConfig.ConnectRetryOptions.MaxDelayMs = tmpMaxDelaySec * 1000;
+			}
+			if (tmpDDLAttempts > 0 || tmpInitialDelaySec > 0 || tmpMaxDelaySec > 0)
+			{
+				tmpConfig.DDLRetryOptions = {};
+				if (tmpDDLAttempts > 0) tmpConfig.DDLRetryOptions.MaxAttempts = tmpDDLAttempts;
+				if (tmpInitialDelaySec > 0) tmpConfig.DDLRetryOptions.InitialDelayMs = tmpInitialDelaySec * 1000;
+				if (tmpMaxDelaySec > 0) tmpConfig.DDLRetryOptions.MaxDelayMs = tmpMaxDelaySec * 1000;
+			}
 		}
 		else if (tmpProvider === 'PostgreSQL')
 		{
@@ -300,6 +328,41 @@ module.exports.default_configuration =
 					<input type="checkbox" id="mssqlLegacyPagination">
 					<label for="mssqlLegacyPagination" title="Enable for SQL Server 2008 R2 / 2012 or databases at compatibility_level &lt; 110. Uses ROW_NUMBER() pagination instead of OFFSET/FETCH.">Legacy pagination (SQL Server &lt; 2012 / compat level &lt; 110)</label>
 				</div>
+
+				<details style="margin-top:8px">
+					<summary style="cursor:pointer; font-weight:600">Reliability &amp; timeouts (advanced)</summary>
+					<p style="margin:8px 0; font-size:0.9em; color:#555">Tune these for slow / flaky customer networks. Connection and DDL operations will retry with exponential backoff, classifying each failure (NetworkError / RequestTimeout / PoolDegraded / ServerError) in the logs so the failure mode is obvious.</p>
+					<div class="inline-group">
+						<div>
+							<label for="mssqlRequestTimeoutSec">Request timeout (sec)</label>
+							<input type="number" id="mssqlRequestTimeoutSec" placeholder="120" value="120">
+						</div>
+						<div>
+							<label for="mssqlConnectionTimeoutSec">Connection timeout (sec)</label>
+							<input type="number" id="mssqlConnectionTimeoutSec" placeholder="60" value="60">
+						</div>
+					</div>
+					<div class="inline-group">
+						<div>
+							<label for="mssqlConnectMaxAttempts">Connect retries (max attempts)</label>
+							<input type="number" id="mssqlConnectMaxAttempts" placeholder="5" value="5" min="1" max="20">
+						</div>
+						<div>
+							<label for="mssqlDDLMaxAttempts">DDL retries (max attempts)</label>
+							<input type="number" id="mssqlDDLMaxAttempts" placeholder="5" value="5" min="1" max="20">
+						</div>
+					</div>
+					<div class="inline-group">
+						<div>
+							<label for="mssqlRetryInitialDelaySec">Retry initial delay (sec)</label>
+							<input type="number" id="mssqlRetryInitialDelaySec" placeholder="3" value="3" min="1" max="60">
+						</div>
+						<div>
+							<label for="mssqlRetryMaxDelaySec">Retry max delay (sec)</label>
+							<input type="number" id="mssqlRetryMaxDelaySec" placeholder="30" value="30" min="1" max="600">
+						</div>
+					</div>
+				</details>
 			</div>
 
 			<!-- PostgreSQL Config -->
