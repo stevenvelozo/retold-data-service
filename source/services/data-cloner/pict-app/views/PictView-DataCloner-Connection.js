@@ -48,6 +48,11 @@ class DataClonerConnectionView extends libPictView
 			tmpConfig.password = document.getElementById('mssqlPassword').value;
 			tmpConfig.database = document.getElementById('mssqlDatabase').value.trim();
 			tmpConfig.connectionLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
+			// Use ROW_NUMBER() pagination instead of OFFSET/FETCH for
+			// SQL Server 2008 R2 / 2012 or databases whose compatibility
+			// level is < 110 (the parser rejects OFFSET/FETCH syntax
+			// otherwise).
+			tmpConfig.LegacyPagination = document.getElementById('mssqlLegacyPagination').checked;
 		}
 		else if (tmpProvider === 'PostgreSQL')
 		{
@@ -290,6 +295,10 @@ module.exports.default_configuration =
 						<input type="number" id="mssqlConnectionLimit" placeholder="20" value="20">
 					</div>
 					<div></div>
+				</div>
+				<div style="margin-top:8px">
+					<input type="checkbox" id="mssqlLegacyPagination">
+					<label for="mssqlLegacyPagination" title="Enable for SQL Server 2008 R2 / 2012 or databases at compatibility_level &lt; 110. Uses ROW_NUMBER() pagination instead of OFFSET/FETCH.">Legacy pagination (SQL Server &lt; 2012 / compat level &lt; 110)</label>
 				</div>
 			</div>
 

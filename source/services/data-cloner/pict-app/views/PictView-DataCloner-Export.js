@@ -37,6 +37,10 @@ class DataClonerExportView extends libPictView
 			tmpDbConfig.password = document.getElementById('mssqlPassword').value;
 			tmpDbConfig.database = document.getElementById('mssqlDatabase').value.trim();
 			tmpDbConfig.connectionLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
+			if (document.getElementById('mssqlLegacyPagination').checked)
+			{
+				tmpDbConfig.LegacyPagination = true;
+			}
 		}
 		else if (tmpProvider === 'PostgreSQL')
 		{
@@ -156,6 +160,10 @@ class DataClonerExportView extends libPictView
 			tmpConfig.Destination.MSSQL.password = document.getElementById('mssqlPassword').value || '';
 			tmpConfig.Destination.MSSQL.database = document.getElementById('mssqlDatabase').value.trim() || 'meadow';
 			tmpConfig.Destination.MSSQL.ConnectionPoolLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
+			if (document.getElementById('mssqlLegacyPagination').checked)
+			{
+				tmpConfig.Destination.MSSQL.LegacyPagination = true;
+			}
 		}
 		else
 		{

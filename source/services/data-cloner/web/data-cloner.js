@@ -5072,6 +5072,11 @@
           if (tmpSolrSecure !== null) {
             document.getElementById('solrSecure').checked = tmpSolrSecure === 'true';
           }
+          let tmpMssqlLegacyPagination = localStorage.getItem('dataCloner_mssqlLegacyPagination');
+          if (tmpMssqlLegacyPagination !== null) {
+            let tmpEl = document.getElementById('mssqlLegacyPagination');
+            if (tmpEl) tmpEl.checked = tmpMssqlLegacyPagination === 'true';
+          }
           // Restore advanced ID pagination checkbox
           let tmpAdvancedIDPagination = localStorage.getItem('dataCloner_syncAdvancedIDPagination');
           if (tmpAdvancedIDPagination !== null) {
@@ -5116,6 +5121,14 @@
           if (tmpSolrSecureEl) {
             tmpSolrSecureEl.addEventListener('change', function () {
               localStorage.setItem('dataCloner_solrSecure', this.checked);
+            });
+          }
+
+          // Persist MSSQL legacy pagination checkbox
+          let tmpMssqlLegacyPaginationEl = document.getElementById('mssqlLegacyPagination');
+          if (tmpMssqlLegacyPaginationEl) {
+            tmpMssqlLegacyPaginationEl.addEventListener('change', function () {
+              localStorage.setItem('dataCloner_mssqlLegacyPagination', this.checked);
             });
           }
 
@@ -5851,6 +5864,11 @@
             tmpConfig.password = document.getElementById('mssqlPassword').value;
             tmpConfig.database = document.getElementById('mssqlDatabase').value.trim();
             tmpConfig.connectionLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
+            // Use ROW_NUMBER() pagination instead of OFFSET/FETCH for
+            // SQL Server 2008 R2 / 2012 or databases whose compatibility
+            // level is < 110 (the parser rejects OFFSET/FETCH syntax
+            // otherwise).
+            tmpConfig.LegacyPagination = document.getElementById('mssqlLegacyPagination').checked;
           } else if (tmpProvider === 'PostgreSQL') {
             tmpConfig.host = document.getElementById('postgresqlHost').value.trim() || '127.0.0.1';
             tmpConfig.port = parseInt(document.getElementById('postgresqlPort').value, 10) || 5432;
@@ -6043,6 +6061,10 @@
 						<input type="number" id="mssqlConnectionLimit" placeholder="20" value="20">
 					</div>
 					<div></div>
+				</div>
+				<div style="margin-top:8px">
+					<input type="checkbox" id="mssqlLegacyPagination">
+					<label for="mssqlLegacyPagination" title="Enable for SQL Server 2008 R2 / 2012 or databases at compatibility_level &lt; 110. Uses ROW_NUMBER() pagination instead of OFFSET/FETCH.">Legacy pagination (SQL Server &lt; 2012 / compat level &lt; 110)</label>
 				</div>
 			</div>
 
@@ -6362,6 +6384,9 @@
             tmpDbConfig.password = document.getElementById('mssqlPassword').value;
             tmpDbConfig.database = document.getElementById('mssqlDatabase').value.trim();
             tmpDbConfig.connectionLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
+            if (document.getElementById('mssqlLegacyPagination').checked) {
+              tmpDbConfig.LegacyPagination = true;
+            }
           } else if (tmpProvider === 'PostgreSQL') {
             tmpDbConfig.host = document.getElementById('postgresqlHost').value.trim() || '127.0.0.1';
             tmpDbConfig.port = parseInt(document.getElementById('postgresqlPort').value, 10) || 5432;
@@ -6465,6 +6490,9 @@
             tmpConfig.Destination.MSSQL.password = document.getElementById('mssqlPassword').value || '';
             tmpConfig.Destination.MSSQL.database = document.getElementById('mssqlDatabase').value.trim() || 'meadow';
             tmpConfig.Destination.MSSQL.ConnectionPoolLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
+            if (document.getElementById('mssqlLegacyPagination').checked) {
+              tmpConfig.Destination.MSSQL.LegacyPagination = true;
+            }
           } else {
             // Default to MySQL placeholder for unsupported providers
             tmpConfig.Destination.Provider = 'MySQL';

@@ -295,6 +295,12 @@ class DataClonerProvider extends libPictProvider
 		{
 			document.getElementById('solrSecure').checked = tmpSolrSecure === 'true';
 		}
+		let tmpMssqlLegacyPagination = localStorage.getItem('dataCloner_mssqlLegacyPagination');
+		if (tmpMssqlLegacyPagination !== null)
+		{
+			let tmpEl = document.getElementById('mssqlLegacyPagination');
+			if (tmpEl) tmpEl.checked = tmpMssqlLegacyPagination === 'true';
+		}
 		// Restore advanced ID pagination checkbox
 		let tmpAdvancedIDPagination = localStorage.getItem('dataCloner_syncAdvancedIDPagination');
 		if (tmpAdvancedIDPagination !== null)
@@ -348,6 +354,16 @@ class DataClonerProvider extends libPictProvider
 			tmpSolrSecureEl.addEventListener('change', function()
 			{
 				localStorage.setItem('dataCloner_solrSecure', this.checked);
+			});
+		}
+
+		// Persist MSSQL legacy pagination checkbox
+		let tmpMssqlLegacyPaginationEl = document.getElementById('mssqlLegacyPagination');
+		if (tmpMssqlLegacyPaginationEl)
+		{
+			tmpMssqlLegacyPaginationEl.addEventListener('change', function()
+			{
+				localStorage.setItem('dataCloner_mssqlLegacyPagination', this.checked);
 			});
 		}
 
