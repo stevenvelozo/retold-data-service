@@ -76,60 +76,25 @@ class DataClonerProvider extends libPictProvider
 
 	updateAllPreviews()
 	{
-		// Section 1 — Database Connection
-		let tmpProvider = document.getElementById('connProvider');
-		if (!tmpProvider) return;
-		tmpProvider = tmpProvider.value;
-		let tmpPreview1 = tmpProvider;
-		if (tmpProvider === 'SQLite')
+		// Section 1 — Database Connection (schema-driven; the
+		// Connection view owns the heuristic that turns the active
+		// schema's field values into preview text).  The view's
+		// _buildPreviewText reads live DOM values for the active
+		// provider and falls back to schema Defaults if a field's
+		// element doesn't exist yet.
+		let tmpConnView = this.pict.views['DataCloner-Connection'];
+		let tmpConnState = (this.pict.AppData.DataCloner && this.pict.AppData.DataCloner.Connection) || null;
+		let tmpPreview1Text;
+		if (tmpConnView && tmpConnState && (tmpConnState.Schemas || []).length > 0)
 		{
-			let tmpPath = document.getElementById('sqliteFilePath').value || '~/headlight-liveconnect-local/cloned.sqlite';
-			tmpPreview1 = 'SQLite at ' + tmpPath;
+			tmpPreview1Text = tmpConnView._buildPreviewText(tmpConnState);
 		}
-		else if (tmpProvider === 'MySQL')
+		else
 		{
-			let tmpHost = document.getElementById('mysqlServer').value || '127.0.0.1';
-			let tmpPort = document.getElementById('mysqlPort').value || '3306';
-			let tmpUser = document.getElementById('mysqlUser').value || 'root';
-			tmpPreview1 = 'MySQL on ' + tmpHost + ':' + tmpPort + ' as ' + tmpUser;
+			tmpPreview1Text = (tmpConnState && tmpConnState.PreviewText) || 'Loading providers…';
 		}
-		else if (tmpProvider === 'MSSQL')
-		{
-			let tmpHost = document.getElementById('mssqlServer').value || '127.0.0.1';
-			let tmpPort = document.getElementById('mssqlPort').value || '1433';
-			let tmpUser = document.getElementById('mssqlUser').value || 'sa';
-			tmpPreview1 = 'MSSQL on ' + tmpHost + ':' + tmpPort + ' as ' + tmpUser;
-		}
-		else if (tmpProvider === 'PostgreSQL')
-		{
-			let tmpHost = document.getElementById('postgresqlHost').value || '127.0.0.1';
-			let tmpPort = document.getElementById('postgresqlPort').value || '5432';
-			let tmpUser = document.getElementById('postgresqlUser').value || 'postgres';
-			tmpPreview1 = 'PostgreSQL on ' + tmpHost + ':' + tmpPort + ' as ' + tmpUser;
-		}
-		else if (tmpProvider === 'MongoDB')
-		{
-			let tmpHost = document.getElementById('mongodbHost').value || '127.0.0.1';
-			let tmpPort = document.getElementById('mongodbPort').value || '27017';
-			tmpPreview1 = 'MongoDB on ' + tmpHost + ':' + tmpPort;
-		}
-		else if (tmpProvider === 'Solr')
-		{
-			let tmpHost = document.getElementById('solrHost').value || '127.0.0.1';
-			let tmpPort = document.getElementById('solrPort').value || '8983';
-			tmpPreview1 = 'Solr on ' + tmpHost + ':' + tmpPort;
-		}
-		else if (tmpProvider === 'RocksDB')
-		{
-			let tmpFolder = document.getElementById('rocksdbFolder').value || '~/headlight-liveconnect-local/rocksdb';
-			tmpPreview1 = 'RocksDB at ' + tmpFolder;
-		}
-		else if (tmpProvider === 'Bibliograph')
-		{
-			let tmpFolder = document.getElementById('bibliographFolder').value || '~/headlight-liveconnect-local/bibliograph';
-			tmpPreview1 = 'Bibliograph at ' + tmpFolder;
-		}
-		document.getElementById('preview1').textContent = tmpPreview1;
+		let tmpPreview1El = document.getElementById('preview1');
+		if (tmpPreview1El) { tmpPreview1El.textContent = tmpPreview1Text; }
 
 		// Section 2 — Remote Session
 		let tmpServerURL = document.getElementById('serverURL').value;
@@ -210,14 +175,12 @@ class DataClonerProvider extends libPictProvider
 	{
 		let tmpSelf = this;
 
+		// Static (non-connection) fields that drive accordion previews.
+		// Connection-section fields hook updateAllPreviews via
+		// _persistConnectionFields() once schemas load — see
+		// bootstrapConnectionSchemas().
 		let tmpPreviewFields = [
-			'connProvider', 'sqliteFilePath',
-			'mysqlServer', 'mysqlPort', 'mysqlUser',
-			'mssqlServer', 'mssqlPort', 'mssqlUser',
-			'postgresqlHost', 'postgresqlPort', 'postgresqlUser',
-			'mongodbHost', 'mongodbPort',
-			'solrHost', 'solrPort',
-			'rocksdbFolder', 'bibliographFolder',
+			'connProvider',
 			'serverURL', 'userName',
 			'schemaURL',
 			'pageSize', 'dateTimePrecisionMS',
@@ -258,7 +221,17 @@ class DataClonerProvider extends libPictProvider
 	saveField(pFieldId)
 	{
 		let tmpEl = document.getElementById(pFieldId);
-		if (tmpEl)
+		if (!tmpEl) { return; }
+		// Checkboxes persist .checked, everything else persists .value.
+		// Older code special-cased a small set of checkbox ids (solrSecure,
+		// mssqlLegacyPagination, etc.); the schema-driven path no longer
+		// needs those — the checkbox handler in bootstrapConnectionSchemas
+		// stores 'true' / 'false' which restore picks up below.
+		if (tmpEl.type === 'checkbox')
+		{
+			localStorage.setItem('dataCloner_' + pFieldId, tmpEl.checked ? 'true' : 'false');
+		}
+		else
 		{
 			localStorage.setItem('dataCloner_' + pFieldId, tmpEl.value);
 		}
@@ -274,38 +247,40 @@ class DataClonerProvider extends libPictProvider
 			if (tmpSaved !== null)
 			{
 				let tmpEl = document.getElementById(tmpId);
-				if (tmpEl) tmpEl.value = tmpSaved;
+				if (tmpEl)
+				{
+					if (tmpEl.type === 'checkbox')
+					{
+						tmpEl.checked = (tmpSaved === 'true');
+					}
+					else
+					{
+						tmpEl.value = tmpSaved;
+					}
+				}
 			}
 		}
 
-		// Restore checkbox state
+		// Restore checkbox state for non-connection checkboxes that
+		// aren't in PersistFields (these all live outside the schema-
+		// driven Connection section, so they stay hardcoded).
 		let tmpSyncDeleted = localStorage.getItem('dataCloner_syncDeletedRecords');
 		if (tmpSyncDeleted !== null)
 		{
-			document.getElementById('syncDeletedRecords').checked = tmpSyncDeleted === 'true';
+			let tmpEl = document.getElementById('syncDeletedRecords');
+			if (tmpEl) tmpEl.checked = tmpSyncDeleted === 'true';
 		}
-		// Restore sync mode
 		let tmpSyncMode = localStorage.getItem('dataCloner_syncMode');
 		if (tmpSyncMode === 'Ongoing')
 		{
-			document.getElementById('syncModeOngoing').checked = true;
+			let tmpEl = document.getElementById('syncModeOngoing');
+			if (tmpEl) tmpEl.checked = true;
 		}
-		let tmpSolrSecure = localStorage.getItem('dataCloner_solrSecure');
-		if (tmpSolrSecure !== null)
-		{
-			document.getElementById('solrSecure').checked = tmpSolrSecure === 'true';
-		}
-		let tmpMssqlLegacyPagination = localStorage.getItem('dataCloner_mssqlLegacyPagination');
-		if (tmpMssqlLegacyPagination !== null)
-		{
-			let tmpEl = document.getElementById('mssqlLegacyPagination');
-			if (tmpEl) tmpEl.checked = tmpMssqlLegacyPagination === 'true';
-		}
-		// Restore advanced ID pagination checkbox
 		let tmpAdvancedIDPagination = localStorage.getItem('dataCloner_syncAdvancedIDPagination');
 		if (tmpAdvancedIDPagination !== null)
 		{
-			document.getElementById('syncAdvancedIDPagination').checked = tmpAdvancedIDPagination === 'true';
+			let tmpEl = document.getElementById('syncAdvancedIDPagination');
+			if (tmpEl) tmpEl.checked = tmpAdvancedIDPagination === 'true';
 		}
 	}
 
@@ -347,25 +322,9 @@ class DataClonerProvider extends libPictProvider
 			});
 		});
 
-		// Persist solr secure checkbox
-		let tmpSolrSecureEl = document.getElementById('solrSecure');
-		if (tmpSolrSecureEl)
-		{
-			tmpSolrSecureEl.addEventListener('change', function()
-			{
-				localStorage.setItem('dataCloner_solrSecure', this.checked);
-			});
-		}
-
-		// Persist MSSQL legacy pagination checkbox
-		let tmpMssqlLegacyPaginationEl = document.getElementById('mssqlLegacyPagination');
-		if (tmpMssqlLegacyPaginationEl)
-		{
-			tmpMssqlLegacyPaginationEl.addEventListener('change', function()
-			{
-				localStorage.setItem('dataCloner_mssqlLegacyPagination', this.checked);
-			});
-		}
+		// (Connection-section checkboxes — solrSecure, mssqlLegacyPagination —
+		// are handled by bootstrapConnectionSchemas() which hooks change
+		// listeners after the schema-driven form renders.)
 
 		// Persist advanced ID pagination checkbox
 		let tmpAdvancedIDPaginationEl = document.getElementById('syncAdvancedIDPagination');
@@ -395,6 +354,136 @@ class DataClonerProvider extends libPictProvider
 				}
 			})(tmpAutoIds[a]);
 		}
+	}
+
+	// ================================================================
+	// Connection Schemas Bootstrap
+	//
+	// Fetches the host's aggregated connection-form schemas and re-
+	// renders the Connection view so it shows the real provider list +
+	// per-provider field blocks.  Then restores localStorage values
+	// for the new (schema-driven) DOM ids and hooks save listeners.
+	// ================================================================
+
+	bootstrapConnectionSchemas(fCallback)
+	{
+		let tmpSelf = this;
+		let tmpDone = (typeof(fCallback) === 'function') ? fCallback : function () {};
+
+		this.api('GET', '/clone/connection/schemas')
+			.then(function (pData)
+			{
+				let tmpSchemas = (pData && Array.isArray(pData.Schemas)) ? pData.Schemas : [];
+				tmpSelf._applyConnectionSchemas(tmpSchemas);
+				return tmpDone(null, tmpSchemas);
+			})
+			.catch(function (pError)
+			{
+				if (tmpSelf.fable && tmpSelf.fable.log && tmpSelf.fable.log.error)
+				{
+					tmpSelf.fable.log.error(`DataCloner: failed to fetch connection schemas: ${pError && pError.message}`);
+				}
+				// On failure, leave the empty-schema state in place — the
+				// shared view's "no schemas detected" notice will surface.
+				tmpSelf._applyConnectionSchemas([]);
+				return tmpDone(pError);
+			});
+	}
+
+	_applyConnectionSchemas(pSchemas)
+	{
+		let tmpAppData = this.pict.AppData.DataCloner;
+		if (!tmpAppData.Connection) { tmpAppData.Connection = { Schemas: [], ActiveProvider: '', PreviewText: '' }; }
+		tmpAppData.Connection.Schemas = pSchemas;
+
+		// Pick an initial ActiveProvider — restore from localStorage
+		// if the saved value matches one of the available providers,
+		// otherwise default to the first schema (or stay empty).
+		let tmpAvailable = pSchemas.map(function (pS) { return pS.Provider; });
+		let tmpSavedProvider = localStorage.getItem('dataCloner_activeProvider');
+		if (tmpSavedProvider && tmpAvailable.indexOf(tmpSavedProvider) >= 0)
+		{
+			tmpAppData.Connection.ActiveProvider = tmpSavedProvider;
+		}
+		else if (pSchemas.length > 0)
+		{
+			tmpAppData.Connection.ActiveProvider = pSchemas[0].Provider;
+		}
+
+		// Hand the schemas to the shared view, which renders the form
+		// into #DataCloner-Connection-FormSlot.
+		let tmpForm = this.pict.views['PictSection-ConnectionForm'];
+		if (tmpForm)
+		{
+			let tmpSelf = this;
+			tmpForm.options.OnProviderChange = function (pProvider)
+			{
+				tmpAppData.Connection.ActiveProvider = pProvider;
+				localStorage.setItem('dataCloner_activeProvider', pProvider);
+				// Re-hook persistence on the new active form's inputs
+				// (the shared view re-renders on provider change, so the
+				// previous input listeners are gone).
+				tmpSelf._persistConnectionFields(pSchemas);
+				tmpSelf.updateAllPreviews();
+			};
+			if (tmpAppData.Connection.ActiveProvider)
+			{
+				tmpForm._ActiveProvider = tmpAppData.Connection.ActiveProvider;
+			}
+			tmpForm.setSchemas(pSchemas);
+		}
+
+		// Re-render the DataCloner accordion shell so the preview text
+		// reflects the active provider.
+		let tmpAccordion = this.pict.views['DataCloner-Connection'];
+		if (tmpAccordion) { tmpAccordion.render(); }
+
+		// Restore values + hook input listeners on the freshly-rendered
+		// shared-view inputs.
+		this._persistConnectionFields(pSchemas);
+		this.updateAllPreviews();
+	}
+
+	_persistConnectionFields(pSchemas)
+	{
+		let tmpForm = this.pict.views['PictSection-ConnectionForm'];
+		if (!tmpForm) { return; }
+
+		let tmpSelf = this;
+
+		// Restore + hook every per-provider field.  saveField()
+		// dispatches on element type internally so checkboxes and
+		// text inputs share the same path.
+		(pSchemas || []).forEach(function (pSchema)
+		{
+			(pSchema.Fields || []).forEach(function (pField)
+			{
+				let tmpId = tmpForm.fieldDOMId(pSchema.Provider, pField.Name);
+				let tmpEl = document.getElementById(tmpId);
+				if (!tmpEl) { return; }
+
+				let tmpSaved = localStorage.getItem('dataCloner_' + tmpId);
+				if (tmpSaved !== null)
+				{
+					if (tmpEl.type === 'checkbox')
+					{
+						tmpEl.checked = (tmpSaved === 'true');
+					}
+					else
+					{
+						tmpEl.value = tmpSaved;
+					}
+				}
+
+				// Avoid double-binding when the shared view re-renders
+				// on provider change.  We tag the element so subsequent
+				// runs of this method are no-ops.
+				if (tmpEl.dataset && tmpEl.dataset.dataclonerHooked === '1') { return; }
+				if (tmpEl.dataset) { tmpEl.dataset.dataclonerHooked = '1'; }
+				tmpEl.addEventListener('input',  function () { tmpSelf.saveField(tmpId); tmpSelf.updateAllPreviews(); });
+				tmpEl.addEventListener('change', function () { tmpSelf.saveField(tmpId); tmpSelf.updateAllPreviews(); });
+			});
+		});
 	}
 
 	// ================================================================

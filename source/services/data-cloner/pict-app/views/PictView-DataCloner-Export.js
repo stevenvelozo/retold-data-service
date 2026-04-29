@@ -9,48 +9,14 @@ class DataClonerExportView extends libPictView
 
 	buildConfigObject()
 	{
-		let tmpProvider = document.getElementById('connProvider').value;
+		// LocalDatabase block — schema-driven via the Connection view's
+		// getProviderConfig().  The wire format produced there matches
+		// what each meadow-connection provider expects (lowercase field
+		// names for SQL drivers, PascalCase for SQLite path, etc.).
+		let tmpConnInfo = this.pict.views['DataCloner-Connection'].getProviderConfig();
+		let tmpProvider = tmpConnInfo.Provider;
 		let tmpConfig = {};
-
-		// ---- Local Database ----
-		tmpConfig.LocalDatabase = { Provider: tmpProvider, Config: {} };
-		let tmpDbConfig = tmpConfig.LocalDatabase.Config;
-
-		if (tmpProvider === 'SQLite')
-		{
-			tmpDbConfig.SQLiteFilePath = document.getElementById('sqliteFilePath').value.trim() || '~/headlight-liveconnect-local/cloned.sqlite';
-		}
-		else if (tmpProvider === 'MySQL')
-		{
-			tmpDbConfig.host = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
-			tmpDbConfig.port = parseInt(document.getElementById('mysqlPort').value, 10) || 3306;
-			tmpDbConfig.user = document.getElementById('mysqlUser').value.trim() || 'root';
-			tmpDbConfig.password = document.getElementById('mysqlPassword').value;
-			tmpDbConfig.database = document.getElementById('mysqlDatabase').value.trim();
-			tmpDbConfig.connectionLimit = parseInt(document.getElementById('mysqlConnectionLimit').value, 10) || 20;
-		}
-		else if (tmpProvider === 'MSSQL')
-		{
-			tmpDbConfig.server = document.getElementById('mssqlServer').value.trim() || '127.0.0.1';
-			tmpDbConfig.port = parseInt(document.getElementById('mssqlPort').value, 10) || 1433;
-			tmpDbConfig.user = document.getElementById('mssqlUser').value.trim() || 'sa';
-			tmpDbConfig.password = document.getElementById('mssqlPassword').value;
-			tmpDbConfig.database = document.getElementById('mssqlDatabase').value.trim();
-			tmpDbConfig.connectionLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
-			if (document.getElementById('mssqlLegacyPagination').checked)
-			{
-				tmpDbConfig.LegacyPagination = true;
-			}
-		}
-		else if (tmpProvider === 'PostgreSQL')
-		{
-			tmpDbConfig.host = document.getElementById('postgresqlHost').value.trim() || '127.0.0.1';
-			tmpDbConfig.port = parseInt(document.getElementById('postgresqlPort').value, 10) || 5432;
-			tmpDbConfig.user = document.getElementById('postgresqlUser').value.trim() || 'postgres';
-			tmpDbConfig.password = document.getElementById('postgresqlPassword').value;
-			tmpDbConfig.database = document.getElementById('postgresqlDatabase').value.trim();
-			tmpDbConfig.max = parseInt(document.getElementById('postgresqlConnectionLimit').value, 10) || 10;
-		}
+		tmpConfig.LocalDatabase = { Provider: tmpProvider, Config: tmpConnInfo.Config || {} };
 
 		// ---- Remote Session ----
 		tmpConfig.RemoteSession = {};
@@ -126,7 +92,14 @@ class DataClonerExportView extends libPictView
 
 	buildMeadowIntegrationConfig()
 	{
-		let tmpProvider = document.getElementById('connProvider').value;
+		// Pull current connection values via the schema-driven Connection
+		// view.  buildConfigObject() above can use the result directly,
+		// but meadow-integration's clone CLI expects a slightly different
+		// destination shape — `server` instead of `host`, `ConnectionPoolLimit`
+		// instead of `connectionLimit` for MSSQL — so we adapt here.
+		let tmpConnInfo = this.pict.views['DataCloner-Connection'].getProviderConfig();
+		let tmpProvider = tmpConnInfo.Provider;
+		let tmpConfigConn = tmpConnInfo.Config || {};
 		let tmpConfig = {};
 
 		// ---- Source ----
@@ -142,25 +115,29 @@ class DataClonerExportView extends libPictView
 		if (tmpProvider === 'MySQL')
 		{
 			tmpConfig.Destination.Provider = 'MySQL';
-			tmpConfig.Destination.MySQL = {};
-			tmpConfig.Destination.MySQL.server = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
-			tmpConfig.Destination.MySQL.port = parseInt(document.getElementById('mysqlPort').value, 10) || 3306;
-			tmpConfig.Destination.MySQL.user = document.getElementById('mysqlUser').value.trim() || 'root';
-			tmpConfig.Destination.MySQL.password = document.getElementById('mysqlPassword').value || '';
-			tmpConfig.Destination.MySQL.database = document.getElementById('mysqlDatabase').value.trim() || 'meadow';
-			tmpConfig.Destination.MySQL.connectionLimit = parseInt(document.getElementById('mysqlConnectionLimit').value, 10) || 20;
+			tmpConfig.Destination.MySQL =
+				{
+					server:          tmpConfigConn.host || '127.0.0.1',
+					port:            tmpConfigConn.port || 3306,
+					user:            tmpConfigConn.user || 'root',
+					password:        tmpConfigConn.password || '',
+					database:        tmpConfigConn.database || 'meadow',
+					connectionLimit: tmpConfigConn.connectionLimit || 20
+				};
 		}
 		else if (tmpProvider === 'MSSQL')
 		{
 			tmpConfig.Destination.Provider = 'MSSQL';
-			tmpConfig.Destination.MSSQL = {};
-			tmpConfig.Destination.MSSQL.server = document.getElementById('mssqlServer').value.trim() || '127.0.0.1';
-			tmpConfig.Destination.MSSQL.port = parseInt(document.getElementById('mssqlPort').value, 10) || 1433;
-			tmpConfig.Destination.MSSQL.user = document.getElementById('mssqlUser').value.trim() || 'sa';
-			tmpConfig.Destination.MSSQL.password = document.getElementById('mssqlPassword').value || '';
-			tmpConfig.Destination.MSSQL.database = document.getElementById('mssqlDatabase').value.trim() || 'meadow';
-			tmpConfig.Destination.MSSQL.ConnectionPoolLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
-			if (document.getElementById('mssqlLegacyPagination').checked)
+			tmpConfig.Destination.MSSQL =
+				{
+					server:              tmpConfigConn.server || '127.0.0.1',
+					port:                tmpConfigConn.port || 1433,
+					user:                tmpConfigConn.user || 'sa',
+					password:            tmpConfigConn.password || '',
+					database:            tmpConfigConn.database || 'meadow',
+					ConnectionPoolLimit: tmpConfigConn.connectionLimit || 20
+				};
+			if (tmpConfigConn.LegacyPagination)
 			{
 				tmpConfig.Destination.MSSQL.LegacyPagination = true;
 			}

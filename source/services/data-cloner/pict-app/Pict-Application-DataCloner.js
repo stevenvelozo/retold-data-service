@@ -11,6 +11,7 @@ const libViewSync = require('./views/PictView-DataCloner-Sync.js');
 const libViewExport = require('./views/PictView-DataCloner-Export.js');
 const libViewViewData = require('./views/PictView-DataCloner-ViewData.js');
 const libViewHistogram = require('pict-section-histogram');
+const libViewConnectionForm = require('pict-section-connection-form');
 
 class DataClonerApplication extends libPictApplication
 {
@@ -45,11 +46,35 @@ class DataClonerApplication extends libPictApplication
 				BarColor: '#4a90d9',
 				Bins: []
 			}, libViewHistogram);
+
+		// Shared schema-driven connection form.  Renders into the slot
+		// the DataCloner-Connection accordion shell exposes; the
+		// provider's bootstrapConnectionSchemas() pumps the schemas in
+		// once the host's /clone/connection/schemas endpoint responds.
+		this.pict.addView('PictSection-ConnectionForm',
+			Object.assign({}, libViewConnectionForm.default_configuration,
+				{
+					ContainerSelector:         '#DataCloner-Connection-FormSlot',
+					DefaultDestinationAddress: '#DataCloner-Connection-FormSlot',
+					SchemasAddress:            'AppData.DataCloner.Connection.Schemas',
+					ActiveAddress:             'AppData.DataCloner.Connection.ActiveProvider',
+					FieldIDPrefix:             'datacloner-conn'
+				}), libViewConnectionForm);
 	}
 
 	onAfterInitializeAsync(fCallback)
 	{
-		// Centralized state (replaces global variables)
+		// Centralized state (replaces global variables).
+		//
+		// PersistFields covers the static, non-connection inputs only.
+		// Connection-section fields (provider picker + per-provider
+		// inputs) are schema-driven now: their DOM ids and
+		// localStorage keys are derived at runtime from the host's
+		// /clone/connection/schemas response and persistence is hooked
+		// up by Pict-Provider-DataCloner#bootstrapConnectionSchemas
+		// after the schema-driven Connection view re-renders.  See
+		// PictView-DataCloner-Connection.js for the field-id
+		// convention.
 		this.pict.AppData.DataCloner =
 		{
 			FetchedTables: [],
@@ -67,36 +92,45 @@ class DataClonerApplication extends libPictApplication
 				'serverURL', 'authMethod', 'authURI', 'checkURI',
 				'cookieName', 'cookieValueAddr', 'cookieValueTemplate', 'loginMarker',
 				'userName', 'password', 'schemaURL', 'pageSize', 'dateTimePrecisionMS',
-				'connProvider', 'sqliteFilePath',
-				'mysqlServer', 'mysqlPort', 'mysqlUser', 'mysqlPassword', 'mysqlDatabase', 'mysqlConnectionLimit',
-				'mssqlServer', 'mssqlPort', 'mssqlUser', 'mssqlPassword', 'mssqlDatabase', 'mssqlConnectionLimit',
-				'mssqlRequestTimeoutSec', 'mssqlConnectionTimeoutSec',
-				'mssqlConnectMaxAttempts', 'mssqlDDLMaxAttempts',
-				'mssqlRetryInitialDelaySec', 'mssqlRetryMaxDelaySec',
-				'postgresqlHost', 'postgresqlPort', 'postgresqlUser', 'postgresqlPassword', 'postgresqlDatabase', 'postgresqlConnectionLimit',
-				'solrHost', 'solrPort', 'solrCore', 'solrPath',
-				'mongodbHost', 'mongodbPort', 'mongodbUser', 'mongodbPassword', 'mongodbDatabase', 'mongodbConnectionLimit',
-				'rocksdbFolder',
-				'bibliographFolder',
 				'syncMaxRecords'
-			]
+			],
+			// Connection state — populated by bootstrapConnectionSchemas().
+			// Initialized empty here so the Connection view's first
+			// onBeforeRender finds a valid (if empty) shape.
+			Connection:
+			{
+				Schemas:         [],
+				ActiveProvider:  '',
+				ProviderOptions: [],
+				ProviderForms:   [],
+				NoSchemasSlot:   [{}],
+				PreviewText:     'Loading providers…'
+			}
 		};
 
 		// Make pict available for inline onclick handlers
 		window.pict = this.pict;
 
-		// Render layout (which chains child view renders via onAfterRender)
+		// Render layout (which chains child view renders via onAfterRender).
+		// The Connection view renders an empty shell here — the schemas
+		// arrive asynchronously and trigger a re-render once they land.
 		this.pict.views['DataCloner-Layout'].render();
 
-		// Post-render initialization
+		// Post-render initialization for the static (non-connection) UI.
 		this.pict.providers.DataCloner.initPersistence();
-		this.pict.views['DataCloner-Connection'].onProviderChange();
 		this.pict.providers.DataCloner.restoreDeployedTables();
 		this.pict.providers.DataCloner.startLiveStatusPolling();
 		this.pict.providers.DataCloner.initAccordionPreviews();
 		this.pict.providers.DataCloner.updateAllPreviews();
 		this.pict.views['DataCloner-Layout'].collapseAllSections();
 		this.pict.providers.DataCloner.initAutoProcess();
+
+		// Async: fetch the host's connection-form schemas and re-render
+		// the Connection section.  bootstrapConnectionSchemas restores
+		// localStorage values + hooks save listeners once the new DOM
+		// is in place, then invokes onProviderChange() to surface the
+		// active provider's form.
+		this.pict.providers.DataCloner.bootstrapConnectionSchemas(function () { /* fire-and-forget */ });
 
 		return fCallback();
 	}

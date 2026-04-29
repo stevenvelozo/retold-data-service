@@ -1,6 +1,6 @@
 {
     "name": "retold-data-service",
-    "version": "2.0.43",
+    "version": "2.1.0",
     "description": "Serve up a whole model!",
     "main": "source/Retold-Data-Service.js",
     "bin": {
@@ -71,7 +71,9 @@
         "fable": "^3.1.70",
         "fable-serviceproviderbase": "^3.0.19",
         "meadow": "^2.0.35",
-        "meadow-connection-mysql": "^1.0.17",
+        "meadow-connection-manager": "^1.1.0",
+        "pict-section-connection-form": "^0.0.1",
+        "meadow-connection-mysql": "^1.0.18",
         "meadow-endpoints": "^4.0.15",
         "meadow-integration": "^1.0.35",
         "meadow-migrationmanager": "^0.0.13",

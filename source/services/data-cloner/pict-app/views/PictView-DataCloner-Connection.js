@@ -1,4 +1,84 @@
+/**
+ * DataCloner — Database Connection (section 1)
+ *
+ * Thin accordion shell + connect/test wiring around the shared
+ * `pict-section-connection-form` view, which owns the schema-driven
+ * provider <select> + per-provider field rendering.  The shared view
+ * is registered separately in Pict-Application-DataCloner.js and
+ * renders into the FormSlot below.
+ *
+ * Flow:
+ *   1. Layout renders, this view paints the accordion shell with an
+ *      empty FormSlot + "Loading providers…" preview text.
+ *   2. Pict-Provider-DataCloner#bootstrapConnectionSchemas() fetches
+ *      GET /clone/connection/schemas and calls setSchemas() on the
+ *      shared view, which renders the per-provider form into FormSlot.
+ *   3. User clicks Connect / Test → this view delegates to the shared
+ *      view's getProviderConfig() to assemble the wire-format payload,
+ *      then POSTs to /clone/connection/{configure,test}.
+ *
+ * Earlier versions of this view contained the schema rendering inline;
+ * that logic has been lifted into pict-section-connection-form so
+ * retold-databeacon and retold-facto can share it.  See:
+ *   modules/pict/pict-section-connection-form/source/Pict-Section-ConnectionForm.js
+ */
+'use strict';
+
 const libPictView = require('pict-view');
+
+const _ViewConfiguration =
+{
+	ViewIdentifier:            'DataCloner-Connection',
+	DefaultRenderable:         'DataCloner-Connection',
+	DefaultDestinationAddress: '#DataCloner-Section-Connection',
+
+	Templates:
+	[
+		{
+			Hash: 'DataCloner-Connection',
+			Template: /*html*/`
+<div class="accordion-row">
+	<div class="accordion-number">1</div>
+	<div class="accordion-card" id="section1" data-section="1">
+		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section1')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> <span class="auto-label">auto</span></label>
+			<div class="accordion-title">Database Connection</div>
+			<span class="accordion-phase" id="phase1"></span>
+			<div class="accordion-preview" id="preview1">{~D:AppData.DataCloner.Connection.PreviewText~}</div>
+			<div class="accordion-actions">
+				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Connection'].connectProvider()">go</span>
+			</div>
+			<div class="accordion-toggle">&#9660;</div>
+		</div>
+		<div class="accordion-body">
+			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Configure the local database where cloned data will be stored.  The provider list comes from the host's installed meadow-connection modules.</p>
+
+			<div class="inline-group" style="margin-bottom:10px">
+				<div style="flex:1; display:flex; align-items:flex-end; gap:8px; justify-content:flex-end">
+					<button class="primary" onclick="pict.views['DataCloner-Connection'].connectProvider()">Connect</button>
+					<button class="secondary" onclick="pict.views['DataCloner-Connection'].testConnection()">Test Connection</button>
+				</div>
+			</div>
+
+			<!-- pict-section-connection-form renders here -->
+			<div id="DataCloner-Connection-FormSlot"></div>
+
+			<div id="connectionStatus"></div>
+		</div>
+	</div>
+</div>`
+		}
+	],
+
+	Renderables:
+	[
+		{
+			RenderableHash:     'DataCloner-Connection',
+			TemplateHash:       'DataCloner-Connection',
+			DestinationAddress: '#DataCloner-Section-Connection'
+		}
+	]
+};
 
 class DataClonerConnectionView extends libPictView
 {
@@ -7,126 +87,126 @@ class DataClonerConnectionView extends libPictView
 		super(pFable, pOptions, pServiceHash);
 	}
 
-	onProviderChange()
+	// ====================================================================
+	//  Lifecycle
+	// ====================================================================
+
+	onBeforeRender(pRenderable)
 	{
-		let tmpProvider = document.getElementById('connProvider').value;
-		let tmpProviders = ['SQLite', 'MySQL', 'MSSQL', 'PostgreSQL', 'Solr', 'MongoDB', 'RocksDB', 'Bibliograph'];
-		for (let i = 0; i < tmpProviders.length; i++)
+		// Make sure AppData has the slot the accordion preview reads
+		// from (the Provider's bootstrapConnectionSchemas() will fill in
+		// the live values once schemas arrive).
+		if (!this.pict.AppData.DataCloner) { this.pict.AppData.DataCloner = {}; }
+		if (!this.pict.AppData.DataCloner.Connection)
 		{
-			let tmpEl = document.getElementById('config' + tmpProviders[i]);
-			if (tmpEl)
-			{
-				tmpEl.style.display = (tmpProvider === tmpProviders[i]) ? '' : 'none';
-			}
+			this.pict.AppData.DataCloner.Connection =
+				{
+					Schemas:        [],
+					ActiveProvider: '',
+					PreviewText:    'Loading providers…'
+				};
 		}
-		this.pict.providers.DataCloner.saveField('connProvider');
+		return super.onBeforeRender(pRenderable);
 	}
+
+	// ====================================================================
+	//  Helpers used by the provider's preview / persistence layer
+	// ====================================================================
+
+	/**
+	 * Build the section 1 accordion preview text.  Reads live DOM
+	 * values via the shared view if it's mounted, otherwise falls back
+	 * to schema defaults.
+	 *
+	 * @param {{Schemas: object[], ActiveProvider: string}} pState
+	 * @returns {string}
+	 */
+	_buildPreviewText(pState)
+	{
+		let tmpActive = pState.ActiveProvider;
+		let tmpSchema = (pState.Schemas || []).find((pS) => pS.Provider === tmpActive);
+		if (!tmpSchema) { return tmpActive || '(no provider selected)'; }
+
+		// Heuristics:
+		//   - file-based providers (single Path field) → "<DisplayName> at <path>"
+		//   - host/port/user providers              → "<DisplayName> on host:port [as user]"
+		// Host/port/user are matched by canonical schema field names.
+		let tmpFields = tmpSchema.Fields || [];
+		let tmpPath = tmpFields.find((pF) => pF.Type === 'Path');
+		if (tmpPath)
+		{
+			let tmpVal = this._readFieldValue(tmpSchema.Provider, tmpPath) || tmpPath.Default || '';
+			return `${tmpSchema.DisplayName} at ${tmpVal}`;
+		}
+		let tmpHostField = tmpFields.find((pF) => pF.Name === 'host' || pF.Name === 'server');
+		let tmpPortField = tmpFields.find((pF) => pF.Name === 'port');
+		let tmpUserField = tmpFields.find((pF) => pF.Name === 'user');
+		if (tmpHostField && tmpPortField)
+		{
+			let tmpHost = this._readFieldValue(tmpSchema.Provider, tmpHostField) || tmpHostField.Default || '';
+			let tmpPort = this._readFieldValue(tmpSchema.Provider, tmpPortField) || tmpPortField.Default || '';
+			let tmpPreview = `${tmpSchema.DisplayName} on ${tmpHost}:${tmpPort}`;
+			if (tmpUserField)
+			{
+				let tmpUser = this._readFieldValue(tmpSchema.Provider, tmpUserField) || tmpUserField.Default || '';
+				if (tmpUser) { tmpPreview += ` as ${tmpUser}`; }
+			}
+			return tmpPreview;
+		}
+		return tmpSchema.DisplayName;
+	}
+
+	_readFieldValue(pProvider, pField)
+	{
+		if (typeof(document) === 'undefined') { return ''; }
+		let tmpForm = this.pict.views['PictSection-ConnectionForm'];
+		if (!tmpForm) { return ''; }
+		let tmpEl = document.getElementById(tmpForm.fieldDOMId(pProvider, pField.Name));
+		if (!tmpEl) { return ''; }
+		if (pField.Type === 'Boolean') { return tmpEl.checked ? 'true' : ''; }
+		return tmpEl.value;
+	}
+
+	/**
+	 * DOM-id resolver for fields owned by the shared view.  Forwarded
+	 * to PictSection-ConnectionForm so the provider's persistence
+	 * layer (saveField, restoreFields) can compute element ids without
+	 * needing to know the prefix.
+	 */
+	fieldDOMId(pProvider, pFieldName)
+	{
+		let tmpForm = this.pict.views['PictSection-ConnectionForm'];
+		if (tmpForm && typeof(tmpForm.fieldDOMId) === 'function')
+		{
+			return tmpForm.fieldDOMId(pProvider, pFieldName);
+		}
+		// Fallback before the shared view is mounted.
+		let tmpProvider = String(pProvider || '').toLowerCase();
+		let tmpField    = String(pFieldName || '').replace(/\./g, '_');
+		return `datacloner-conn-${tmpProvider}-${tmpField}`;
+	}
+
+	// ====================================================================
+	//  Connect / Test — delegate field collection to the shared view
+	// ====================================================================
 
 	getProviderConfig()
 	{
-		let tmpProvider = document.getElementById('connProvider').value;
-		let tmpConfig = {};
-
-		if (tmpProvider === 'SQLite')
+		let tmpForm = this.pict.views['PictSection-ConnectionForm'];
+		if (tmpForm && typeof(tmpForm.getProviderConfig) === 'function')
 		{
-			tmpConfig.SQLiteFilePath = document.getElementById('sqliteFilePath').value.trim() || '~/headlight-liveconnect-local/cloned.sqlite';
+			return tmpForm.getProviderConfig();
 		}
-		else if (tmpProvider === 'MySQL')
-		{
-			tmpConfig.host = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
-			tmpConfig.port = parseInt(document.getElementById('mysqlPort').value, 10) || 3306;
-			tmpConfig.user = document.getElementById('mysqlUser').value.trim() || 'root';
-			tmpConfig.password = document.getElementById('mysqlPassword').value;
-			tmpConfig.database = document.getElementById('mysqlDatabase').value.trim();
-			tmpConfig.connectionLimit = parseInt(document.getElementById('mysqlConnectionLimit').value, 10) || 20;
-		}
-		else if (tmpProvider === 'MSSQL')
-		{
-			tmpConfig.server = document.getElementById('mssqlServer').value.trim() || '127.0.0.1';
-			tmpConfig.port = parseInt(document.getElementById('mssqlPort').value, 10) || 1433;
-			tmpConfig.user = document.getElementById('mssqlUser').value.trim() || 'sa';
-			tmpConfig.password = document.getElementById('mssqlPassword').value;
-			tmpConfig.database = document.getElementById('mssqlDatabase').value.trim();
-			tmpConfig.connectionLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
-			// Use ROW_NUMBER() pagination instead of OFFSET/FETCH for
-			// SQL Server 2008 R2 / 2012 or databases whose compatibility
-			// level is < 110 (the parser rejects OFFSET/FETCH syntax
-			// otherwise).
-			tmpConfig.LegacyPagination = document.getElementById('mssqlLegacyPagination').checked;
-
-			// Reliability tuning — pull from the advanced settings block.
-			// All are optional; the connection provider falls back to
-			// sensible defaults when a value is missing or zero.
-			let tmpReqSec = parseInt(document.getElementById('mssqlRequestTimeoutSec').value, 10);
-			if (tmpReqSec > 0) tmpConfig.RequestTimeoutMs = tmpReqSec * 1000;
-			let tmpConnSec = parseInt(document.getElementById('mssqlConnectionTimeoutSec').value, 10);
-			if (tmpConnSec > 0) tmpConfig.ConnectionTimeoutMs = tmpConnSec * 1000;
-
-			let tmpConnectAttempts = parseInt(document.getElementById('mssqlConnectMaxAttempts').value, 10);
-			let tmpDDLAttempts = parseInt(document.getElementById('mssqlDDLMaxAttempts').value, 10);
-			let tmpInitialDelaySec = parseInt(document.getElementById('mssqlRetryInitialDelaySec').value, 10);
-			let tmpMaxDelaySec = parseInt(document.getElementById('mssqlRetryMaxDelaySec').value, 10);
-
-			if (tmpConnectAttempts > 0 || tmpInitialDelaySec > 0 || tmpMaxDelaySec > 0)
-			{
-				tmpConfig.ConnectRetryOptions = {};
-				if (tmpConnectAttempts > 0) tmpConfig.ConnectRetryOptions.MaxAttempts = tmpConnectAttempts;
-				if (tmpInitialDelaySec > 0) tmpConfig.ConnectRetryOptions.InitialDelayMs = tmpInitialDelaySec * 1000;
-				if (tmpMaxDelaySec > 0) tmpConfig.ConnectRetryOptions.MaxDelayMs = tmpMaxDelaySec * 1000;
-			}
-			if (tmpDDLAttempts > 0 || tmpInitialDelaySec > 0 || tmpMaxDelaySec > 0)
-			{
-				tmpConfig.DDLRetryOptions = {};
-				if (tmpDDLAttempts > 0) tmpConfig.DDLRetryOptions.MaxAttempts = tmpDDLAttempts;
-				if (tmpInitialDelaySec > 0) tmpConfig.DDLRetryOptions.InitialDelayMs = tmpInitialDelaySec * 1000;
-				if (tmpMaxDelaySec > 0) tmpConfig.DDLRetryOptions.MaxDelayMs = tmpMaxDelaySec * 1000;
-			}
-		}
-		else if (tmpProvider === 'PostgreSQL')
-		{
-			tmpConfig.host = document.getElementById('postgresqlHost').value.trim() || '127.0.0.1';
-			tmpConfig.port = parseInt(document.getElementById('postgresqlPort').value, 10) || 5432;
-			tmpConfig.user = document.getElementById('postgresqlUser').value.trim() || 'postgres';
-			tmpConfig.password = document.getElementById('postgresqlPassword').value;
-			tmpConfig.database = document.getElementById('postgresqlDatabase').value.trim();
-			tmpConfig.max = parseInt(document.getElementById('postgresqlConnectionLimit').value, 10) || 10;
-		}
-		else if (tmpProvider === 'Solr')
-		{
-			tmpConfig.host = document.getElementById('solrHost').value.trim() || 'localhost';
-			tmpConfig.port = parseInt(document.getElementById('solrPort').value, 10) || 8983;
-			tmpConfig.core = document.getElementById('solrCore').value.trim() || 'default';
-			tmpConfig.path = document.getElementById('solrPath').value.trim() || '/solr';
-			tmpConfig.secure = document.getElementById('solrSecure').checked;
-		}
-		else if (tmpProvider === 'MongoDB')
-		{
-			tmpConfig.host = document.getElementById('mongodbHost').value.trim() || '127.0.0.1';
-			tmpConfig.port = parseInt(document.getElementById('mongodbPort').value, 10) || 27017;
-			tmpConfig.user = document.getElementById('mongodbUser').value.trim();
-			tmpConfig.password = document.getElementById('mongodbPassword').value;
-			tmpConfig.database = document.getElementById('mongodbDatabase').value.trim() || 'test';
-			tmpConfig.maxPoolSize = parseInt(document.getElementById('mongodbConnectionLimit').value, 10) || 10;
-		}
-		else if (tmpProvider === 'RocksDB')
-		{
-			tmpConfig.RocksDBFolder = document.getElementById('rocksdbFolder').value.trim() || 'data/rocksdb';
-		}
-		else if (tmpProvider === 'Bibliograph')
-		{
-			tmpConfig.StorageFolder = document.getElementById('bibliographFolder').value.trim() || 'data/bibliograph';
-		}
-
-		return { Provider: tmpProvider, Config: tmpConfig };
+		// Shared view not mounted yet (early bootstrap, or schemas
+		// failed to load).  Surface a plain empty payload — the
+		// connect/test handlers downstream will report the failure
+		// from the server side.
+		return { Provider: '', Config: {} };
 	}
 
 	connectProvider()
 	{
-		// Guard against re-entrant calls (e.g. rapid auto-connect polling)
-		if (this._connectInFlight)
-		{
-			return;
-		}
+		if (this._connectInFlight) { return; }
 		this._connectInFlight = true;
 
 		let tmpConnInfo = this.getProviderConfig();
@@ -199,291 +279,9 @@ class DataClonerConnectionView extends libPictView
 					}
 				})
 			.catch(
-				() =>
-				{
-					/* ignore */
-				});
+				() => { /* ignore */ });
 	}
 }
 
 module.exports = DataClonerConnectionView;
-
-module.exports.default_configuration =
-{
-	ViewIdentifier: 'DataCloner-Connection',
-	DefaultRenderable: 'DataCloner-Connection',
-	DefaultDestinationAddress: '#DataCloner-Section-Connection',
-	Templates:
-	[
-		{
-			Hash: 'DataCloner-Connection',
-			Template: /*html*/`
-<div class="accordion-row">
-	<div class="accordion-number">1</div>
-	<div class="accordion-card" id="section1" data-section="1">
-		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section1')">
-			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> <span class="auto-label">auto</span></label>
-			<div class="accordion-title">Database Connection</div>
-			<span class="accordion-phase" id="phase1"></span>
-			<div class="accordion-preview" id="preview1">SQLite at data/cloned.sqlite</div>
-			<div class="accordion-actions">
-				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Connection'].connectProvider()">go</span>
-			</div>
-			<div class="accordion-toggle">&#9660;</div>
-		</div>
-		<div class="accordion-body">
-			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Configure the local database where cloned data will be stored. SQLite is connected by default.</p>
-
-			<div class="inline-group">
-				<div style="flex:0 0 200px">
-					<label for="connProvider">Provider</label>
-					<select id="connProvider" onchange="pict.views['DataCloner-Connection'].onProviderChange()">
-						<option value="SQLite" selected>SQLite</option>
-						<option value="MySQL">MySQL</option>
-						<option value="MSSQL">MSSQL</option>
-						<option value="PostgreSQL">PostgreSQL</option>
-						<option value="Solr">Solr</option>
-						<option value="MongoDB">MongoDB</option>
-						<option value="RocksDB">RocksDB</option>
-						<option value="Bibliograph">Bibliograph</option>
-					</select>
-				</div>
-				<div style="flex:1; display:flex; align-items:flex-end; gap:8px">
-					<button class="primary" onclick="pict.views['DataCloner-Connection'].connectProvider()">Connect</button>
-					<button class="secondary" onclick="pict.views['DataCloner-Connection'].testConnection()">Test Connection</button>
-				</div>
-			</div>
-
-			<!-- SQLite Config -->
-			<div id="configSQLite">
-				<label for="sqliteFilePath">SQLite File Path</label>
-				<input type="text" id="sqliteFilePath" placeholder="~/headlight-liveconnect-local/cloned.sqlite" value="~/headlight-liveconnect-local/cloned.sqlite">
-			</div>
-
-			<!-- MySQL Config -->
-			<div id="configMySQL" style="display:none">
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="mysqlServer">Server</label>
-						<input type="text" id="mysqlServer" placeholder="127.0.0.1" value="127.0.0.1">
-					</div>
-					<div style="flex:1">
-						<label for="mysqlPort">Port</label>
-						<input type="number" id="mysqlPort" placeholder="3306" value="3306">
-					</div>
-				</div>
-				<div class="inline-group">
-					<div>
-						<label for="mysqlUser">User</label>
-						<input type="text" id="mysqlUser" placeholder="root" value="root">
-					</div>
-					<div>
-						<label for="mysqlPassword">Password</label>
-						<input type="password" id="mysqlPassword" placeholder="password">
-					</div>
-				</div>
-				<label for="mysqlDatabase">Database</label>
-				<input type="text" id="mysqlDatabase" placeholder="meadow_clone">
-				<div class="inline-group">
-					<div>
-						<label for="mysqlConnectionLimit">Connection Limit</label>
-						<input type="number" id="mysqlConnectionLimit" placeholder="20" value="20">
-					</div>
-					<div></div>
-				</div>
-			</div>
-
-			<!-- MSSQL Config -->
-			<div id="configMSSQL" style="display:none">
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="mssqlServer">Server</label>
-						<input type="text" id="mssqlServer" placeholder="127.0.0.1" value="127.0.0.1">
-					</div>
-					<div style="flex:1">
-						<label for="mssqlPort">Port</label>
-						<input type="number" id="mssqlPort" placeholder="1433" value="1433">
-					</div>
-				</div>
-				<div class="inline-group">
-					<div>
-						<label for="mssqlUser">User</label>
-						<input type="text" id="mssqlUser" placeholder="sa" value="sa">
-					</div>
-					<div>
-						<label for="mssqlPassword">Password</label>
-						<input type="password" id="mssqlPassword" placeholder="password">
-					</div>
-				</div>
-				<label for="mssqlDatabase">Database</label>
-				<input type="text" id="mssqlDatabase" placeholder="meadow_clone">
-				<div class="inline-group">
-					<div>
-						<label for="mssqlConnectionLimit">Connection Limit</label>
-						<input type="number" id="mssqlConnectionLimit" placeholder="20" value="20">
-					</div>
-					<div></div>
-				</div>
-				<div style="margin-top:8px">
-					<input type="checkbox" id="mssqlLegacyPagination">
-					<label for="mssqlLegacyPagination" title="Enable for SQL Server 2008 R2 / 2012 or databases at compatibility_level &lt; 110. Uses ROW_NUMBER() pagination instead of OFFSET/FETCH.">Legacy pagination (SQL Server &lt; 2012 / compat level &lt; 110)</label>
-				</div>
-
-				<details style="margin-top:8px">
-					<summary style="cursor:pointer; font-weight:600">Reliability &amp; timeouts (advanced)</summary>
-					<p style="margin:8px 0; font-size:0.9em; color:#555">Tune these for slow / flaky customer networks. Connection and DDL operations will retry with exponential backoff, classifying each failure (NetworkError / RequestTimeout / PoolDegraded / ServerError) in the logs so the failure mode is obvious.</p>
-					<div class="inline-group">
-						<div>
-							<label for="mssqlRequestTimeoutSec">Request timeout (sec)</label>
-							<input type="number" id="mssqlRequestTimeoutSec" placeholder="120" value="120">
-						</div>
-						<div>
-							<label for="mssqlConnectionTimeoutSec">Connection timeout (sec)</label>
-							<input type="number" id="mssqlConnectionTimeoutSec" placeholder="60" value="60">
-						</div>
-					</div>
-					<div class="inline-group">
-						<div>
-							<label for="mssqlConnectMaxAttempts">Connect retries (max attempts)</label>
-							<input type="number" id="mssqlConnectMaxAttempts" placeholder="5" value="5" min="1" max="20">
-						</div>
-						<div>
-							<label for="mssqlDDLMaxAttempts">DDL retries (max attempts)</label>
-							<input type="number" id="mssqlDDLMaxAttempts" placeholder="5" value="5" min="1" max="20">
-						</div>
-					</div>
-					<div class="inline-group">
-						<div>
-							<label for="mssqlRetryInitialDelaySec">Retry initial delay (sec)</label>
-							<input type="number" id="mssqlRetryInitialDelaySec" placeholder="3" value="3" min="1" max="60">
-						</div>
-						<div>
-							<label for="mssqlRetryMaxDelaySec">Retry max delay (sec)</label>
-							<input type="number" id="mssqlRetryMaxDelaySec" placeholder="30" value="30" min="1" max="600">
-						</div>
-					</div>
-				</details>
-			</div>
-
-			<!-- PostgreSQL Config -->
-			<div id="configPostgreSQL" style="display:none">
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="postgresqlHost">Host</label>
-						<input type="text" id="postgresqlHost" placeholder="127.0.0.1" value="127.0.0.1">
-					</div>
-					<div style="flex:1">
-						<label for="postgresqlPort">Port</label>
-						<input type="number" id="postgresqlPort" placeholder="5432" value="5432">
-					</div>
-				</div>
-				<div class="inline-group">
-					<div>
-						<label for="postgresqlUser">User</label>
-						<input type="text" id="postgresqlUser" placeholder="postgres" value="postgres">
-					</div>
-					<div>
-						<label for="postgresqlPassword">Password</label>
-						<input type="password" id="postgresqlPassword" placeholder="password">
-					</div>
-				</div>
-				<label for="postgresqlDatabase">Database</label>
-				<input type="text" id="postgresqlDatabase" placeholder="meadow_clone">
-				<div class="inline-group">
-					<div>
-						<label for="postgresqlConnectionLimit">Connection Pool Limit</label>
-						<input type="number" id="postgresqlConnectionLimit" placeholder="10" value="10">
-					</div>
-					<div></div>
-				</div>
-			</div>
-
-			<!-- Solr Config -->
-			<div id="configSolr" style="display:none">
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="solrHost">Host</label>
-						<input type="text" id="solrHost" placeholder="localhost" value="localhost">
-					</div>
-					<div style="flex:1">
-						<label for="solrPort">Port</label>
-						<input type="number" id="solrPort" placeholder="8983" value="8983">
-					</div>
-				</div>
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="solrCore">Core</label>
-						<input type="text" id="solrCore" placeholder="default" value="default">
-					</div>
-					<div style="flex:1">
-						<label for="solrPath">Path</label>
-						<input type="text" id="solrPath" placeholder="/solr" value="/solr">
-					</div>
-				</div>
-				<div class="checkbox-row">
-					<input type="checkbox" id="solrSecure">
-					<label for="solrSecure">Use HTTPS</label>
-				</div>
-			</div>
-
-			<!-- MongoDB Config -->
-			<div id="configMongoDB" style="display:none">
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="mongodbHost">Host</label>
-						<input type="text" id="mongodbHost" placeholder="127.0.0.1" value="127.0.0.1">
-					</div>
-					<div style="flex:1">
-						<label for="mongodbPort">Port</label>
-						<input type="number" id="mongodbPort" placeholder="27017" value="27017">
-					</div>
-				</div>
-				<div class="inline-group">
-					<div>
-						<label for="mongodbUser">User</label>
-						<input type="text" id="mongodbUser" placeholder="(optional)">
-					</div>
-					<div>
-						<label for="mongodbPassword">Password</label>
-						<input type="password" id="mongodbPassword" placeholder="(optional)">
-					</div>
-				</div>
-				<label for="mongodbDatabase">Database</label>
-				<input type="text" id="mongodbDatabase" placeholder="test" value="test">
-				<div class="inline-group">
-					<div>
-						<label for="mongodbConnectionLimit">Max Pool Size</label>
-						<input type="number" id="mongodbConnectionLimit" placeholder="10" value="10">
-					</div>
-					<div></div>
-				</div>
-			</div>
-
-			<!-- RocksDB Config -->
-			<div id="configRocksDB" style="display:none">
-				<label for="rocksdbFolder">RocksDB Folder Path</label>
-				<input type="text" id="rocksdbFolder" placeholder="data/rocksdb" value="data/rocksdb">
-			</div>
-
-			<!-- Bibliograph Config -->
-			<div id="configBibliograph" style="display:none">
-				<label for="bibliographFolder">Storage Folder Path</label>
-				<input type="text" id="bibliographFolder" placeholder="data/bibliograph" value="data/bibliograph">
-			</div>
-
-			<div id="connectionStatus"></div>
-		</div>
-	</div>
-</div>
-`
-		}
-	],
-	Renderables:
-	[
-		{
-			RenderableHash: 'DataCloner-Connection',
-			TemplateHash: 'DataCloner-Connection',
-			DestinationAddress: '#DataCloner-Section-Connection'
-		}
-	]
-};
+module.exports.default_configuration = _ViewConfiguration;

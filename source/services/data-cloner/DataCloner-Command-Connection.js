@@ -2,16 +2,56 @@
  * DataCloner Connection Management Routes
  *
  * Registers /clone/connection/* endpoints for managing the local database
- * connection (status, configure, test).
+ * connection (status, configure, test, schemas).
  *
  * @param {Object} pDataClonerService - The RetoldDataServiceDataCloner instance
  * @param {Object} pOratorServiceServer - The Orator ServiceServer instance
  */
+const libMeadowConnectionManager = require('meadow-connection-manager');
+
 module.exports = (pDataClonerService, pOratorServiceServer) =>
 {
 	let tmpFable = pDataClonerService.fable;
 	let tmpCloneState = pDataClonerService.cloneState;
 	let tmpPrefix = pDataClonerService.routePrefix;
+
+	// MCM is the canonical aggregator for connection-form schemas; the
+	// DataCloner browser UI fetches /clone/connection/schemas and renders
+	// its provider form straight off the result, instead of carrying
+	// per-provider HTML in the bundle.  Cached on the service so we don't
+	// re-walk the filesystem on every poll.
+	let tmpSchemaMCM = null;
+	let tmpCachedSchemas = null;
+	let tmpGetSchemas = () =>
+	{
+		if (tmpCachedSchemas) { return tmpCachedSchemas; }
+		if (!tmpSchemaMCM)
+		{
+			tmpSchemaMCM = new libMeadowConnectionManager(tmpFable, {}, 'datacloner-mcm-formschemas');
+		}
+		// Defensive: an older MCM (< 1.1.0) won't have the aggregator
+		// method.  Surface an empty array rather than throwing so the
+		// UI can fall back to a "schemas unavailable" message.
+		if (typeof(tmpSchemaMCM.getAllProviderFormSchemas) !== 'function')
+		{
+			tmpFable.log.warn('DataCloner: meadow-connection-manager is older than 1.1.0; connection form schemas are not available.  Run npm update meadow-connection-manager.');
+			tmpCachedSchemas = [];
+			return tmpCachedSchemas;
+		}
+		tmpCachedSchemas = tmpSchemaMCM.getAllProviderFormSchemas();
+		return tmpCachedSchemas;
+	};
+
+	// GET /clone/connection/schemas
+	// Returns the form schemas for every provider whose module is
+	// installed in the host environment.  Drives the connection
+	// section's UI (provider picker + per-provider field block).
+	pOratorServiceServer.get(`${tmpPrefix}/connection/schemas`,
+		(pRequest, pResponse, fNext) =>
+		{
+			pResponse.send(200, { Schemas: tmpGetSchemas() });
+			return fNext();
+		});
 
 	// GET /clone/connection/status
 	pOratorServiceServer.get(`${tmpPrefix}/connection/status`,
