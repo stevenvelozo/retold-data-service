@@ -1817,6 +1817,626 @@
       "fable-serviceproviderbase": 2
     }],
     7: [function (require, module, exports) {
+      /**
+       * Default Pict-view configuration for PictSection-ConnectionForm.
+       *
+       * Host applications register the view with their own ContainerSelector
+       * and field-id prefix (so multiple connection forms can coexist without
+       * DOM-id collisions).  All other defaults live here.
+       *
+       * The host owns:
+       *   - Where in the DOM the form lands (DefaultDestinationAddress / TargetSelector)
+       *   - Where in AppData the schemas + active provider live (SchemasAddress / ActiveAddress)
+       *   - The DOM-id prefix used to namespace per-field input ids (FieldIDPrefix)
+       *   - Whether the provider <select> is visible at all (ShowProviderSelect)
+       *   - Whether the "Advanced" <details> block is rendered (ShowAdvancedToggle)
+       */
+      'use strict';
+
+      module.exports = {
+        ViewIdentifier: 'PictSection-ConnectionForm',
+        DefaultRenderable: 'PictSection-ConnectionForm-Main',
+        DefaultDestinationAddress: '#PictSection-ConnectionForm-Slot',
+        AutoRender: false,
+        // Host-overridable knobs
+        SchemasAddress: 'AppData.Connection.Schemas',
+        ActiveAddress: 'AppData.Connection.ActiveProvider',
+        FieldIDPrefix: 'pict-conn',
+        ShowProviderSelect: true,
+        ShowAdvancedToggle: true
+      };
+    }, {}],
+    8: [function (require, module, exports) {
+      /**
+       * PictSection-ConnectionForm
+       *
+       * Schema-driven Meadow connection-form view.  Renders a provider
+       * <select> + per-provider field block from the form schemas exported
+       * by each `meadow-connection-*` module (and aggregated server-side via
+       * `meadow-connection-manager#getAllProviderFormSchemas()`).
+       *
+       * Three host applications consume this:
+       *   - retold-data-service / DataCloner     (single active provider, "connect/test" UX)
+       *   - retold-databeacon / Connection list  (add/edit named saved connections)
+       *   - retold-facto / Store connections     (add/edit named saved connections)
+       *
+       * Each host wires it with a different DOM destination + AppData
+       * address + DOM-id prefix so multiple connection forms can coexist
+       * without colliding on element ids.
+       *
+       * ── Wiring contract ────────────────────────────────────────────────
+       * Host AppData (configurable via SchemasAddress / ActiveAddress):
+       *   AppData.<...>.Schemas         array of schemas (see field shape)
+       *   AppData.<...>.ActiveProvider  string — currently selected Provider
+       *
+       * Host options on the view (registered via pict.addView):
+       *   ContainerSelector    — where to render (overrides DefaultDestinationAddress)
+       *   SchemasAddress       — AppData address of the Schemas array
+       *   ActiveAddress        — AppData address of the ActiveProvider string
+       *   FieldIDPrefix        — DOM-id namespace ('pict-conn' default)
+       *   ShowProviderSelect   — whether to render the <select> (false = single-provider mode)
+       *   ShowAdvancedToggle   — whether the Advanced group is collapsible
+       *   OnProviderChange(p)  — optional callback when the user picks a different provider
+       *
+       * Host calls (instance methods):
+       *   setSchemas(pSchemas)            — replace schema list and re-render
+       *   setActiveProvider(pProvider)    — switch active provider
+       *   getProviderConfig()             — collect form values → { Provider, Config }
+       *   setValues(pProvider, pConfig)   — populate fields from a saved config blob
+       *   clear()                         — reset all fields to schema defaults
+       *
+       * ── Field shape (from each meadow-connection-* schema) ─────────────
+       *   Name        — canonical config key (lowercase for SQL drivers, dotted for nested)
+       *   Label       — UI label
+       *   Type        — String | Number | Password | Boolean | Path | Select
+       *   Default     — initial value
+       *   Required    — boolean
+       *   Placeholder, Help, Min, Max — UI hints
+       *   Group       — 'Basic' (default) or 'Advanced' (rendered under <details>)
+       *   Multiplier  — form value × multiplier = stored value (sec→ms via 1000)
+       *   MapTo       — array of dotted-path targets (one input → multiple keys)
+       *   OmitIfFalsy — drop key from emitted config when value is 0/empty/false
+       *   Options     — for Select: [{ Value, Label }]
+       *
+       * Pure presentation — does NOT fetch schemas itself.  Host fetches
+       * them however it likes (typical: GET /<app>/connection/schemas
+       * backed by MCM) and calls setSchemas() once they arrive.
+       */
+      'use strict';
+
+      const libPictView = require('pict-view');
+      const _DefaultConfiguration = require('./Pict-Section-ConnectionForm-DefaultConfiguration.js');
+      const _BaseCSS = /*css*/`
+.pict-conn-form {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.pict-conn-form__provider-row {
+	display: flex;
+	gap: 10px;
+	align-items: flex-end;
+}
+.pict-conn-form__provider-row label {
+	font-size: 12px;
+	font-weight: 600;
+	color: #475569;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	flex: 0 0 200px;
+}
+.pict-conn-form__provider-row select {
+	font-family: inherit;
+	font-size: 14px;
+	padding: 7px 10px;
+	border: 1px solid #cbd5e1;
+	border-radius: 6px;
+	background: #fff;
+	color: #0f172a;
+	height: 36px;
+}
+.pict-conn-form__provider-form {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 10px 16px;
+}
+.pict-conn-form__field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+.pict-conn-form__field label {
+	font-size: 12px;
+	font-weight: 600;
+	color: #475569;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+}
+.pict-conn-form__field input,
+.pict-conn-form__field select {
+	font-family: inherit;
+	font-size: 14px;
+	padding: 7px 10px;
+	border: 1px solid #cbd5e1;
+	border-radius: 6px;
+	background: #fff;
+	color: #0f172a;
+}
+.pict-conn-form__field input[type="checkbox"] {
+	width: auto;
+	height: auto;
+	align-self: flex-start;
+}
+.pict-conn-form__field-help {
+	font-size: 11px;
+	color: #64748b;
+}
+.pict-conn-form__advanced {
+	grid-column: 1 / -1;
+	margin-top: 4px;
+}
+.pict-conn-form__advanced > summary {
+	cursor: pointer;
+	font-weight: 600;
+	color: #475569;
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	padding: 4px 0;
+}
+.pict-conn-form__advanced > p {
+	margin: 8px 0;
+	font-size: 12px;
+	color: #64748b;
+}
+.pict-conn-form__advanced > .pict-conn-form__advanced-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 10px 16px;
+}
+.pict-conn-form__no-schemas {
+	padding: 12px;
+	background: #fef3c7;
+	border: 1px solid #f59e0b;
+	border-radius: 6px;
+	color: #92400e;
+	font-size: 13px;
+}
+`;
+      const _BaseTemplates = [{
+        Hash: 'PictSection-ConnectionForm-Main',
+        Template: /*html*/`
+<div class="pict-conn-form" id="{~D:AppData.PictSectionConnectionForm.RootId~}">
+	{~TS:PictSection-ConnectionForm-Selector:AppData.PictSectionConnectionForm.SelectorSlot~}
+	<div class="pict-conn-form__forms" id="{~D:AppData.PictSectionConnectionForm.FormsId~}">
+		{~TS:PictSection-ConnectionForm-ProviderForm:AppData.PictSectionConnectionForm.ProviderForms~}
+	</div>
+	{~TS:PictSection-ConnectionForm-NoSchemas:AppData.PictSectionConnectionForm.NoSchemasSlot~}
+</div>`
+      }, {
+        Hash: 'PictSection-ConnectionForm-Selector',
+        Template: /*html*/`
+<div class="pict-conn-form__provider-row">
+	<label>Provider
+		<select id="{~D:Record.SelectId~}" onchange="{~P~}.views['{~D:Record.ViewHash~}'].onProviderSelectChange(this.value)">
+			{~TS:PictSection-ConnectionForm-ProviderOption:Record.Options~}
+		</select>
+	</label>
+</div>`
+      }, {
+        Hash: 'PictSection-ConnectionForm-ProviderOption',
+        Template: /*html*/`<option value="{~D:Record.Provider~}" {~D:Record.SelectedAttr~}>{~D:Record.DisplayName~}</option>`
+      }, {
+        Hash: 'PictSection-ConnectionForm-ProviderForm',
+        Template: /*html*/`
+<div class="pict-conn-form__provider-form" id="{~D:Record.FormId~}" style="display:{~D:Record.DisplayStyle~}">
+	{~TS:PictSection-ConnectionForm-Field:Record.BasicFields~}
+	{~TS:PictSection-ConnectionForm-Advanced:Record.AdvancedSlot~}
+</div>`
+      }, {
+        Hash: 'PictSection-ConnectionForm-Field',
+        Template: /*html*/`
+<div class="pict-conn-form__field">
+	<label for="{~D:Record.DOMId~}">{~D:Record.Label~}</label>
+	{~D:Record.InputHTML~}
+	{~TS:PictSection-ConnectionForm-FieldHelp:Record.HelpSlot~}
+</div>`
+      }, {
+        Hash: 'PictSection-ConnectionForm-FieldHelp',
+        Template: /*html*/`<small class="pict-conn-form__field-help">{~D:Record.Help~}</small>`
+      }, {
+        Hash: 'PictSection-ConnectionForm-Advanced',
+        Template: /*html*/`
+<details class="pict-conn-form__advanced">
+	<summary>Advanced settings</summary>
+	<p>Optional tuning — leave blank or zero to use the connection driver's defaults.</p>
+	<div class="pict-conn-form__advanced-fields">
+		{~TS:PictSection-ConnectionForm-Field:Record.Fields~}
+	</div>
+</details>`
+      }, {
+        Hash: 'PictSection-ConnectionForm-NoSchemas',
+        Template: /*html*/`<div class="pict-conn-form__no-schemas">No connection providers detected.  Either <code>meadow-connection-manager</code> is older than 1.1.0 or no provider modules are installed in the host environment.</div>`
+      }];
+      class PictSectionConnectionForm extends libPictView {
+        constructor(pFable, pOptions, pServiceHash) {
+          // Merge host-supplied options on top of the module defaults.
+          // Templates + CSS come from this module; host can override the
+          // AppData addresses, the DOM destination, and the field-id prefix.
+          let tmpOptions = Object.assign({}, _DefaultConfiguration, pOptions || {});
+          if (!tmpOptions.Templates) {
+            tmpOptions.Templates = _BaseTemplates;
+          }
+          if (!tmpOptions.CSS) {
+            tmpOptions.CSS = _BaseCSS;
+          }
+          if (!tmpOptions.Renderables) {
+            tmpOptions.Renderables = [{
+              RenderableHash: 'PictSection-ConnectionForm-Main',
+              TemplateHash: 'PictSection-ConnectionForm-Main',
+              ContentDestinationAddress: tmpOptions.ContainerSelector || tmpOptions.DefaultDestinationAddress,
+              RenderMethod: 'replace'
+            }];
+          }
+          super(pFable, tmpOptions, pServiceHash);
+          this._Schemas = [];
+          this._ActiveProvider = '';
+        }
+
+        // ====================================================================
+        //  Public API — hosts call these to drive the view
+        // ====================================================================
+
+        setSchemas(pSchemas) {
+          this._Schemas = Array.isArray(pSchemas) ? pSchemas : [];
+          // If no active provider yet, default to the first schema.
+          if (!this._ActiveProvider && this._Schemas.length > 0) {
+            this._ActiveProvider = this._Schemas[0].Provider;
+          }
+          this._writeAppData();
+          this.render();
+        }
+        setActiveProvider(pProvider) {
+          this._ActiveProvider = pProvider || '';
+          this._writeAppData();
+          this.render();
+          this._invokeProviderChangeCallback();
+        }
+        getActiveProvider() {
+          return this._ActiveProvider;
+        }
+
+        /**
+         * Read the active provider's form values out of the DOM and
+         * collect them into the canonical wire-format config blob the
+         * provider's connection driver expects.  Honors:
+         *   - Multiplier (form value × multiplier = stored value)
+         *   - MapTo (one input → multiple dotted-path targets)
+         *   - OmitIfFalsy (drop key when value is 0/empty/false)
+         *   - Type-aware reads (Boolean→.checked, Number→parseInt, else trimmed string)
+         *
+         * @returns {{Provider: string, Config: object}}
+         */
+        getProviderConfig() {
+          let tmpProvider = this._ActiveProvider;
+          let tmpSchema = this._Schemas.find(pS => pS.Provider === tmpProvider);
+          if (!tmpSchema) {
+            return {
+              Provider: tmpProvider,
+              Config: {}
+            };
+          }
+          let tmpConfig = {};
+          (tmpSchema.Fields || []).forEach(pField => this._collectField(tmpProvider, pField, tmpConfig));
+          return {
+            Provider: tmpProvider,
+            Config: tmpConfig
+          };
+        }
+
+        /**
+         * Populate the form from a saved config blob.  Used by edit
+         * workflows (DataBeacon / Facto) that load a named connection
+         * record and want its values pre-filled.
+         *
+         * @param {string} pProvider
+         * @param {object} pConfig — wire-format config (same shape getProviderConfig returns)
+         */
+        setValues(pProvider, pConfig) {
+          this._ActiveProvider = pProvider || '';
+          this._writeAppData();
+          this.render();
+          let tmpSchema = this._Schemas.find(pS => pS.Provider === pProvider);
+          if (!tmpSchema || typeof document === 'undefined') {
+            return;
+          }
+          (tmpSchema.Fields || []).forEach(pField => {
+            let tmpDOMId = this.fieldDOMId(pProvider, pField.Name);
+            let tmpEl = document.getElementById(tmpDOMId);
+            if (!tmpEl) {
+              return;
+            }
+            let tmpVal = this._readNested(pConfig || {}, pField.MapTo && pField.MapTo[0] ? pField.MapTo[0] : pField.Name);
+            // Reverse-apply Multiplier (storage unit → display unit).
+            if (pField.Multiplier && typeof tmpVal === 'number') {
+              tmpVal = Math.floor(tmpVal / pField.Multiplier);
+            }
+            if (pField.Type === 'Boolean') {
+              tmpEl.checked = !!tmpVal;
+            } else if (tmpVal === undefined || tmpVal === null) {/* leave default */} else {
+              tmpEl.value = String(tmpVal);
+            }
+          });
+        }
+        clear() {
+          this._ActiveProvider = this._Schemas.length > 0 ? this._Schemas[0].Provider : '';
+          this._writeAppData();
+          this.render();
+        }
+
+        // ====================================================================
+        //  DOM-id helper — host code can use this to find a specific input
+        // ====================================================================
+
+        fieldDOMId(pProvider, pFieldName) {
+          let tmpPrefix = this.options.FieldIDPrefix || 'pict-conn';
+          let tmpProvider = String(pProvider || '').toLowerCase();
+          let tmpField = String(pFieldName || '').replace(/\./g, '_');
+          return `${tmpPrefix}-${tmpProvider}-${tmpField}`;
+        }
+
+        // ====================================================================
+        //  Lifecycle hooks
+        // ====================================================================
+
+        onBeforeRender(pRenderable) {
+          this._writeAppData();
+          return super.onBeforeRender(pRenderable);
+        }
+        onAfterRender(pRenderable, pAddress, pRecord, pContent) {
+          // Toggle visibility on the active provider's form (the templates
+          // pre-render a wrapper for every schema so values persist when
+          // the user switches between providers).
+          if (typeof document !== 'undefined') {
+            this._Schemas.forEach(pSchema => {
+              let tmpEl = document.getElementById(this._formId(pSchema.Provider));
+              if (tmpEl) {
+                tmpEl.style.display = pSchema.Provider === this._ActiveProvider ? '' : 'none';
+              }
+            });
+          }
+          this.pict.CSSMap.injectCSS();
+          return super.onAfterRender(pRenderable, pAddress, pRecord, pContent);
+        }
+
+        // ====================================================================
+        //  Selector-change handler (called from the rendered <select>)
+        // ====================================================================
+
+        onProviderSelectChange(pProvider) {
+          this.setActiveProvider(pProvider);
+        }
+
+        // ====================================================================
+        //  Internals
+        // ====================================================================
+
+        /**
+         * Push the computed render records into AppData under the address
+         * the templates read from.  Templates always read from
+         * `AppData.PictSectionConnectionForm.*` regardless of where the
+         * host's "real" Schemas / ActiveProvider live; that's because Pict
+         * template addresses are static strings and we want one set of
+         * templates to work for many host configurations.  The real
+         * SchemasAddress / ActiveAddress are also written so hosts can
+         * read them out for their own state-tracking.
+         */
+        _writeAppData() {
+          if (!this.pict.AppData) {
+            this.pict.AppData = {};
+          }
+          let tmpRoot = this.pict.AppData.PictSectionConnectionForm = this.pict.AppData.PictSectionConnectionForm || {};
+          let tmpPrefix = this.options.FieldIDPrefix || 'pict-conn';
+          tmpRoot.RootId = `${tmpPrefix}-root`;
+          tmpRoot.FormsId = `${tmpPrefix}-forms`;
+
+          // Selector slot — empty array hides the <select>, single-element
+          // renders it once.  Honors ShowProviderSelect.
+          if (this.options.ShowProviderSelect && this._Schemas.length > 0) {
+            tmpRoot.SelectorSlot = [{
+              SelectId: `${tmpPrefix}-provider-select`,
+              ViewHash: this.Hash,
+              Options: this._Schemas.map(pS => ({
+                Provider: pS.Provider,
+                DisplayName: this._escape(pS.DisplayName || pS.Provider),
+                SelectedAttr: pS.Provider === this._ActiveProvider ? 'selected' : ''
+              }))
+            }];
+          } else {
+            tmpRoot.SelectorSlot = [];
+          }
+          tmpRoot.ProviderForms = this._Schemas.map(pSchema => this._buildProviderForm(pSchema, pSchema.Provider === this._ActiveProvider));
+          tmpRoot.NoSchemasSlot = this._Schemas.length === 0 ? [{}] : [];
+
+          // Mirror state into the host's configured AppData addresses (so
+          // hosts that read AppData directly see live values).
+          if (this.options.SchemasAddress) {
+            this._writeAppDataAddress(this.options.SchemasAddress, this._Schemas);
+          }
+          if (this.options.ActiveAddress) {
+            this._writeAppDataAddress(this.options.ActiveAddress, this._ActiveProvider);
+          }
+        }
+        _buildProviderForm(pSchema, pIsActive) {
+          let tmpFields = pSchema.Fields || [];
+          let tmpBasic = [];
+          let tmpAdvanced = [];
+          tmpFields.forEach(pField => {
+            let tmpRecord = this._buildFieldRecord(pField, pSchema.Provider);
+            if (pField.Group === 'Advanced') {
+              tmpAdvanced.push(tmpRecord);
+            } else {
+              tmpBasic.push(tmpRecord);
+            }
+          });
+          return {
+            Provider: pSchema.Provider,
+            FormId: this._formId(pSchema.Provider),
+            DisplayStyle: pIsActive ? '' : 'none',
+            BasicFields: tmpBasic,
+            AdvancedSlot: this.options.ShowAdvancedToggle && tmpAdvanced.length > 0 ? [{
+              Fields: tmpAdvanced
+            }] : []
+          };
+        }
+        _buildFieldRecord(pField, pProvider) {
+          let tmpDOMId = this.fieldDOMId(pProvider, pField.Name);
+          return {
+            DOMId: tmpDOMId,
+            Label: this._escape(pField.Label || pField.Name),
+            InputHTML: this._buildInputHTML(pField, tmpDOMId),
+            HelpSlot: pField.Help ? [{
+              Help: this._escape(pField.Help)
+            }] : []
+          };
+        }
+        _buildInputHTML(pField, pDOMId) {
+          let tmpDefault = pField.Default !== undefined && pField.Default !== null ? String(pField.Default) : '';
+          let tmpPlaceholder = pField.Placeholder ? this._escape(pField.Placeholder) : '';
+          let tmpRequired = pField.Required ? ' required' : '';
+          switch (pField.Type) {
+            case 'Number':
+              {
+                let tmpMin = pField.Min !== undefined && pField.Min !== null ? ` min="${this._escape(String(pField.Min))}"` : '';
+                let tmpMax = pField.Max !== undefined && pField.Max !== null ? ` max="${this._escape(String(pField.Max))}"` : '';
+                return `<input type="number" id="${this._escape(pDOMId)}" value="${this._escape(tmpDefault)}" placeholder="${tmpPlaceholder}"${tmpMin}${tmpMax}${tmpRequired}>`;
+              }
+            case 'Password':
+              return `<input type="password" id="${this._escape(pDOMId)}" placeholder="${tmpPlaceholder || '(optional)'}"${tmpRequired}>`;
+            case 'Boolean':
+              {
+                let tmpChecked = pField.Default ? ' checked' : '';
+                return `<input type="checkbox" id="${this._escape(pDOMId)}"${tmpChecked}>`;
+              }
+            case 'Select':
+              {
+                let tmpOptions = (pField.Options || []).map(pOpt => {
+                  let tmpVal = String(pOpt.Value);
+                  let tmpSel = tmpVal === tmpDefault ? ' selected' : '';
+                  return `<option value="${this._escape(tmpVal)}"${tmpSel}>${this._escape(pOpt.Label || tmpVal)}</option>`;
+                }).join('');
+                return `<select id="${this._escape(pDOMId)}"${tmpRequired}>${tmpOptions}</select>`;
+              }
+            case 'Path':
+            case 'String':
+            default:
+              return `<input type="text" id="${this._escape(pDOMId)}" value="${this._escape(tmpDefault)}" placeholder="${tmpPlaceholder}"${tmpRequired}>`;
+          }
+        }
+        _collectField(pProvider, pField, pConfigOut) {
+          if (typeof document === 'undefined') {
+            return;
+          }
+          let tmpDOMId = this.fieldDOMId(pProvider, pField.Name);
+          let tmpEl = document.getElementById(tmpDOMId);
+          if (!tmpEl) {
+            return;
+          }
+          let tmpRaw;
+          if (pField.Type === 'Boolean') {
+            tmpRaw = !!tmpEl.checked;
+          } else if (pField.Type === 'Number') {
+            let tmpParsed = parseInt(tmpEl.value, 10);
+            tmpRaw = isNaN(tmpParsed) ? 0 : tmpParsed;
+          } else {
+            tmpRaw = String(tmpEl.value || '').trim();
+          }
+          let tmpFinal = tmpRaw;
+          if (pField.Multiplier && typeof tmpFinal === 'number') {
+            tmpFinal = tmpFinal * pField.Multiplier;
+          }
+          if (pField.OmitIfFalsy && !tmpFinal) {
+            return;
+          }
+          let tmpTargets = pField.MapTo && pField.MapTo.length ? pField.MapTo : [pField.Name];
+          tmpTargets.forEach(pPath => this._setNested(pConfigOut, pPath, tmpFinal));
+        }
+        _setNested(pTarget, pPath, pValue) {
+          let tmpParts = String(pPath).split('.');
+          let tmpCursor = pTarget;
+          for (let i = 0; i < tmpParts.length - 1; i++) {
+            let tmpKey = tmpParts[i];
+            if (typeof tmpCursor[tmpKey] !== 'object' || tmpCursor[tmpKey] === null) {
+              tmpCursor[tmpKey] = {};
+            }
+            tmpCursor = tmpCursor[tmpKey];
+          }
+          tmpCursor[tmpParts[tmpParts.length - 1]] = pValue;
+        }
+        _readNested(pSource, pPath) {
+          let tmpParts = String(pPath).split('.');
+          let tmpCursor = pSource;
+          for (let i = 0; i < tmpParts.length; i++) {
+            if (tmpCursor === undefined || tmpCursor === null) {
+              return undefined;
+            }
+            tmpCursor = tmpCursor[tmpParts[i]];
+          }
+          return tmpCursor;
+        }
+        _writeAppDataAddress(pAddress, pValue) {
+          // Address is "AppData.X.Y" — drop the leading "AppData." prefix
+          // before walking; if it's missing, fall through and treat the
+          // whole string as a property chain off pict.AppData.
+          let tmpRoot = this.pict.AppData;
+          let tmpAddr = String(pAddress || '');
+          if (tmpAddr.indexOf('AppData.') === 0) {
+            tmpAddr = tmpAddr.substring('AppData.'.length);
+          }
+          if (!tmpAddr) {
+            return;
+          }
+          let tmpParts = tmpAddr.split('.');
+          let tmpCursor = tmpRoot;
+          for (let i = 0; i < tmpParts.length - 1; i++) {
+            let tmpKey = tmpParts[i];
+            if (typeof tmpCursor[tmpKey] !== 'object' || tmpCursor[tmpKey] === null) {
+              tmpCursor[tmpKey] = {};
+            }
+            tmpCursor = tmpCursor[tmpKey];
+          }
+          tmpCursor[tmpParts[tmpParts.length - 1]] = pValue;
+        }
+        _invokeProviderChangeCallback() {
+          let tmpCb = this.options.OnProviderChange;
+          if (typeof tmpCb === 'function') {
+            try {
+              tmpCb(this._ActiveProvider);
+            } catch (pError) {
+              if (this.log && this.log.warn) {
+                this.log.warn(`PictSection-ConnectionForm: OnProviderChange callback threw: ${pError && pError.message}`);
+              }
+            }
+          }
+        }
+        _formId(pProvider) {
+          let tmpPrefix = this.options.FieldIDPrefix || 'pict-conn';
+          return `${tmpPrefix}-form-${String(pProvider || '').toLowerCase()}`;
+        }
+        _escape(pStr) {
+          return String(pStr == null ? '' : pStr).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+      }
+      module.exports = PictSectionConnectionForm;
+      module.exports.default_configuration = _DefaultConfiguration;
+    }, {
+      "./Pict-Section-ConnectionForm-DefaultConfiguration.js": 7,
+      "pict-view": 15
+    }],
+    9: [function (require, module, exports) {
       module.exports = {
         "RenderOnLoad": true,
         "DefaultRenderable": "Histogram-Wrap",
@@ -2068,7 +2688,7 @@
 `
       };
     }, {}],
-    8: [function (require, module, exports) {
+    10: [function (require, module, exports) {
       /**
        * Pict Section Histogram
        *
@@ -2447,13 +3067,13 @@
         cli: libRendererCLI
       };
     }, {
-      "./Pict-Section-Histogram-DefaultConfiguration.js": 7,
-      "./renderers/Pict-Histogram-Renderer-Browser.js": 9,
-      "./renderers/Pict-Histogram-Renderer-CLI.js": 10,
-      "./renderers/Pict-Histogram-Renderer-ConsoleUI.js": 11,
-      "pict-view": 13
+      "./Pict-Section-Histogram-DefaultConfiguration.js": 9,
+      "./renderers/Pict-Histogram-Renderer-Browser.js": 11,
+      "./renderers/Pict-Histogram-Renderer-CLI.js": 12,
+      "./renderers/Pict-Histogram-Renderer-ConsoleUI.js": 13,
+      "pict-view": 15
     }],
-    9: [function (require, module, exports) {
+    11: [function (require, module, exports) {
       /**
        * Browser renderer for pict-section-histogram.
        *
@@ -2756,7 +3376,7 @@
         wireEvents
       };
     }, {}],
-    10: [function (require, module, exports) {
+    12: [function (require, module, exports) {
       (function (process) {
         (function () {
           /**
@@ -3065,9 +3685,9 @@
         }).call(this);
       }).call(this, require('_process'));
     }, {
-      "_process": 14
+      "_process": 16
     }],
-    11: [function (require, module, exports) {
+    13: [function (require, module, exports) {
       /**
        * Console UI (blessed) renderer for pict-section-histogram.
        *
@@ -3312,7 +3932,7 @@
         renderHorizontal
       };
     }, {}],
-    12: [function (require, module, exports) {
+    14: [function (require, module, exports) {
       module.exports = {
         "name": "pict-view",
         "version": "1.0.68",
@@ -3366,7 +3986,7 @@
         }
       };
     }, {}],
-    13: [function (require, module, exports) {
+    15: [function (require, module, exports) {
       const libFableServiceBase = require('fable-serviceproviderbase');
       const libPackage = require('../package.json');
       const defaultPictViewSettings = {
@@ -4553,10 +5173,10 @@
       }
       module.exports = PictView;
     }, {
-      "../package.json": 12,
+      "../package.json": 14,
       "fable-serviceproviderbase": 2
     }],
-    14: [function (require, module, exports) {
+    16: [function (require, module, exports) {
       // shim for using process in browser
       var process = module.exports = {};
 
@@ -4733,7 +5353,7 @@
         return 0;
       };
     }, {}],
-    15: [function (require, module, exports) {
+    17: [function (require, module, exports) {
       module.exports = {
         "Name": "Retold Data Cloner",
         "Hash": "DataCloner",
@@ -4746,7 +5366,7 @@
         "AutoRenderMainViewportViewAfterInitialize": false
       };
     }, {}],
-    16: [function (require, module, exports) {
+    18: [function (require, module, exports) {
       const libPictApplication = require('pict-application');
       const libProvider = require('./providers/Pict-Provider-DataCloner.js');
       const libViewLayout = require('./views/PictView-DataCloner-Layout.js');
@@ -4758,6 +5378,7 @@
       const libViewExport = require('./views/PictView-DataCloner-Export.js');
       const libViewViewData = require('./views/PictView-DataCloner-ViewData.js');
       const libViewHistogram = require('pict-section-histogram');
+      const libViewConnectionForm = require('pict-section-connection-form');
       class DataClonerApplication extends libPictApplication {
         constructor(pFable, pOptions, pServiceHash) {
           super(pFable, pOptions, pServiceHash);
@@ -4788,9 +5409,31 @@
             BarColor: '#4a90d9',
             Bins: []
           }, libViewHistogram);
+
+          // Shared schema-driven connection form.  Renders into the slot
+          // the DataCloner-Connection accordion shell exposes; the
+          // provider's bootstrapConnectionSchemas() pumps the schemas in
+          // once the host's /clone/connection/schemas endpoint responds.
+          this.pict.addView('PictSection-ConnectionForm', Object.assign({}, libViewConnectionForm.default_configuration, {
+            ContainerSelector: '#DataCloner-Connection-FormSlot',
+            DefaultDestinationAddress: '#DataCloner-Connection-FormSlot',
+            SchemasAddress: 'AppData.DataCloner.Connection.Schemas',
+            ActiveAddress: 'AppData.DataCloner.Connection.ActiveProvider',
+            FieldIDPrefix: 'datacloner-conn'
+          }), libViewConnectionForm);
         }
         onAfterInitializeAsync(fCallback) {
-          // Centralized state (replaces global variables)
+          // Centralized state (replaces global variables).
+          //
+          // PersistFields covers the static, non-connection inputs only.
+          // Connection-section fields (provider picker + per-provider
+          // inputs) are schema-driven now: their DOM ids and
+          // localStorage keys are derived at runtime from the host's
+          // /clone/connection/schemas response and persistence is hooked
+          // up by Pict-Provider-DataCloner#bootstrapConnectionSchemas
+          // after the schema-driven Connection view re-renders.  See
+          // PictView-DataCloner-Connection.js for the field-id
+          // convention.
           this.pict.AppData.DataCloner = {
             FetchedTables: [],
             DeployedTables: [],
@@ -4803,44 +5446,64 @@
             StatusDetailTimer: null,
             StatusDetailData: null,
             LastLiveStatus: null,
-            PersistFields: ['serverURL', 'authMethod', 'authURI', 'checkURI', 'cookieName', 'cookieValueAddr', 'cookieValueTemplate', 'loginMarker', 'userName', 'password', 'schemaURL', 'pageSize', 'dateTimePrecisionMS', 'connProvider', 'sqliteFilePath', 'mysqlServer', 'mysqlPort', 'mysqlUser', 'mysqlPassword', 'mysqlDatabase', 'mysqlConnectionLimit', 'mssqlServer', 'mssqlPort', 'mssqlUser', 'mssqlPassword', 'mssqlDatabase', 'mssqlConnectionLimit', 'mssqlRequestTimeoutSec', 'mssqlConnectionTimeoutSec', 'mssqlConnectMaxAttempts', 'mssqlDDLMaxAttempts', 'mssqlRetryInitialDelaySec', 'mssqlRetryMaxDelaySec', 'postgresqlHost', 'postgresqlPort', 'postgresqlUser', 'postgresqlPassword', 'postgresqlDatabase', 'postgresqlConnectionLimit', 'solrHost', 'solrPort', 'solrCore', 'solrPath', 'mongodbHost', 'mongodbPort', 'mongodbUser', 'mongodbPassword', 'mongodbDatabase', 'mongodbConnectionLimit', 'rocksdbFolder', 'bibliographFolder', 'syncMaxRecords']
+            PersistFields: ['serverURL', 'authMethod', 'authURI', 'checkURI', 'cookieName', 'cookieValueAddr', 'cookieValueTemplate', 'loginMarker', 'userName', 'password', 'schemaURL', 'pageSize', 'dateTimePrecisionMS', 'syncMaxRecords'],
+            // Connection state — populated by bootstrapConnectionSchemas().
+            // Initialized empty here so the Connection view's first
+            // onBeforeRender finds a valid (if empty) shape.
+            Connection: {
+              Schemas: [],
+              ActiveProvider: '',
+              ProviderOptions: [],
+              ProviderForms: [],
+              NoSchemasSlot: [{}],
+              PreviewText: 'Loading providers…'
+            }
           };
 
           // Make pict available for inline onclick handlers
           window.pict = this.pict;
 
-          // Render layout (which chains child view renders via onAfterRender)
+          // Render layout (which chains child view renders via onAfterRender).
+          // The Connection view renders an empty shell here — the schemas
+          // arrive asynchronously and trigger a re-render once they land.
           this.pict.views['DataCloner-Layout'].render();
 
-          // Post-render initialization
+          // Post-render initialization for the static (non-connection) UI.
           this.pict.providers.DataCloner.initPersistence();
-          this.pict.views['DataCloner-Connection'].onProviderChange();
           this.pict.providers.DataCloner.restoreDeployedTables();
           this.pict.providers.DataCloner.startLiveStatusPolling();
           this.pict.providers.DataCloner.initAccordionPreviews();
           this.pict.providers.DataCloner.updateAllPreviews();
           this.pict.views['DataCloner-Layout'].collapseAllSections();
           this.pict.providers.DataCloner.initAutoProcess();
+
+          // Async: fetch the host's connection-form schemas and re-render
+          // the Connection section.  bootstrapConnectionSchemas restores
+          // localStorage values + hooks save listeners once the new DOM
+          // is in place, then invokes onProviderChange() to surface the
+          // active provider's form.
+          this.pict.providers.DataCloner.bootstrapConnectionSchemas(function () {/* fire-and-forget */});
           return fCallback();
         }
       }
       module.exports = DataClonerApplication;
       module.exports.default_configuration = require('./Pict-Application-DataCloner-Configuration.json');
     }, {
-      "./Pict-Application-DataCloner-Configuration.json": 15,
-      "./providers/Pict-Provider-DataCloner.js": 18,
-      "./views/PictView-DataCloner-Connection.js": 19,
-      "./views/PictView-DataCloner-Deploy.js": 20,
-      "./views/PictView-DataCloner-Export.js": 21,
-      "./views/PictView-DataCloner-Layout.js": 22,
-      "./views/PictView-DataCloner-Schema.js": 23,
-      "./views/PictView-DataCloner-Session.js": 24,
-      "./views/PictView-DataCloner-Sync.js": 25,
-      "./views/PictView-DataCloner-ViewData.js": 26,
+      "./Pict-Application-DataCloner-Configuration.json": 17,
+      "./providers/Pict-Provider-DataCloner.js": 20,
+      "./views/PictView-DataCloner-Connection.js": 21,
+      "./views/PictView-DataCloner-Deploy.js": 22,
+      "./views/PictView-DataCloner-Export.js": 23,
+      "./views/PictView-DataCloner-Layout.js": 24,
+      "./views/PictView-DataCloner-Schema.js": 25,
+      "./views/PictView-DataCloner-Session.js": 26,
+      "./views/PictView-DataCloner-Sync.js": 27,
+      "./views/PictView-DataCloner-ViewData.js": 28,
       "pict-application": 4,
-      "pict-section-histogram": 8
+      "pict-section-connection-form": 8,
+      "pict-section-histogram": 10
     }],
-    17: [function (require, module, exports) {
+    19: [function (require, module, exports) {
       module.exports = {
         DataClonerApplication: require('./Pict-Application-DataCloner.js')
       };
@@ -4848,9 +5511,9 @@
         window.DataClonerApplication = module.exports.DataClonerApplication;
       }
     }, {
-      "./Pict-Application-DataCloner.js": 16
+      "./Pict-Application-DataCloner.js": 18
     }],
-    18: [function (require, module, exports) {
+    20: [function (require, module, exports) {
       const libPictProvider = require('pict-provider');
       class DataClonerProvider extends libPictProvider {
         constructor(pFable, pOptions, pServiceHash) {
@@ -4914,45 +5577,24 @@
         // ================================================================
 
         updateAllPreviews() {
-          // Section 1 — Database Connection
-          let tmpProvider = document.getElementById('connProvider');
-          if (!tmpProvider) return;
-          tmpProvider = tmpProvider.value;
-          let tmpPreview1 = tmpProvider;
-          if (tmpProvider === 'SQLite') {
-            let tmpPath = document.getElementById('sqliteFilePath').value || '~/headlight-liveconnect-local/cloned.sqlite';
-            tmpPreview1 = 'SQLite at ' + tmpPath;
-          } else if (tmpProvider === 'MySQL') {
-            let tmpHost = document.getElementById('mysqlServer').value || '127.0.0.1';
-            let tmpPort = document.getElementById('mysqlPort').value || '3306';
-            let tmpUser = document.getElementById('mysqlUser').value || 'root';
-            tmpPreview1 = 'MySQL on ' + tmpHost + ':' + tmpPort + ' as ' + tmpUser;
-          } else if (tmpProvider === 'MSSQL') {
-            let tmpHost = document.getElementById('mssqlServer').value || '127.0.0.1';
-            let tmpPort = document.getElementById('mssqlPort').value || '1433';
-            let tmpUser = document.getElementById('mssqlUser').value || 'sa';
-            tmpPreview1 = 'MSSQL on ' + tmpHost + ':' + tmpPort + ' as ' + tmpUser;
-          } else if (tmpProvider === 'PostgreSQL') {
-            let tmpHost = document.getElementById('postgresqlHost').value || '127.0.0.1';
-            let tmpPort = document.getElementById('postgresqlPort').value || '5432';
-            let tmpUser = document.getElementById('postgresqlUser').value || 'postgres';
-            tmpPreview1 = 'PostgreSQL on ' + tmpHost + ':' + tmpPort + ' as ' + tmpUser;
-          } else if (tmpProvider === 'MongoDB') {
-            let tmpHost = document.getElementById('mongodbHost').value || '127.0.0.1';
-            let tmpPort = document.getElementById('mongodbPort').value || '27017';
-            tmpPreview1 = 'MongoDB on ' + tmpHost + ':' + tmpPort;
-          } else if (tmpProvider === 'Solr') {
-            let tmpHost = document.getElementById('solrHost').value || '127.0.0.1';
-            let tmpPort = document.getElementById('solrPort').value || '8983';
-            tmpPreview1 = 'Solr on ' + tmpHost + ':' + tmpPort;
-          } else if (tmpProvider === 'RocksDB') {
-            let tmpFolder = document.getElementById('rocksdbFolder').value || '~/headlight-liveconnect-local/rocksdb';
-            tmpPreview1 = 'RocksDB at ' + tmpFolder;
-          } else if (tmpProvider === 'Bibliograph') {
-            let tmpFolder = document.getElementById('bibliographFolder').value || '~/headlight-liveconnect-local/bibliograph';
-            tmpPreview1 = 'Bibliograph at ' + tmpFolder;
+          // Section 1 — Database Connection (schema-driven; the
+          // Connection view owns the heuristic that turns the active
+          // schema's field values into preview text).  The view's
+          // _buildPreviewText reads live DOM values for the active
+          // provider and falls back to schema Defaults if a field's
+          // element doesn't exist yet.
+          let tmpConnView = this.pict.views['DataCloner-Connection'];
+          let tmpConnState = this.pict.AppData.DataCloner && this.pict.AppData.DataCloner.Connection || null;
+          let tmpPreview1Text;
+          if (tmpConnView && tmpConnState && (tmpConnState.Schemas || []).length > 0) {
+            tmpPreview1Text = tmpConnView._buildPreviewText(tmpConnState);
+          } else {
+            tmpPreview1Text = tmpConnState && tmpConnState.PreviewText || 'Loading providers…';
           }
-          document.getElementById('preview1').textContent = tmpPreview1;
+          let tmpPreview1El = document.getElementById('preview1');
+          if (tmpPreview1El) {
+            tmpPreview1El.textContent = tmpPreview1Text;
+          }
 
           // Section 2 — Remote Session
           let tmpServerURL = document.getElementById('serverURL').value;
@@ -5014,7 +5656,12 @@
         }
         initAccordionPreviews() {
           let tmpSelf = this;
-          let tmpPreviewFields = ['connProvider', 'sqliteFilePath', 'mysqlServer', 'mysqlPort', 'mysqlUser', 'mssqlServer', 'mssqlPort', 'mssqlUser', 'postgresqlHost', 'postgresqlPort', 'postgresqlUser', 'mongodbHost', 'mongodbPort', 'solrHost', 'solrPort', 'rocksdbFolder', 'bibliographFolder', 'serverURL', 'userName', 'schemaURL', 'pageSize', 'dateTimePrecisionMS', 'syncMaxRecords', 'viewTable', 'viewLimit'];
+
+          // Static (non-connection) fields that drive accordion previews.
+          // Connection-section fields hook updateAllPreviews via
+          // _persistConnectionFields() once schemas load — see
+          // bootstrapConnectionSchemas().
+          let tmpPreviewFields = ['connProvider', 'serverURL', 'userName', 'schemaURL', 'pageSize', 'dateTimePrecisionMS', 'syncMaxRecords', 'viewTable', 'viewLimit'];
           let tmpHandler = function () {
             tmpSelf.updateAllPreviews();
           };
@@ -5043,7 +5690,17 @@
 
         saveField(pFieldId) {
           let tmpEl = document.getElementById(pFieldId);
-          if (tmpEl) {
+          if (!tmpEl) {
+            return;
+          }
+          // Checkboxes persist .checked, everything else persists .value.
+          // Older code special-cased a small set of checkbox ids (solrSecure,
+          // mssqlLegacyPagination, etc.); the schema-driven path no longer
+          // needs those — the checkbox handler in bootstrapConnectionSchemas
+          // stores 'true' / 'false' which restore picks up below.
+          if (tmpEl.type === 'checkbox') {
+            localStorage.setItem('dataCloner_' + pFieldId, tmpEl.checked ? 'true' : 'false');
+          } else {
             localStorage.setItem('dataCloner_' + pFieldId, tmpEl.value);
           }
         }
@@ -5054,33 +5711,33 @@
             let tmpSaved = localStorage.getItem('dataCloner_' + tmpId);
             if (tmpSaved !== null) {
               let tmpEl = document.getElementById(tmpId);
-              if (tmpEl) tmpEl.value = tmpSaved;
+              if (tmpEl) {
+                if (tmpEl.type === 'checkbox') {
+                  tmpEl.checked = tmpSaved === 'true';
+                } else {
+                  tmpEl.value = tmpSaved;
+                }
+              }
             }
           }
 
-          // Restore checkbox state
+          // Restore checkbox state for non-connection checkboxes that
+          // aren't in PersistFields (these all live outside the schema-
+          // driven Connection section, so they stay hardcoded).
           let tmpSyncDeleted = localStorage.getItem('dataCloner_syncDeletedRecords');
           if (tmpSyncDeleted !== null) {
-            document.getElementById('syncDeletedRecords').checked = tmpSyncDeleted === 'true';
+            let tmpEl = document.getElementById('syncDeletedRecords');
+            if (tmpEl) tmpEl.checked = tmpSyncDeleted === 'true';
           }
-          // Restore sync mode
           let tmpSyncMode = localStorage.getItem('dataCloner_syncMode');
           if (tmpSyncMode === 'Ongoing') {
-            document.getElementById('syncModeOngoing').checked = true;
+            let tmpEl = document.getElementById('syncModeOngoing');
+            if (tmpEl) tmpEl.checked = true;
           }
-          let tmpSolrSecure = localStorage.getItem('dataCloner_solrSecure');
-          if (tmpSolrSecure !== null) {
-            document.getElementById('solrSecure').checked = tmpSolrSecure === 'true';
-          }
-          let tmpMssqlLegacyPagination = localStorage.getItem('dataCloner_mssqlLegacyPagination');
-          if (tmpMssqlLegacyPagination !== null) {
-            let tmpEl = document.getElementById('mssqlLegacyPagination');
-            if (tmpEl) tmpEl.checked = tmpMssqlLegacyPagination === 'true';
-          }
-          // Restore advanced ID pagination checkbox
           let tmpAdvancedIDPagination = localStorage.getItem('dataCloner_syncAdvancedIDPagination');
           if (tmpAdvancedIDPagination !== null) {
-            document.getElementById('syncAdvancedIDPagination').checked = tmpAdvancedIDPagination === 'true';
+            let tmpEl = document.getElementById('syncAdvancedIDPagination');
+            if (tmpEl) tmpEl.checked = tmpAdvancedIDPagination === 'true';
           }
         }
         initPersistence() {
@@ -5116,21 +5773,9 @@
             });
           });
 
-          // Persist solr secure checkbox
-          let tmpSolrSecureEl = document.getElementById('solrSecure');
-          if (tmpSolrSecureEl) {
-            tmpSolrSecureEl.addEventListener('change', function () {
-              localStorage.setItem('dataCloner_solrSecure', this.checked);
-            });
-          }
-
-          // Persist MSSQL legacy pagination checkbox
-          let tmpMssqlLegacyPaginationEl = document.getElementById('mssqlLegacyPagination');
-          if (tmpMssqlLegacyPaginationEl) {
-            tmpMssqlLegacyPaginationEl.addEventListener('change', function () {
-              localStorage.setItem('dataCloner_mssqlLegacyPagination', this.checked);
-            });
-          }
+          // (Connection-section checkboxes — solrSecure, mssqlLegacyPagination —
+          // are handled by bootstrapConnectionSchemas() which hooks change
+          // listeners after the schema-driven form renders.)
 
           // Persist advanced ID pagination checkbox
           let tmpAdvancedIDPaginationEl = document.getElementById('syncAdvancedIDPagination');
@@ -5154,6 +5799,135 @@
               }
             })(tmpAutoIds[a]);
           }
+        }
+
+        // ================================================================
+        // Connection Schemas Bootstrap
+        //
+        // Fetches the host's aggregated connection-form schemas and re-
+        // renders the Connection view so it shows the real provider list +
+        // per-provider field blocks.  Then restores localStorage values
+        // for the new (schema-driven) DOM ids and hooks save listeners.
+        // ================================================================
+
+        bootstrapConnectionSchemas(fCallback) {
+          let tmpSelf = this;
+          let tmpDone = typeof fCallback === 'function' ? fCallback : function () {};
+          this.api('GET', '/clone/connection/schemas').then(function (pData) {
+            let tmpSchemas = pData && Array.isArray(pData.Schemas) ? pData.Schemas : [];
+            tmpSelf._applyConnectionSchemas(tmpSchemas);
+            return tmpDone(null, tmpSchemas);
+          }).catch(function (pError) {
+            if (tmpSelf.fable && tmpSelf.fable.log && tmpSelf.fable.log.error) {
+              tmpSelf.fable.log.error(`DataCloner: failed to fetch connection schemas: ${pError && pError.message}`);
+            }
+            // On failure, leave the empty-schema state in place — the
+            // shared view's "no schemas detected" notice will surface.
+            tmpSelf._applyConnectionSchemas([]);
+            return tmpDone(pError);
+          });
+        }
+        _applyConnectionSchemas(pSchemas) {
+          let tmpAppData = this.pict.AppData.DataCloner;
+          if (!tmpAppData.Connection) {
+            tmpAppData.Connection = {
+              Schemas: [],
+              ActiveProvider: '',
+              PreviewText: ''
+            };
+          }
+          tmpAppData.Connection.Schemas = pSchemas;
+
+          // Pick an initial ActiveProvider — restore from localStorage
+          // if the saved value matches one of the available providers,
+          // otherwise default to the first schema (or stay empty).
+          let tmpAvailable = pSchemas.map(function (pS) {
+            return pS.Provider;
+          });
+          let tmpSavedProvider = localStorage.getItem('dataCloner_activeProvider');
+          if (tmpSavedProvider && tmpAvailable.indexOf(tmpSavedProvider) >= 0) {
+            tmpAppData.Connection.ActiveProvider = tmpSavedProvider;
+          } else if (pSchemas.length > 0) {
+            tmpAppData.Connection.ActiveProvider = pSchemas[0].Provider;
+          }
+
+          // Hand the schemas to the shared view, which renders the form
+          // into #DataCloner-Connection-FormSlot.
+          let tmpForm = this.pict.views['PictSection-ConnectionForm'];
+          if (tmpForm) {
+            let tmpSelf = this;
+            tmpForm.options.OnProviderChange = function (pProvider) {
+              tmpAppData.Connection.ActiveProvider = pProvider;
+              localStorage.setItem('dataCloner_activeProvider', pProvider);
+              // Re-hook persistence on the new active form's inputs
+              // (the shared view re-renders on provider change, so the
+              // previous input listeners are gone).
+              tmpSelf._persistConnectionFields(pSchemas);
+              tmpSelf.updateAllPreviews();
+            };
+            if (tmpAppData.Connection.ActiveProvider) {
+              tmpForm._ActiveProvider = tmpAppData.Connection.ActiveProvider;
+            }
+            tmpForm.setSchemas(pSchemas);
+          }
+
+          // Re-render the DataCloner accordion shell so the preview text
+          // reflects the active provider.
+          let tmpAccordion = this.pict.views['DataCloner-Connection'];
+          if (tmpAccordion) {
+            tmpAccordion.render();
+          }
+
+          // Restore values + hook input listeners on the freshly-rendered
+          // shared-view inputs.
+          this._persistConnectionFields(pSchemas);
+          this.updateAllPreviews();
+        }
+        _persistConnectionFields(pSchemas) {
+          let tmpForm = this.pict.views['PictSection-ConnectionForm'];
+          if (!tmpForm) {
+            return;
+          }
+          let tmpSelf = this;
+
+          // Restore + hook every per-provider field.  saveField()
+          // dispatches on element type internally so checkboxes and
+          // text inputs share the same path.
+          (pSchemas || []).forEach(function (pSchema) {
+            (pSchema.Fields || []).forEach(function (pField) {
+              let tmpId = tmpForm.fieldDOMId(pSchema.Provider, pField.Name);
+              let tmpEl = document.getElementById(tmpId);
+              if (!tmpEl) {
+                return;
+              }
+              let tmpSaved = localStorage.getItem('dataCloner_' + tmpId);
+              if (tmpSaved !== null) {
+                if (tmpEl.type === 'checkbox') {
+                  tmpEl.checked = tmpSaved === 'true';
+                } else {
+                  tmpEl.value = tmpSaved;
+                }
+              }
+
+              // Avoid double-binding when the shared view re-renders
+              // on provider change.  We tag the element so subsequent
+              // runs of this method are no-ops.
+              if (tmpEl.dataset && tmpEl.dataset.dataclonerHooked === '1') {
+                return;
+              }
+              if (tmpEl.dataset) {
+                tmpEl.dataset.dataclonerHooked = '1';
+              }
+              tmpEl.addEventListener('input', function () {
+                tmpSelf.saveField(tmpId);
+                tmpSelf.updateAllPreviews();
+              });
+              tmpEl.addEventListener('change', function () {
+                tmpSelf.saveField(tmpId);
+                tmpSelf.updateAllPreviews();
+              });
+            });
+          });
         }
 
         // ================================================================
@@ -5828,103 +6602,204 @@
     }, {
       "pict-provider": 6
     }],
-    19: [function (require, module, exports) {
+    21: [function (require, module, exports) {
+      /**
+       * DataCloner — Database Connection (section 1)
+       *
+       * Thin accordion shell + connect/test wiring around the shared
+       * `pict-section-connection-form` view, which owns the schema-driven
+       * provider <select> + per-provider field rendering.  The shared view
+       * is registered separately in Pict-Application-DataCloner.js and
+       * renders into the FormSlot below.
+       *
+       * Flow:
+       *   1. Layout renders, this view paints the accordion shell with an
+       *      empty FormSlot + "Loading providers…" preview text.
+       *   2. Pict-Provider-DataCloner#bootstrapConnectionSchemas() fetches
+       *      GET /clone/connection/schemas and calls setSchemas() on the
+       *      shared view, which renders the per-provider form into FormSlot.
+       *   3. User clicks Connect / Test → this view delegates to the shared
+       *      view's getProviderConfig() to assemble the wire-format payload,
+       *      then POSTs to /clone/connection/{configure,test}.
+       *
+       * Earlier versions of this view contained the schema rendering inline;
+       * that logic has been lifted into pict-section-connection-form so
+       * retold-databeacon and retold-facto can share it.  See:
+       *   modules/pict/pict-section-connection-form/source/Pict-Section-ConnectionForm.js
+       */
+      'use strict';
+
       const libPictView = require('pict-view');
+      const _ViewConfiguration = {
+        ViewIdentifier: 'DataCloner-Connection',
+        DefaultRenderable: 'DataCloner-Connection',
+        DefaultDestinationAddress: '#DataCloner-Section-Connection',
+        Templates: [{
+          Hash: 'DataCloner-Connection',
+          Template: /*html*/`
+<div class="accordion-row">
+	<div class="accordion-number">1</div>
+	<div class="accordion-card" id="section1" data-section="1">
+		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section1')">
+			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> <span class="auto-label">auto</span></label>
+			<div class="accordion-title">Database Connection</div>
+			<span class="accordion-phase" id="phase1"></span>
+			<div class="accordion-preview" id="preview1">{~D:AppData.DataCloner.Connection.PreviewText~}</div>
+			<div class="accordion-actions">
+				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Connection'].connectProvider()">go</span>
+			</div>
+			<div class="accordion-toggle">&#9660;</div>
+		</div>
+		<div class="accordion-body">
+			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Configure the local database where cloned data will be stored.  The provider list comes from the host's installed meadow-connection modules.</p>
+
+			<div class="inline-group" style="margin-bottom:10px">
+				<div style="flex:1; display:flex; align-items:flex-end; gap:8px; justify-content:flex-end">
+					<button class="primary" onclick="pict.views['DataCloner-Connection'].connectProvider()">Connect</button>
+					<button class="secondary" onclick="pict.views['DataCloner-Connection'].testConnection()">Test Connection</button>
+				</div>
+			</div>
+
+			<!-- pict-section-connection-form renders here -->
+			<div id="DataCloner-Connection-FormSlot"></div>
+
+			<div id="connectionStatus"></div>
+		</div>
+	</div>
+</div>`
+        }],
+        Renderables: [{
+          RenderableHash: 'DataCloner-Connection',
+          TemplateHash: 'DataCloner-Connection',
+          DestinationAddress: '#DataCloner-Section-Connection'
+        }]
+      };
       class DataClonerConnectionView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
           super(pFable, pOptions, pServiceHash);
         }
-        onProviderChange() {
-          let tmpProvider = document.getElementById('connProvider').value;
-          let tmpProviders = ['SQLite', 'MySQL', 'MSSQL', 'PostgreSQL', 'Solr', 'MongoDB', 'RocksDB', 'Bibliograph'];
-          for (let i = 0; i < tmpProviders.length; i++) {
-            let tmpEl = document.getElementById('config' + tmpProviders[i]);
-            if (tmpEl) {
-              tmpEl.style.display = tmpProvider === tmpProviders[i] ? '' : 'none';
-            }
-          }
-          this.pict.providers.DataCloner.saveField('connProvider');
-        }
-        getProviderConfig() {
-          let tmpProvider = document.getElementById('connProvider').value;
-          let tmpConfig = {};
-          if (tmpProvider === 'SQLite') {
-            tmpConfig.SQLiteFilePath = document.getElementById('sqliteFilePath').value.trim() || '~/headlight-liveconnect-local/cloned.sqlite';
-          } else if (tmpProvider === 'MySQL') {
-            tmpConfig.host = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
-            tmpConfig.port = parseInt(document.getElementById('mysqlPort').value, 10) || 3306;
-            tmpConfig.user = document.getElementById('mysqlUser').value.trim() || 'root';
-            tmpConfig.password = document.getElementById('mysqlPassword').value;
-            tmpConfig.database = document.getElementById('mysqlDatabase').value.trim();
-            tmpConfig.connectionLimit = parseInt(document.getElementById('mysqlConnectionLimit').value, 10) || 20;
-          } else if (tmpProvider === 'MSSQL') {
-            tmpConfig.server = document.getElementById('mssqlServer').value.trim() || '127.0.0.1';
-            tmpConfig.port = parseInt(document.getElementById('mssqlPort').value, 10) || 1433;
-            tmpConfig.user = document.getElementById('mssqlUser').value.trim() || 'sa';
-            tmpConfig.password = document.getElementById('mssqlPassword').value;
-            tmpConfig.database = document.getElementById('mssqlDatabase').value.trim();
-            tmpConfig.connectionLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
-            // Use ROW_NUMBER() pagination instead of OFFSET/FETCH for
-            // SQL Server 2008 R2 / 2012 or databases whose compatibility
-            // level is < 110 (the parser rejects OFFSET/FETCH syntax
-            // otherwise).
-            tmpConfig.LegacyPagination = document.getElementById('mssqlLegacyPagination').checked;
 
-            // Reliability tuning — pull from the advanced settings block.
-            // All are optional; the connection provider falls back to
-            // sensible defaults when a value is missing or zero.
-            let tmpReqSec = parseInt(document.getElementById('mssqlRequestTimeoutSec').value, 10);
-            if (tmpReqSec > 0) tmpConfig.RequestTimeoutMs = tmpReqSec * 1000;
-            let tmpConnSec = parseInt(document.getElementById('mssqlConnectionTimeoutSec').value, 10);
-            if (tmpConnSec > 0) tmpConfig.ConnectionTimeoutMs = tmpConnSec * 1000;
-            let tmpConnectAttempts = parseInt(document.getElementById('mssqlConnectMaxAttempts').value, 10);
-            let tmpDDLAttempts = parseInt(document.getElementById('mssqlDDLMaxAttempts').value, 10);
-            let tmpInitialDelaySec = parseInt(document.getElementById('mssqlRetryInitialDelaySec').value, 10);
-            let tmpMaxDelaySec = parseInt(document.getElementById('mssqlRetryMaxDelaySec').value, 10);
-            if (tmpConnectAttempts > 0 || tmpInitialDelaySec > 0 || tmpMaxDelaySec > 0) {
-              tmpConfig.ConnectRetryOptions = {};
-              if (tmpConnectAttempts > 0) tmpConfig.ConnectRetryOptions.MaxAttempts = tmpConnectAttempts;
-              if (tmpInitialDelaySec > 0) tmpConfig.ConnectRetryOptions.InitialDelayMs = tmpInitialDelaySec * 1000;
-              if (tmpMaxDelaySec > 0) tmpConfig.ConnectRetryOptions.MaxDelayMs = tmpMaxDelaySec * 1000;
-            }
-            if (tmpDDLAttempts > 0 || tmpInitialDelaySec > 0 || tmpMaxDelaySec > 0) {
-              tmpConfig.DDLRetryOptions = {};
-              if (tmpDDLAttempts > 0) tmpConfig.DDLRetryOptions.MaxAttempts = tmpDDLAttempts;
-              if (tmpInitialDelaySec > 0) tmpConfig.DDLRetryOptions.InitialDelayMs = tmpInitialDelaySec * 1000;
-              if (tmpMaxDelaySec > 0) tmpConfig.DDLRetryOptions.MaxDelayMs = tmpMaxDelaySec * 1000;
-            }
-          } else if (tmpProvider === 'PostgreSQL') {
-            tmpConfig.host = document.getElementById('postgresqlHost').value.trim() || '127.0.0.1';
-            tmpConfig.port = parseInt(document.getElementById('postgresqlPort').value, 10) || 5432;
-            tmpConfig.user = document.getElementById('postgresqlUser').value.trim() || 'postgres';
-            tmpConfig.password = document.getElementById('postgresqlPassword').value;
-            tmpConfig.database = document.getElementById('postgresqlDatabase').value.trim();
-            tmpConfig.max = parseInt(document.getElementById('postgresqlConnectionLimit').value, 10) || 10;
-          } else if (tmpProvider === 'Solr') {
-            tmpConfig.host = document.getElementById('solrHost').value.trim() || 'localhost';
-            tmpConfig.port = parseInt(document.getElementById('solrPort').value, 10) || 8983;
-            tmpConfig.core = document.getElementById('solrCore').value.trim() || 'default';
-            tmpConfig.path = document.getElementById('solrPath').value.trim() || '/solr';
-            tmpConfig.secure = document.getElementById('solrSecure').checked;
-          } else if (tmpProvider === 'MongoDB') {
-            tmpConfig.host = document.getElementById('mongodbHost').value.trim() || '127.0.0.1';
-            tmpConfig.port = parseInt(document.getElementById('mongodbPort').value, 10) || 27017;
-            tmpConfig.user = document.getElementById('mongodbUser').value.trim();
-            tmpConfig.password = document.getElementById('mongodbPassword').value;
-            tmpConfig.database = document.getElementById('mongodbDatabase').value.trim() || 'test';
-            tmpConfig.maxPoolSize = parseInt(document.getElementById('mongodbConnectionLimit').value, 10) || 10;
-          } else if (tmpProvider === 'RocksDB') {
-            tmpConfig.RocksDBFolder = document.getElementById('rocksdbFolder').value.trim() || 'data/rocksdb';
-          } else if (tmpProvider === 'Bibliograph') {
-            tmpConfig.StorageFolder = document.getElementById('bibliographFolder').value.trim() || 'data/bibliograph';
+        // ====================================================================
+        //  Lifecycle
+        // ====================================================================
+
+        onBeforeRender(pRenderable) {
+          // Make sure AppData has the slot the accordion preview reads
+          // from (the Provider's bootstrapConnectionSchemas() will fill in
+          // the live values once schemas arrive).
+          if (!this.pict.AppData.DataCloner) {
+            this.pict.AppData.DataCloner = {};
           }
+          if (!this.pict.AppData.DataCloner.Connection) {
+            this.pict.AppData.DataCloner.Connection = {
+              Schemas: [],
+              ActiveProvider: '',
+              PreviewText: 'Loading providers…'
+            };
+          }
+          return super.onBeforeRender(pRenderable);
+        }
+
+        // ====================================================================
+        //  Helpers used by the provider's preview / persistence layer
+        // ====================================================================
+
+        /**
+         * Build the section 1 accordion preview text.  Reads live DOM
+         * values via the shared view if it's mounted, otherwise falls back
+         * to schema defaults.
+         *
+         * @param {{Schemas: object[], ActiveProvider: string}} pState
+         * @returns {string}
+         */
+        _buildPreviewText(pState) {
+          let tmpActive = pState.ActiveProvider;
+          let tmpSchema = (pState.Schemas || []).find(pS => pS.Provider === tmpActive);
+          if (!tmpSchema) {
+            return tmpActive || '(no provider selected)';
+          }
+
+          // Heuristics:
+          //   - file-based providers (single Path field) → "<DisplayName> at <path>"
+          //   - host/port/user providers              → "<DisplayName> on host:port [as user]"
+          // Host/port/user are matched by canonical schema field names.
+          let tmpFields = tmpSchema.Fields || [];
+          let tmpPath = tmpFields.find(pF => pF.Type === 'Path');
+          if (tmpPath) {
+            let tmpVal = this._readFieldValue(tmpSchema.Provider, tmpPath) || tmpPath.Default || '';
+            return `${tmpSchema.DisplayName} at ${tmpVal}`;
+          }
+          let tmpHostField = tmpFields.find(pF => pF.Name === 'host' || pF.Name === 'server');
+          let tmpPortField = tmpFields.find(pF => pF.Name === 'port');
+          let tmpUserField = tmpFields.find(pF => pF.Name === 'user');
+          if (tmpHostField && tmpPortField) {
+            let tmpHost = this._readFieldValue(tmpSchema.Provider, tmpHostField) || tmpHostField.Default || '';
+            let tmpPort = this._readFieldValue(tmpSchema.Provider, tmpPortField) || tmpPortField.Default || '';
+            let tmpPreview = `${tmpSchema.DisplayName} on ${tmpHost}:${tmpPort}`;
+            if (tmpUserField) {
+              let tmpUser = this._readFieldValue(tmpSchema.Provider, tmpUserField) || tmpUserField.Default || '';
+              if (tmpUser) {
+                tmpPreview += ` as ${tmpUser}`;
+              }
+            }
+            return tmpPreview;
+          }
+          return tmpSchema.DisplayName;
+        }
+        _readFieldValue(pProvider, pField) {
+          if (typeof document === 'undefined') {
+            return '';
+          }
+          let tmpForm = this.pict.views['PictSection-ConnectionForm'];
+          if (!tmpForm) {
+            return '';
+          }
+          let tmpEl = document.getElementById(tmpForm.fieldDOMId(pProvider, pField.Name));
+          if (!tmpEl) {
+            return '';
+          }
+          if (pField.Type === 'Boolean') {
+            return tmpEl.checked ? 'true' : '';
+          }
+          return tmpEl.value;
+        }
+
+        /**
+         * DOM-id resolver for fields owned by the shared view.  Forwarded
+         * to PictSection-ConnectionForm so the provider's persistence
+         * layer (saveField, restoreFields) can compute element ids without
+         * needing to know the prefix.
+         */
+        fieldDOMId(pProvider, pFieldName) {
+          let tmpForm = this.pict.views['PictSection-ConnectionForm'];
+          if (tmpForm && typeof tmpForm.fieldDOMId === 'function') {
+            return tmpForm.fieldDOMId(pProvider, pFieldName);
+          }
+          // Fallback before the shared view is mounted.
+          let tmpProvider = String(pProvider || '').toLowerCase();
+          let tmpField = String(pFieldName || '').replace(/\./g, '_');
+          return `datacloner-conn-${tmpProvider}-${tmpField}`;
+        }
+
+        // ====================================================================
+        //  Connect / Test — delegate field collection to the shared view
+        // ====================================================================
+
+        getProviderConfig() {
+          let tmpForm = this.pict.views['PictSection-ConnectionForm'];
+          if (tmpForm && typeof tmpForm.getProviderConfig === 'function') {
+            return tmpForm.getProviderConfig();
+          }
+          // Shared view not mounted yet (early bootstrap, or schemas
+          // failed to load).  Surface a plain empty payload — the
+          // connect/test handlers downstream will report the failure
+          // from the server side.
           return {
-            Provider: tmpProvider,
-            Config: tmpConfig
+            Provider: '',
+            Config: {}
           };
         }
         connectProvider() {
-          // Guard against re-entrant calls (e.g. rapid auto-connect polling)
           if (this._connectInFlight) {
             return;
           }
@@ -5967,288 +6842,15 @@
               this.pict.providers.DataCloner.setStatus('connectionStatus', 'Connected: ' + pData.Provider, 'ok');
               this.pict.providers.DataCloner.setSectionPhase(1, 'ok');
             }
-          }).catch(() => {
-            /* ignore */
-          });
+          }).catch(() => {/* ignore */});
         }
       }
       module.exports = DataClonerConnectionView;
-      module.exports.default_configuration = {
-        ViewIdentifier: 'DataCloner-Connection',
-        DefaultRenderable: 'DataCloner-Connection',
-        DefaultDestinationAddress: '#DataCloner-Section-Connection',
-        Templates: [{
-          Hash: 'DataCloner-Connection',
-          Template: /*html*/`
-<div class="accordion-row">
-	<div class="accordion-number">1</div>
-	<div class="accordion-card" id="section1" data-section="1">
-		<div class="accordion-header" onclick="pict.views['DataCloner-Layout'].toggleSection('section1')">
-			<label class="accordion-auto" onclick="event.stopPropagation()"><input type="checkbox" id="auto1"> <span class="auto-label">auto</span></label>
-			<div class="accordion-title">Database Connection</div>
-			<span class="accordion-phase" id="phase1"></span>
-			<div class="accordion-preview" id="preview1">SQLite at data/cloned.sqlite</div>
-			<div class="accordion-actions">
-				<span class="accordion-go" onclick="event.stopPropagation(); pict.views['DataCloner-Connection'].connectProvider()">go</span>
-			</div>
-			<div class="accordion-toggle">&#9660;</div>
-		</div>
-		<div class="accordion-body">
-			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Configure the local database where cloned data will be stored. SQLite is connected by default.</p>
-
-			<div class="inline-group">
-				<div style="flex:0 0 200px">
-					<label for="connProvider">Provider</label>
-					<select id="connProvider" onchange="pict.views['DataCloner-Connection'].onProviderChange()">
-						<option value="SQLite" selected>SQLite</option>
-						<option value="MySQL">MySQL</option>
-						<option value="MSSQL">MSSQL</option>
-						<option value="PostgreSQL">PostgreSQL</option>
-						<option value="Solr">Solr</option>
-						<option value="MongoDB">MongoDB</option>
-						<option value="RocksDB">RocksDB</option>
-						<option value="Bibliograph">Bibliograph</option>
-					</select>
-				</div>
-				<div style="flex:1; display:flex; align-items:flex-end; gap:8px">
-					<button class="primary" onclick="pict.views['DataCloner-Connection'].connectProvider()">Connect</button>
-					<button class="secondary" onclick="pict.views['DataCloner-Connection'].testConnection()">Test Connection</button>
-				</div>
-			</div>
-
-			<!-- SQLite Config -->
-			<div id="configSQLite">
-				<label for="sqliteFilePath">SQLite File Path</label>
-				<input type="text" id="sqliteFilePath" placeholder="~/headlight-liveconnect-local/cloned.sqlite" value="~/headlight-liveconnect-local/cloned.sqlite">
-			</div>
-
-			<!-- MySQL Config -->
-			<div id="configMySQL" style="display:none">
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="mysqlServer">Server</label>
-						<input type="text" id="mysqlServer" placeholder="127.0.0.1" value="127.0.0.1">
-					</div>
-					<div style="flex:1">
-						<label for="mysqlPort">Port</label>
-						<input type="number" id="mysqlPort" placeholder="3306" value="3306">
-					</div>
-				</div>
-				<div class="inline-group">
-					<div>
-						<label for="mysqlUser">User</label>
-						<input type="text" id="mysqlUser" placeholder="root" value="root">
-					</div>
-					<div>
-						<label for="mysqlPassword">Password</label>
-						<input type="password" id="mysqlPassword" placeholder="password">
-					</div>
-				</div>
-				<label for="mysqlDatabase">Database</label>
-				<input type="text" id="mysqlDatabase" placeholder="meadow_clone">
-				<div class="inline-group">
-					<div>
-						<label for="mysqlConnectionLimit">Connection Limit</label>
-						<input type="number" id="mysqlConnectionLimit" placeholder="20" value="20">
-					</div>
-					<div></div>
-				</div>
-			</div>
-
-			<!-- MSSQL Config -->
-			<div id="configMSSQL" style="display:none">
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="mssqlServer">Server</label>
-						<input type="text" id="mssqlServer" placeholder="127.0.0.1" value="127.0.0.1">
-					</div>
-					<div style="flex:1">
-						<label for="mssqlPort">Port</label>
-						<input type="number" id="mssqlPort" placeholder="1433" value="1433">
-					</div>
-				</div>
-				<div class="inline-group">
-					<div>
-						<label for="mssqlUser">User</label>
-						<input type="text" id="mssqlUser" placeholder="sa" value="sa">
-					</div>
-					<div>
-						<label for="mssqlPassword">Password</label>
-						<input type="password" id="mssqlPassword" placeholder="password">
-					</div>
-				</div>
-				<label for="mssqlDatabase">Database</label>
-				<input type="text" id="mssqlDatabase" placeholder="meadow_clone">
-				<div class="inline-group">
-					<div>
-						<label for="mssqlConnectionLimit">Connection Limit</label>
-						<input type="number" id="mssqlConnectionLimit" placeholder="20" value="20">
-					</div>
-					<div></div>
-				</div>
-				<div style="margin-top:8px">
-					<input type="checkbox" id="mssqlLegacyPagination">
-					<label for="mssqlLegacyPagination" title="Enable for SQL Server 2008 R2 / 2012 or databases at compatibility_level &lt; 110. Uses ROW_NUMBER() pagination instead of OFFSET/FETCH.">Legacy pagination (SQL Server &lt; 2012 / compat level &lt; 110)</label>
-				</div>
-
-				<details style="margin-top:8px">
-					<summary style="cursor:pointer; font-weight:600">Reliability &amp; timeouts (advanced)</summary>
-					<p style="margin:8px 0; font-size:0.9em; color:#555">Tune these for slow / flaky customer networks. Connection and DDL operations will retry with exponential backoff, classifying each failure (NetworkError / RequestTimeout / PoolDegraded / ServerError) in the logs so the failure mode is obvious.</p>
-					<div class="inline-group">
-						<div>
-							<label for="mssqlRequestTimeoutSec">Request timeout (sec)</label>
-							<input type="number" id="mssqlRequestTimeoutSec" placeholder="120" value="120">
-						</div>
-						<div>
-							<label for="mssqlConnectionTimeoutSec">Connection timeout (sec)</label>
-							<input type="number" id="mssqlConnectionTimeoutSec" placeholder="60" value="60">
-						</div>
-					</div>
-					<div class="inline-group">
-						<div>
-							<label for="mssqlConnectMaxAttempts">Connect retries (max attempts)</label>
-							<input type="number" id="mssqlConnectMaxAttempts" placeholder="5" value="5" min="1" max="20">
-						</div>
-						<div>
-							<label for="mssqlDDLMaxAttempts">DDL retries (max attempts)</label>
-							<input type="number" id="mssqlDDLMaxAttempts" placeholder="5" value="5" min="1" max="20">
-						</div>
-					</div>
-					<div class="inline-group">
-						<div>
-							<label for="mssqlRetryInitialDelaySec">Retry initial delay (sec)</label>
-							<input type="number" id="mssqlRetryInitialDelaySec" placeholder="3" value="3" min="1" max="60">
-						</div>
-						<div>
-							<label for="mssqlRetryMaxDelaySec">Retry max delay (sec)</label>
-							<input type="number" id="mssqlRetryMaxDelaySec" placeholder="30" value="30" min="1" max="600">
-						</div>
-					</div>
-				</details>
-			</div>
-
-			<!-- PostgreSQL Config -->
-			<div id="configPostgreSQL" style="display:none">
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="postgresqlHost">Host</label>
-						<input type="text" id="postgresqlHost" placeholder="127.0.0.1" value="127.0.0.1">
-					</div>
-					<div style="flex:1">
-						<label for="postgresqlPort">Port</label>
-						<input type="number" id="postgresqlPort" placeholder="5432" value="5432">
-					</div>
-				</div>
-				<div class="inline-group">
-					<div>
-						<label for="postgresqlUser">User</label>
-						<input type="text" id="postgresqlUser" placeholder="postgres" value="postgres">
-					</div>
-					<div>
-						<label for="postgresqlPassword">Password</label>
-						<input type="password" id="postgresqlPassword" placeholder="password">
-					</div>
-				</div>
-				<label for="postgresqlDatabase">Database</label>
-				<input type="text" id="postgresqlDatabase" placeholder="meadow_clone">
-				<div class="inline-group">
-					<div>
-						<label for="postgresqlConnectionLimit">Connection Pool Limit</label>
-						<input type="number" id="postgresqlConnectionLimit" placeholder="10" value="10">
-					</div>
-					<div></div>
-				</div>
-			</div>
-
-			<!-- Solr Config -->
-			<div id="configSolr" style="display:none">
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="solrHost">Host</label>
-						<input type="text" id="solrHost" placeholder="localhost" value="localhost">
-					</div>
-					<div style="flex:1">
-						<label for="solrPort">Port</label>
-						<input type="number" id="solrPort" placeholder="8983" value="8983">
-					</div>
-				</div>
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="solrCore">Core</label>
-						<input type="text" id="solrCore" placeholder="default" value="default">
-					</div>
-					<div style="flex:1">
-						<label for="solrPath">Path</label>
-						<input type="text" id="solrPath" placeholder="/solr" value="/solr">
-					</div>
-				</div>
-				<div class="checkbox-row">
-					<input type="checkbox" id="solrSecure">
-					<label for="solrSecure">Use HTTPS</label>
-				</div>
-			</div>
-
-			<!-- MongoDB Config -->
-			<div id="configMongoDB" style="display:none">
-				<div class="inline-group">
-					<div style="flex:2">
-						<label for="mongodbHost">Host</label>
-						<input type="text" id="mongodbHost" placeholder="127.0.0.1" value="127.0.0.1">
-					</div>
-					<div style="flex:1">
-						<label for="mongodbPort">Port</label>
-						<input type="number" id="mongodbPort" placeholder="27017" value="27017">
-					</div>
-				</div>
-				<div class="inline-group">
-					<div>
-						<label for="mongodbUser">User</label>
-						<input type="text" id="mongodbUser" placeholder="(optional)">
-					</div>
-					<div>
-						<label for="mongodbPassword">Password</label>
-						<input type="password" id="mongodbPassword" placeholder="(optional)">
-					</div>
-				</div>
-				<label for="mongodbDatabase">Database</label>
-				<input type="text" id="mongodbDatabase" placeholder="test" value="test">
-				<div class="inline-group">
-					<div>
-						<label for="mongodbConnectionLimit">Max Pool Size</label>
-						<input type="number" id="mongodbConnectionLimit" placeholder="10" value="10">
-					</div>
-					<div></div>
-				</div>
-			</div>
-
-			<!-- RocksDB Config -->
-			<div id="configRocksDB" style="display:none">
-				<label for="rocksdbFolder">RocksDB Folder Path</label>
-				<input type="text" id="rocksdbFolder" placeholder="data/rocksdb" value="data/rocksdb">
-			</div>
-
-			<!-- Bibliograph Config -->
-			<div id="configBibliograph" style="display:none">
-				<label for="bibliographFolder">Storage Folder Path</label>
-				<input type="text" id="bibliographFolder" placeholder="data/bibliograph" value="data/bibliograph">
-			</div>
-
-			<div id="connectionStatus"></div>
-		</div>
-	</div>
-</div>
-`
-        }],
-        Renderables: [{
-          RenderableHash: 'DataCloner-Connection',
-          TemplateHash: 'DataCloner-Connection',
-          DestinationAddress: '#DataCloner-Section-Connection'
-        }]
-      };
+      module.exports.default_configuration = _ViewConfiguration;
     }, {
-      "pict-view": 13
+      "pict-view": 15
     }],
-    20: [function (require, module, exports) {
+    22: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerDeployView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -6409,51 +7011,26 @@
         }]
       };
     }, {
-      "pict-view": 13
+      "pict-view": 15
     }],
-    21: [function (require, module, exports) {
+    23: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerExportView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
           super(pFable, pOptions, pServiceHash);
         }
         buildConfigObject() {
-          let tmpProvider = document.getElementById('connProvider').value;
+          // LocalDatabase block — schema-driven via the Connection view's
+          // getProviderConfig().  The wire format produced there matches
+          // what each meadow-connection provider expects (lowercase field
+          // names for SQL drivers, PascalCase for SQLite path, etc.).
+          let tmpConnInfo = this.pict.views['DataCloner-Connection'].getProviderConfig();
+          let tmpProvider = tmpConnInfo.Provider;
           let tmpConfig = {};
-
-          // ---- Local Database ----
           tmpConfig.LocalDatabase = {
             Provider: tmpProvider,
-            Config: {}
+            Config: tmpConnInfo.Config || {}
           };
-          let tmpDbConfig = tmpConfig.LocalDatabase.Config;
-          if (tmpProvider === 'SQLite') {
-            tmpDbConfig.SQLiteFilePath = document.getElementById('sqliteFilePath').value.trim() || '~/headlight-liveconnect-local/cloned.sqlite';
-          } else if (tmpProvider === 'MySQL') {
-            tmpDbConfig.host = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
-            tmpDbConfig.port = parseInt(document.getElementById('mysqlPort').value, 10) || 3306;
-            tmpDbConfig.user = document.getElementById('mysqlUser').value.trim() || 'root';
-            tmpDbConfig.password = document.getElementById('mysqlPassword').value;
-            tmpDbConfig.database = document.getElementById('mysqlDatabase').value.trim();
-            tmpDbConfig.connectionLimit = parseInt(document.getElementById('mysqlConnectionLimit').value, 10) || 20;
-          } else if (tmpProvider === 'MSSQL') {
-            tmpDbConfig.server = document.getElementById('mssqlServer').value.trim() || '127.0.0.1';
-            tmpDbConfig.port = parseInt(document.getElementById('mssqlPort').value, 10) || 1433;
-            tmpDbConfig.user = document.getElementById('mssqlUser').value.trim() || 'sa';
-            tmpDbConfig.password = document.getElementById('mssqlPassword').value;
-            tmpDbConfig.database = document.getElementById('mssqlDatabase').value.trim();
-            tmpDbConfig.connectionLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
-            if (document.getElementById('mssqlLegacyPagination').checked) {
-              tmpDbConfig.LegacyPagination = true;
-            }
-          } else if (tmpProvider === 'PostgreSQL') {
-            tmpDbConfig.host = document.getElementById('postgresqlHost').value.trim() || '127.0.0.1';
-            tmpDbConfig.port = parseInt(document.getElementById('postgresqlPort').value, 10) || 5432;
-            tmpDbConfig.user = document.getElementById('postgresqlUser').value.trim() || 'postgres';
-            tmpDbConfig.password = document.getElementById('postgresqlPassword').value;
-            tmpDbConfig.database = document.getElementById('postgresqlDatabase').value.trim();
-            tmpDbConfig.max = parseInt(document.getElementById('postgresqlConnectionLimit').value, 10) || 10;
-          }
 
           // ---- Remote Session ----
           tmpConfig.RemoteSession = {};
@@ -6516,7 +7093,14 @@
           return tmpConfig;
         }
         buildMeadowIntegrationConfig() {
-          let tmpProvider = document.getElementById('connProvider').value;
+          // Pull current connection values via the schema-driven Connection
+          // view.  buildConfigObject() above can use the result directly,
+          // but meadow-integration's clone CLI expects a slightly different
+          // destination shape — `server` instead of `host`, `ConnectionPoolLimit`
+          // instead of `connectionLimit` for MSSQL — so we adapt here.
+          let tmpConnInfo = this.pict.views['DataCloner-Connection'].getProviderConfig();
+          let tmpProvider = tmpConnInfo.Provider;
+          let tmpConfigConn = tmpConnInfo.Config || {};
           let tmpConfig = {};
 
           // ---- Source ----
@@ -6533,23 +7117,25 @@
           tmpConfig.Destination = {};
           if (tmpProvider === 'MySQL') {
             tmpConfig.Destination.Provider = 'MySQL';
-            tmpConfig.Destination.MySQL = {};
-            tmpConfig.Destination.MySQL.server = document.getElementById('mysqlServer').value.trim() || '127.0.0.1';
-            tmpConfig.Destination.MySQL.port = parseInt(document.getElementById('mysqlPort').value, 10) || 3306;
-            tmpConfig.Destination.MySQL.user = document.getElementById('mysqlUser').value.trim() || 'root';
-            tmpConfig.Destination.MySQL.password = document.getElementById('mysqlPassword').value || '';
-            tmpConfig.Destination.MySQL.database = document.getElementById('mysqlDatabase').value.trim() || 'meadow';
-            tmpConfig.Destination.MySQL.connectionLimit = parseInt(document.getElementById('mysqlConnectionLimit').value, 10) || 20;
+            tmpConfig.Destination.MySQL = {
+              server: tmpConfigConn.host || '127.0.0.1',
+              port: tmpConfigConn.port || 3306,
+              user: tmpConfigConn.user || 'root',
+              password: tmpConfigConn.password || '',
+              database: tmpConfigConn.database || 'meadow',
+              connectionLimit: tmpConfigConn.connectionLimit || 20
+            };
           } else if (tmpProvider === 'MSSQL') {
             tmpConfig.Destination.Provider = 'MSSQL';
-            tmpConfig.Destination.MSSQL = {};
-            tmpConfig.Destination.MSSQL.server = document.getElementById('mssqlServer').value.trim() || '127.0.0.1';
-            tmpConfig.Destination.MSSQL.port = parseInt(document.getElementById('mssqlPort').value, 10) || 1433;
-            tmpConfig.Destination.MSSQL.user = document.getElementById('mssqlUser').value.trim() || 'sa';
-            tmpConfig.Destination.MSSQL.password = document.getElementById('mssqlPassword').value || '';
-            tmpConfig.Destination.MSSQL.database = document.getElementById('mssqlDatabase').value.trim() || 'meadow';
-            tmpConfig.Destination.MSSQL.ConnectionPoolLimit = parseInt(document.getElementById('mssqlConnectionLimit').value, 10) || 20;
-            if (document.getElementById('mssqlLegacyPagination').checked) {
+            tmpConfig.Destination.MSSQL = {
+              server: tmpConfigConn.server || '127.0.0.1',
+              port: tmpConfigConn.port || 1433,
+              user: tmpConfigConn.user || 'sa',
+              password: tmpConfigConn.password || '',
+              database: tmpConfigConn.database || 'meadow',
+              ConnectionPoolLimit: tmpConfigConn.connectionLimit || 20
+            };
+            if (tmpConfigConn.LegacyPagination) {
               tmpConfig.Destination.MSSQL.LegacyPagination = true;
             }
           } else {
@@ -6852,9 +7438,9 @@
         }]
       };
     }, {
-      "pict-view": 13
+      "pict-view": 15
     }],
-    22: [function (require, module, exports) {
+    24: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerLayoutView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -7256,9 +7842,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         }]
       };
     }, {
-      "pict-view": 13
+      "pict-view": 15
     }],
-    23: [function (require, module, exports) {
+    25: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerSchemaView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -7444,9 +8030,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         }]
       };
     }, {
-      "pict-view": 13
+      "pict-view": 15
     }],
-    24: [function (require, module, exports) {
+    26: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerSessionView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -7639,9 +8225,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         }]
       };
     }, {
-      "pict-view": 13
+      "pict-view": 15
     }],
-    25: [function (require, module, exports) {
+    27: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerSyncView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -8175,9 +8761,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         }]
       };
     }, {
-      "pict-view": 13
+      "pict-view": 15
     }],
-    26: [function (require, module, exports) {
+    28: [function (require, module, exports) {
       const libPictView = require('pict-view');
       class DataClonerViewDataView extends libPictView {
         constructor(pFable, pOptions, pServiceHash) {
@@ -8312,8 +8898,8 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         }]
       };
     }, {
-      "pict-view": 13
+      "pict-view": 15
     }]
-  }, {}, [17])(17);
+  }, {}, [19])(19);
 });
 //# sourceMappingURL=data-cloner.js.map
