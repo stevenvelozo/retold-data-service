@@ -185,7 +185,7 @@
     3: [function (require, module, exports) {
       module.exports = {
         "name": "pict-application",
-        "version": "1.0.33",
+        "version": "1.0.34",
         "description": "Application base class for a pict view-based application",
         "main": "source/Pict-Application.js",
         "scripts": {
@@ -216,9 +216,10 @@
           "browser-env": "^3.3.0",
           "eslint": "^9.28.0",
           "pict": "^1.0.348",
+          "pict-docuserve": "^0.1.5",
           "pict-provider": "^1.0.10",
           "pict-view": "^1.0.66",
-          "quackage": "^1.0.58",
+          "quackage": "^1.1.0",
           "typescript": "^5.9.3"
         },
         "mocha": {
@@ -1475,7 +1476,7 @@
     5: [function (require, module, exports) {
       module.exports = {
         "name": "pict-provider",
-        "version": "1.0.12",
+        "version": "1.0.13",
         "description": "Pict Provider Base Class",
         "main": "source/Pict-Provider.js",
         "scripts": {
@@ -1505,7 +1506,8 @@
           "@eslint/js": "^9.39.1",
           "eslint": "^9.39.1",
           "pict": "^1.0.351",
-          "quackage": "^1.0.58",
+          "pict-docuserve": "^0.1.5",
+          "quackage": "^1.1.0",
           "typescript": "^5.9.3"
         },
         "dependencies": {
@@ -1934,7 +1936,7 @@
 	padding: 7px 10px;
 	border: 1px solid #cbd5e1;
 	border-radius: 6px;
-	background: var(--theme-color-background-panel, #fff);
+	background: #fff;
 	color: #0f172a;
 	height: 36px;
 }
@@ -1962,7 +1964,7 @@
 	padding: 7px 10px;
 	border: 1px solid #cbd5e1;
 	border-radius: 6px;
-	background: var(--theme-color-background-panel, #fff);
+	background: #fff;
 	color: #0f172a;
 }
 .pict-conn-form__field input[type="checkbox"] {
@@ -2581,7 +2583,7 @@
 .pict-histogram-value-label
 {
 	text-align: center;
-	color: var(--theme-color-text-secondary, #666);
+	color: #666;
 	font-size: 11px;
 	padding: 2px 0;
 	white-space: nowrap;
@@ -2593,7 +2595,7 @@
 .pict-histogram-bin-label
 {
 	text-align: center;
-	color: var(--theme-color-text-primary, #333);
+	color: #333;
 	font-size: 11px;
 	padding: 4px 2px 0 2px;
 	white-space: nowrap;
@@ -2628,7 +2630,7 @@
 	left: 0;
 	right: 0;
 	height: 4px;
-	background: var(--theme-color-border-default, #E0E0E0);
+	background: #E0E0E0;
 	border-radius: 2px;
 }
 .pict-histogram-horizontal .pict-histogram-range-track
@@ -2661,7 +2663,7 @@
 	top: 4px;
 	width: 16px;
 	height: 16px;
-	background: var(--theme-color-background-panel, #fff);
+	background: #fff;
 	border: 2px solid #4A90D9;
 	border-radius: 50%;
 	cursor: grab;
