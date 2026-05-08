@@ -224,14 +224,14 @@ class DataClonerSyncView extends libPictView
 			+ '<div class="report-card">'
 			+ '  <div class="card-label">Records</div>'
 			+ '  <div class="card-value">' + tmpTotalSynced + '</div>'
-			+ '  <div style="font-size:0.75em; color:#888">of ' + tmpTotalRecords + '</div>'
+			+ '  <div style="font-size:0.75em; color:var(--theme-color-text-muted, #888)">of ' + tmpTotalRecords + '</div>'
 			+ '</div>';
 
 		// --- Anomalies ---
 		let tmpAnomalyContainer = document.getElementById('reportAnomalies');
 		if (pReport.Anomalies.length === 0)
 		{
-			tmpAnomalyContainer.innerHTML = '<div style="color:#28a745; font-weight:600; font-size:0.9em">No anomalies detected.</div>';
+			tmpAnomalyContainer.innerHTML = '<div style="color:var(--theme-color-status-success, #28a745); font-weight:600; font-size:0.9em">No anomalies detected.</div>';
 		}
 		else
 		{
@@ -257,7 +257,7 @@ class DataClonerSyncView extends libPictView
 		let tmpTopCount = Math.min(10, pReport.Tables.length);
 		if (tmpTopCount > 0)
 		{
-			let tmpHtml = '<h4 style="margin:0 0 8px; font-size:0.95em; color:#444">Top Tables by Duration</h4>';
+			let tmpHtml = '<h4 style="margin:0 0 8px; font-size:0.95em; color:var(--theme-color-text-secondary, #444)">Top Tables by Duration</h4>';
 			tmpHtml += '<table class="progress-table">';
 			tmpHtml += '<tr><th>Table</th><th>Duration</th><th>Records</th><th>Status</th></tr>';
 			for (let i = 0; i < tmpTopCount; i++)
@@ -481,22 +481,22 @@ module.exports.default_configuration =
 	DefaultDestinationAddress: '#DataCloner-Section-Sync',
 	CSS: /*css*/`
 .progress-table { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 4px; }
-.progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+.progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--theme-color-border-light, #eee); font-size: 0.9em; }
 .progress-table th { background: #f8f9fa; font-weight: 600; }
-.progress-table-muted td { color: #888; padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
+.progress-table-muted td { color: var(--theme-color-text-muted, #888); padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
 .progress-bar-container { width: 120px; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
-.progress-bar-fill { height: 100%; background: #28a745; transition: width 0.3s; }
-.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid #e0e0e0; }
+.progress-bar-fill { height: 100%; background: var(--theme-color-status-success, #28a745); transition: width 0.3s; }
+.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid var(--theme-color-border-default, #e0e0e0); }
 .sync-section-header:first-child { border-top: none; margin-top: 10px; }
 .sync-section-header-error { color: #dc3545; }
-.sync-section-header-ok { color: #28a745; }
-.sync-section-count { font-weight: 400; color: #999; font-size: 0.95em; }
-.sync-section-overflow { font-size: 0.8em; color: #aaa; padding: 2px 12px 6px; }
-.sync-pending-count { text-align: right; color: #aaa; font-size: 0.85em; }
+.sync-section-header-ok { color: var(--theme-color-status-success, #28a745); }
+.sync-section-count { font-weight: 400; color: var(--theme-color-text-muted, #999); font-size: 0.95em; }
+.sync-section-overflow { font-size: 0.8em; color: var(--theme-color-text-muted, #aaa); padding: 2px 12px 6px; }
+.sync-pending-count { text-align: right; color: var(--theme-color-text-muted, #aaa); font-size: 0.85em; }
 .report-card { background: #f8f9fa; border-radius: 8px; padding: 12px 16px; min-width: 140px; text-align: center; border: 1px solid #e9ecef; }
-.report-card .card-label { font-size: 0.8em; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.report-card .card-label { font-size: 0.8em; color: var(--theme-color-text-secondary, #666); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .report-card .card-value { font-size: 1.4em; font-weight: 700; }
-.report-card.outcome-success { border-left: 4px solid #28a745; }
+.report-card.outcome-success { border-left: 4px solid var(--theme-color-status-success, #28a745); }
 .report-card.outcome-partial { border-left: 4px solid #ffc107; }
 .report-card.outcome-error { border-left: 4px solid #dc3545; }
 .report-card.outcome-stopped { border-left: 4px solid #6c757d; }
@@ -534,30 +534,30 @@ module.exports.default_configuration =
 					<button class="danger" style="margin:0" onclick="pict.views['DataCloner-Sync'].stopSync()">Stop Sync</button>
 				</div>
 			</div>
-			<div style="font-size:0.8em; color:#888; margin-bottom:10px; padding-left:158px">Cross-DB tolerance for date comparison (default: 1000ms)</div>
+			<div style="font-size:0.8em; color:var(--theme-color-text-muted, #888); margin-bottom:10px; padding-left:158px">Cross-DB tolerance for date comparison (default: 1000ms)</div>
 
 			<div style="margin-bottom:10px">
 				<label style="margin-bottom:6px">Sync Mode</label>
 				<div style="display:flex; gap:12px 20px; align-items:center; flex-wrap:wrap">
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="syncMode" id="syncModeInitial" value="Initial" checked onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Initial
-						<span style="color:#888; font-size:0.85em">(full clone)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(full clone)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="syncMode" id="syncModeOngoing" value="Ongoing" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Ongoing
-						<span style="color:#888; font-size:0.85em">(delta sync)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(delta sync)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="syncMode" id="syncModeOngoingEventualConsistency" value="OngoingEventualConsistency" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Eventual
-						<span style="color:#888; font-size:0.85em">(time-budgeted back-sync)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(time-budgeted back-sync)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="syncMode" id="syncModeTrueUp" value="TrueUp" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> True-Up
-						<span style="color:#888; font-size:0.85em">(linear walk, one-time)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(linear walk, one-time)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="syncMode" id="syncModeComparisonOnly" value="ComparisonOnly" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Compare
-						<span style="color:#888; font-size:0.85em">(diff report, no sync)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(diff report, no sync)</span>
 					</label>
 				</div>
 			</div>
@@ -569,7 +569,7 @@ module.exports.default_configuration =
 						<input type="number" id="backSyncTimeLimit" value="30000" min="1000" max="600000" style="margin-bottom:0">
 					</div>
 				</div>
-				<div style="font-size:0.8em; color:#888; padding-left:4px">Milliseconds devoted to backwards bisection per entity before pulling new records (default: 30000)</div>
+				<div style="font-size:0.8em; color:var(--theme-color-text-muted, #888); padding-left:4px">Milliseconds devoted to backwards bisection per entity before pulling new records (default: 30000)</div>
 			</div>
 
 			<div id="syncModeOptions-TrueUp" style="display:none; margin-bottom:10px">
@@ -579,7 +579,7 @@ module.exports.default_configuration =
 						<input type="number" id="trueUpPageSize" value="500" min="10" max="10000" style="margin-bottom:0">
 					</div>
 				</div>
-				<div style="font-size:0.8em; color:#888; padding-left:4px">Records per page for the linear keyset walk (default: 500)</div>
+				<div style="font-size:0.8em; color:var(--theme-color-text-muted, #888); padding-left:4px">Records per page for the linear keyset walk (default: 500)</div>
 			</div>
 
 			<div class="checkbox-row">
@@ -609,7 +609,7 @@ module.exports.default_configuration =
 			<div id="syncProgress"></div>
 
 			<!-- Sync Report (appears after sync completes) -->
-			<div id="syncReportSection" style="display:none; margin-top:16px; padding-top:16px; border-top:2px solid #ddd">
+			<div id="syncReportSection" style="display:none; margin-top:16px; padding-top:16px; border-top:2px solid var(--theme-color-border-default, #ddd)">
 				<h3 style="margin:0 0 12px; font-size:1.1em">Sync Report</h3>
 
 				<!-- Summary cards -->

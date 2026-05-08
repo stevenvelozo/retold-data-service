@@ -183,9 +183,9 @@ module.exports.default_configuration =
 	DefaultRenderable: 'DataCloner-Schema',
 	DefaultDestinationAddress: '#DataCloner-Section-Schema',
 	CSS: /*css*/`
-.table-list { max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 8px; margin: 10px 0; }
+.table-list { max-height: 300px; overflow-y: auto; border: 1px solid var(--theme-color-border-default, #ddd); border-radius: 4px; padding: 8px; margin: 10px 0; }
 .table-item { padding: 4px 8px; display: flex; align-items: center; }
-.table-item:hover { background: #f0f0f0; }
+.table-item:hover { background: var(--theme-color-background-tertiary, #f0f0f0); }
 .table-item input[type="checkbox"] { margin-right: 8px; width: auto; }
 .table-item label { display: inline; font-weight: normal; margin-bottom: 0; cursor: pointer; }
 `,
@@ -220,7 +220,7 @@ module.exports.default_configuration =
 					<input type="text" id="tableFilter" placeholder="Filter tables..." style="flex:1; margin-bottom:0" oninput="pict.views['DataCloner-Schema'].filterTableList()">
 					<button class="secondary" onclick="pict.views['DataCloner-Schema'].selectAllTables(true)" style="font-size:0.8em">Select All</button>
 					<button class="secondary" onclick="pict.views['DataCloner-Schema'].selectAllTables(false)" style="font-size:0.8em">Deselect All</button>
-					<span id="tableSelectionCount" style="font-size:0.85em; color:#666; white-space:nowrap"></span>
+					<span id="tableSelectionCount" style="font-size:0.85em; color:var(--theme-color-text-secondary, #666); white-space:nowrap"></span>
 				</div>
 				<div id="tableList" class="table-list"></div>
 			</div>

@@ -450,7 +450,7 @@ module.exports.default_configuration =
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
 		<div class="accordion-body">
-			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Generate a JSON config file from your current settings. Use it to run headless clones from the command line.</p>
+			<p style="font-size:0.9em; color:var(--theme-color-text-secondary, #666); margin-bottom:10px">Generate a JSON config file from your current settings. Use it to run headless clones from the command line.</p>
 			<div style="display:flex; gap:8px; margin-bottom:10px">
 				<button class="primary" onclick="pict.views['DataCloner-Export'].generateConfig()">Generate Config</button>
 				<button class="secondary" onclick="pict.views['DataCloner-Export'].copyConfig()">Copy to Clipboard</button>
@@ -458,28 +458,28 @@ module.exports.default_configuration =
 			</div>
 			<div id="configExportStatus"></div>
 			<div id="cliCommand" style="display:none; margin-bottom:10px">
-				<label style="margin-bottom:4px">CLI Command <span style="color:#888; font-weight:normal">(with config file)</span></label>
-				<div style="background:#1a1a1a; color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyCLI()" title="Click to copy"></div>
+				<label style="margin-bottom:4px">CLI Command <span style="color:var(--theme-color-text-muted, #888); font-weight:normal">(with config file)</span></label>
+				<div style="background:var(--theme-color-text-primary, #1a1a1a); color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyCLI()" title="Click to copy"></div>
 			</div>
 			<div id="cliOneShot" style="display:none; margin-bottom:10px">
-				<label style="margin-bottom:4px">One-liner <span style="color:#888; font-weight:normal">(no config file needed)</span></label>
-				<div style="background:#1a1a1a; color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer; white-space:pre-wrap" onclick="pict.views['DataCloner-Export'].copyOneShot()" title="Click to copy"></div>
+				<label style="margin-bottom:4px">One-liner <span style="color:var(--theme-color-text-muted, #888); font-weight:normal">(no config file needed)</span></label>
+				<div style="background:var(--theme-color-text-primary, #1a1a1a); color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer; white-space:pre-wrap" onclick="pict.views['DataCloner-Export'].copyOneShot()" title="Click to copy"></div>
 			</div>
-			<textarea id="configOutput" style="display:none; width:100%; min-height:300px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid #ccc; border-radius:4px; background:#fafafa; tab-size:4; resize:vertical" readonly></textarea>
+			<textarea id="configOutput" style="display:none; width:100%; min-height:300px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid var(--theme-color-border-default, #ccc); border-radius:4px; background:var(--theme-color-background-secondary, #fafafa); tab-size:4; resize:vertical" readonly></textarea>
 
-			<div id="mdwintExport" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid #eee">
-				<h3 style="margin:0 0 8px; font-size:1em">meadow-integration CLI <span style="color:#888; font-weight:normal; font-size:0.85em">(mdwint clone)</span></h3>
-				<p style="font-size:0.85em; color:#666; margin-bottom:8px">Save as <code>.meadow.config.json</code> in your project root, then run the command below. Requires a local Meadow extended schema JSON file.</p>
+			<div id="mdwintExport" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--theme-color-border-light, #eee)">
+				<h3 style="margin:0 0 8px; font-size:1em">meadow-integration CLI <span style="color:var(--theme-color-text-muted, #888); font-weight:normal; font-size:0.85em">(mdwint clone)</span></h3>
+				<p style="font-size:0.85em; color:var(--theme-color-text-secondary, #666); margin-bottom:8px">Save as <code>.meadow.config.json</code> in your project root, then run the command below. Requires a local Meadow extended schema JSON file.</p>
 				<div style="display:flex; gap:8px; margin-bottom:10px">
 					<button class="secondary" onclick="pict.views['DataCloner-Export'].copyMdwintConfig()">Copy Config</button>
 					<button class="secondary" onclick="pict.views['DataCloner-Export'].downloadMdwintConfig()">Download .meadow.config.json</button>
 				</div>
 				<div id="mdwintCLICommand" style="margin-bottom:10px">
 					<label style="margin-bottom:4px">CLI Command</label>
-					<div style="background:#1a1a1a; color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyMdwintCLI()" title="Click to copy"></div>
+					<div style="background:var(--theme-color-text-primary, #1a1a1a); color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyMdwintCLI()" title="Click to copy"></div>
 				</div>
 				<div id="mdwintConfigStatus"></div>
-				<textarea id="mdwintConfigOutput" style="width:100%; min-height:250px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid #ccc; border-radius:4px; background:#fafafa; tab-size:4; resize:vertical" readonly></textarea>
+				<textarea id="mdwintConfigOutput" style="width:100%; min-height:250px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid var(--theme-color-border-default, #ccc); border-radius:4px; background:var(--theme-color-background-secondary, #fafafa); tab-size:4; resize:vertical" readonly></textarea>
 			</div>
 		</div>
 	</div>

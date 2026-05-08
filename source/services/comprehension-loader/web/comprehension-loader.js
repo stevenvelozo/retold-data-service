@@ -1971,7 +1971,7 @@
 .pict-histogram-value-label
 {
 	text-align: center;
-	color: #666;
+	color: var(--theme-color-text-secondary, #666);
 	font-size: 11px;
 	padding: 2px 0;
 	white-space: nowrap;
@@ -1983,7 +1983,7 @@
 .pict-histogram-bin-label
 {
 	text-align: center;
-	color: #333;
+	color: var(--theme-color-text-primary, #333);
 	font-size: 11px;
 	padding: 4px 2px 0 2px;
 	white-space: nowrap;
@@ -2018,7 +2018,7 @@
 	left: 0;
 	right: 0;
 	height: 4px;
-	background: #E0E0E0;
+	background: var(--theme-color-border-default, #E0E0E0);
 	border-radius: 2px;
 }
 .pict-histogram-horizontal .pict-histogram-range-track
@@ -2051,7 +2051,7 @@
 	top: 4px;
 	width: 16px;
 	height: 16px;
-	background: #fff;
+	background: var(--theme-color-background-panel, #fff);
 	border: 2px solid #4A90D9;
 	border-radius: 50%;
 	cursor: grab;
@@ -2097,7 +2097,7 @@
 {
 	width: 100%;
 	height: 1px;
-	background: #ccc;
+	background: var(--theme-color-border-default, #ccc);
 }
 .pict-histogram-label-row
 {
@@ -2107,7 +2107,7 @@
 .pict-histogram-fill-label
 {
 	font-size: 10px;
-	color: #666;
+	color: var(--theme-color-text-secondary, #666);
 	text-align: center;
 	white-space: nowrap;
 	overflow: visible;
@@ -5393,9 +5393,9 @@
           }
           if (tmpHtml === '') {
             if (tmpIsLive) {
-              tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">Load in progress, waiting for entity data\u2026</div>';
+              tmpHtml = '<div style="font-size:0.9em; color:var(--theme-color-text-muted, #888); padding:8px 0">Load in progress, waiting for entity data\u2026</div>';
             } else {
-              tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">No load data available. Run a load to see operation details here.</div>';
+              tmpHtml = '<div style="font-size:0.9em; color:var(--theme-color-text-muted, #888); padding:8px 0">No load data available. Run a load to see operation details here.</div>';
             }
           }
           tmpContainer.innerHTML = tmpHtml;
@@ -5615,11 +5615,11 @@
         DefaultDestinationAddress: '#ComprehensionLoader-Application-Container',
         CSS: /*css*/`
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
-h1 { margin-bottom: 20px; color: #1a1a1a; }
-h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px solid #ddd; padding-bottom: 6px; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--theme-color-background-secondary, #f5f5f5); color: var(--theme-color-text-primary, #333); padding: 20px; }
+h1 { margin-bottom: 20px; color: var(--theme-color-text-primary, #1a1a1a); }
+h2 { margin-bottom: 12px; color: var(--theme-color-text-secondary, #444); font-size: 1.2em; border-bottom: 2px solid var(--theme-color-border-default, #ddd); padding-bottom: 6px; }
 
-.section { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.section { background: var(--theme-color-background-panel, #fff); border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
 /* Accordion layout */
 .accordion-row { display: flex; gap: 0; margin-bottom: 16px; align-items: stretch; }
@@ -5629,25 +5629,25 @@ h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px soli
 	user-select: none;
 }
 .accordion-card {
-	flex: 1; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	flex: 1; background: var(--theme-color-background-panel, #fff); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 	overflow: hidden; min-width: 0;
 }
 .accordion-header {
 	display: flex; align-items: center; padding: 14px 20px; cursor: pointer;
 	user-select: none; gap: 12px; transition: background 0.15s; line-height: 1.4;
 }
-.accordion-header:hover { background: #fafafa; }
-.accordion-title { font-weight: 600; color: #333; font-size: 1.05em; white-space: nowrap; }
-.accordion-preview { flex: 1; font-style: italic; color: #888; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.accordion-header:hover { background: var(--theme-color-background-secondary, #fafafa); }
+.accordion-title { font-weight: 600; color: var(--theme-color-text-primary, #333); font-size: 1.05em; white-space: nowrap; }
+.accordion-preview { flex: 1; font-style: italic; color: var(--theme-color-text-muted, #888); font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .accordion-toggle {
 	flex: 0 0 20px; display: flex; align-items: center; justify-content: center;
-	border-radius: 4px; transition: background 0.15s, transform 0.25s; font-size: 0.7em; color: #888;
+	border-radius: 4px; transition: background 0.15s, transform 0.25s; font-size: 0.7em; color: var(--theme-color-text-muted, #888);
 }
-.accordion-header:hover .accordion-toggle { background: #eee; color: #555; }
+.accordion-header:hover .accordion-toggle { background: var(--theme-color-border-light, #eee); color: var(--theme-color-text-secondary, #555); }
 .accordion-card.open .accordion-toggle { transform: rotate(180deg); }
 .accordion-body { padding: 0 20px 20px; display: none; }
 .accordion-card.open .accordion-body { display: block; }
-.accordion-card.open .accordion-header { border-bottom: 1px solid #eee; }
+.accordion-card.open .accordion-header { border-bottom: 1px solid var(--theme-color-border-light, #eee); }
 .accordion-card.open .accordion-preview { display: none; }
 
 /* Action controls (go link + auto checkbox) */
@@ -5660,13 +5660,13 @@ h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px soli
 }
 .accordion-go:hover { background: #e8f0fe; text-decoration: underline; }
 .accordion-auto {
-	font-size: 0.82em; color: #999; white-space: nowrap; cursor: pointer;
+	font-size: 0.82em; color: var(--theme-color-text-muted, #999); white-space: nowrap; cursor: pointer;
 }
 .accordion-auto .auto-label { display: none; }
 .accordion-auto:hover .auto-label { display: inline; }
 .accordion-auto input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; vertical-align: middle; position: relative; top: 0px; opacity: 0.75; transition: opacity 0.15s; }
 .accordion-auto:hover input[type="checkbox"] { opacity: 1; }
-.accordion-auto:hover { color: #666; }
+.accordion-auto:hover { color: var(--theme-color-text-secondary, #666); }
 
 /* Phase status indicator */
 .accordion-phase {
@@ -5674,12 +5674,12 @@ h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px soli
 	font-size: 0.85em; line-height: 1;
 }
 .accordion-phase.visible { display: flex; }
-.accordion-phase-ok { color: #28a745; }
+.accordion-phase-ok { color: var(--theme-color-status-success, #28a745); }
 .accordion-phase-error { color: #dc3545; }
-.accordion-phase-busy { color: #28a745; }
+.accordion-phase-busy { color: var(--theme-color-status-success, #28a745); }
 .accordion-phase-busy .phase-spinner {
 	display: inline-block; width: 14px; height: 14px;
-	border: 2px solid #28a745; border-top-color: transparent; border-radius: 50%;
+	border: 2px solid var(--theme-color-status-success, #28a745); border-top-color: transparent; border-radius: 50%;
 	animation: phase-spin 0.8s linear infinite; vertical-align: middle;
 }
 @keyframes phase-spin {
@@ -5691,13 +5691,13 @@ h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px soli
 }
 .accordion-controls button {
 	padding: 4px 10px; font-size: 0.82em; font-weight: 500; background: none;
-	border: 1px solid #ccc; border-radius: 4px; color: #666; cursor: pointer; margin: 0;
+	border: 1px solid var(--theme-color-border-default, #ccc); border-radius: 4px; color: var(--theme-color-text-secondary, #666); cursor: pointer; margin: 0;
 }
-.accordion-controls button:hover { background: #f0f0f0; border-color: #aaa; color: #333; }
+.accordion-controls button:hover { background: var(--theme-color-background-tertiary, #f0f0f0); border-color: var(--theme-color-text-muted, #aaa); color: var(--theme-color-text-primary, #333); }
 
 label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9em; }
 input[type="text"], input[type="password"], input[type="number"] {
-	width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px;
+	width: 100%; padding: 8px 12px; border: 1px solid var(--theme-color-border-default, #ccc); border-radius: 4px;
 	font-size: 0.95em; margin-bottom: 10px;
 }
 input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus {
@@ -5708,13 +5708,13 @@ button {
 	padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;
 	font-size: 0.9em; font-weight: 600; margin-right: 8px; margin-bottom: 8px;
 }
-button.primary { background: #4a90d9; color: #fff; }
+button.primary { background: #4a90d9; color: var(--theme-color-background-panel, #fff); }
 button.primary:hover { background: #357abd; }
-button.secondary { background: #6c757d; color: #fff; }
+button.secondary { background: #6c757d; color: var(--theme-color-background-panel, #fff); }
 button.secondary:hover { background: #5a6268; }
-button.danger { background: #dc3545; color: #fff; }
+button.danger { background: #dc3545; color: var(--theme-color-background-panel, #fff); }
 button.danger:hover { background: #c82333; }
-button.success { background: #28a745; color: #fff; }
+button.success { background: var(--theme-color-status-success, #28a745); color: var(--theme-color-background-panel, #fff); }
 button.success:hover { background: #218838; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -5729,7 +5729,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 a { color: #4a90d9; }
 
-select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95em; margin-bottom: 10px; }
+select { background: var(--theme-color-background-panel, #fff); width: 100%; padding: 8px 12px; border: 1px solid var(--theme-color-border-default, #ccc); border-radius: 4px; font-size: 0.95em; margin-bottom: 10px; }
 
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .checkbox-row input[type="checkbox"] { width: auto; margin: 0; }
@@ -5737,16 +5737,16 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 
 /* Live Status Bar */
 .live-status-bar {
-	background: #fff; border-radius: 8px; margin-bottom: 16px;
+	background: var(--theme-color-background-panel, #fff); border-radius: 8px; margin-bottom: 16px;
 	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 	position: sticky; top: 0; z-index: 100; border-left: 4px solid #6c757d;
 }
 .live-status-bar.phase-idle { border-left-color: #6c757d; }
 .live-status-bar.phase-disconnected { border-left-color: #dc3545; }
 .live-status-bar.phase-ready { border-left-color: #4a90d9; }
-.live-status-bar.phase-loading { border-left-color: #28a745; }
+.live-status-bar.phase-loading { border-left-color: var(--theme-color-status-success, #28a745); }
 .live-status-bar.phase-stopping { border-left-color: #ffc107; }
-.live-status-bar.phase-complete { border-left-color: #28a745; }
+.live-status-bar.phase-complete { border-left-color: var(--theme-color-status-success, #28a745); }
 
 .live-status-dot {
 	width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
@@ -5756,34 +5756,34 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 .live-status-bar.phase-disconnected .live-status-dot { background: #dc3545; }
 .live-status-bar.phase-ready .live-status-dot { background: #4a90d9; }
 .live-status-bar.phase-loading .live-status-dot {
-	background: #28a745;
+	background: var(--theme-color-status-success, #28a745);
 	animation: live-pulse 1.5s ease-in-out infinite;
 }
 .live-status-bar.phase-stopping .live-status-dot {
 	background: #ffc107;
 	animation: live-pulse 0.8s ease-in-out infinite;
 }
-.live-status-bar.phase-complete .live-status-dot { background: #28a745; }
+.live-status-bar.phase-complete .live-status-dot { background: var(--theme-color-status-success, #28a745); }
 
 @keyframes live-pulse {
 	0%, 100% { opacity: 1; transform: scale(1); }
 	50% { opacity: 0.4; transform: scale(0.8); }
 }
 
-.live-status-message { flex: 1; font-size: 0.92em; color: #333; line-height: 1.4; }
+.live-status-message { flex: 1; font-size: 0.92em; color: var(--theme-color-text-primary, #333); line-height: 1.4; }
 
 .live-status-meta {
-	display: flex; gap: 16px; flex-shrink: 0; font-size: 0.82em; color: #666;
+	display: flex; gap: 16px; flex-shrink: 0; font-size: 0.82em; color: var(--theme-color-text-secondary, #666);
 }
 .live-status-meta-item { white-space: nowrap; }
-.live-status-meta-item strong { color: #333; }
+.live-status-meta-item strong { color: var(--theme-color-text-primary, #333); }
 
 .live-status-progress-bar {
 	height: 3px; background: #e9ecef; border-radius: 2px; overflow: hidden;
 	position: absolute; bottom: 0; left: 0; right: 0;
 }
 .live-status-progress-fill {
-	height: 100%; background: #28a745; transition: width 1s ease;
+	height: 100%; background: var(--theme-color-status-success, #28a745); transition: width 1s ease;
 }
 /* Expandable status bar */
 .live-status-header {
@@ -5795,7 +5795,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 }
 .live-status-expand-toggle {
 	flex: 0 0 20px; display: flex; align-items: center; justify-content: center;
-	font-size: 0.7em; color: #888; transition: transform 0.25s;
+	font-size: 0.7em; color: var(--theme-color-text-muted, #888); transition: transform 0.25s;
 }
 .live-status-bar.expanded .live-status-expand-toggle { transform: rotate(180deg); }
 
@@ -5807,9 +5807,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 .status-detail-section { margin-bottom: 14px; }
 .status-detail-section:last-child { margin-bottom: 0; }
 .status-detail-section-title {
-	font-size: 0.85em; font-weight: 600; color: #555; text-transform: uppercase;
+	font-size: 0.85em; font-weight: 600; color: var(--theme-color-text-secondary, #555); text-transform: uppercase;
 	letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 4px;
-	border-bottom: 1px solid #eee;
+	border-bottom: 1px solid var(--theme-color-border-light, #eee);
 }
 
 /* Running Operations */
@@ -5823,26 +5823,26 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	min-width: 120px;
 }
 .running-op-bar-fill { height: 100%; background: #4a90d9; transition: width 0.5s ease; }
-.running-op-count { font-size: 0.85em; color: #666; white-space: nowrap; }
-.running-op-pending { color: #888; font-size: 0.85em; font-style: italic; padding: 4px 0; }
+.running-op-count { font-size: 0.85em; color: var(--theme-color-text-secondary, #666); white-space: nowrap; }
+.running-op-pending { color: var(--theme-color-text-muted, #888); font-size: 0.85em; font-style: italic; padding: 4px 0; }
 
 /* Completed Operations */
-.completed-op-row { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.completed-op-row { padding: 8px 0; border-bottom: 1px solid var(--theme-color-background-tertiary, #f0f0f0); }
 .completed-op-row:last-child { border-bottom: none; }
 .completed-op-header {
 	display: flex; align-items: center; gap: 10px; font-size: 0.9em; margin-bottom: 4px;
 }
 .completed-op-name { font-weight: 600; }
-.completed-op-stats { color: #666; font-size: 0.85em; }
-.completed-op-checkmark { color: #28a745; }
+.completed-op-stats { color: var(--theme-color-text-secondary, #666); font-size: 0.85em; }
+.completed-op-checkmark { color: var(--theme-color-status-success, #28a745); }
 
 /* Error Operations */
-.error-op-row { padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9em; }
+.error-op-row { padding: 6px 0; border-bottom: 1px solid var(--theme-color-background-tertiary, #f0f0f0); font-size: 0.9em; }
 .error-op-row:last-child { border-bottom: none; }
 .error-op-header { display: flex; align-items: center; gap: 8px; }
 .error-op-name { font-weight: 600; color: #dc3545; }
 .error-op-status { font-size: 0.82em; color: #dc3545; }
-.error-op-message { font-size: 0.82em; color: #888; margin-top: 2px; padding-left: 18px; }
+.error-op-message { font-size: 0.82em; color: var(--theme-color-text-muted, #888); margin-top: 2px; padding-left: 18px; }
 `,
         Templates: [{
           Hash: 'ComprehensionLoader-Layout',
@@ -5991,12 +5991,12 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           let tmpDurationStr = tmpDurationSec < 60 ? tmpDurationSec + 's' : Math.floor(tmpDurationSec / 60) + 'm ' + tmpDurationSec % 60 + 's';
           let tmpTotalPushed = this.pict.providers.ComprehensionLoader.formatNumber(pReport.Summary.TotalPushed);
           let tmpTotalRecords = this.pict.providers.ComprehensionLoader.formatNumber(pReport.Summary.TotalRecords);
-          tmpCardsContainer.innerHTML = '' + '<div class="report-card ' + tmpOutcomeClass + '">' + '  <div class="card-label">Outcome</div>' + '  <div class="card-value" style="color:' + tmpOutcomeColor + '">' + pReport.Outcome + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Duration</div>' + '  <div class="card-value">' + tmpDurationStr + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Entities</div>' + '  <div class="card-value">' + pReport.Summary.Complete + ' / ' + pReport.Summary.TotalEntities + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Records Pushed</div>' + '  <div class="card-value">' + tmpTotalPushed + '</div>' + '  <div style="font-size:0.75em; color:#888">of ' + tmpTotalRecords + '</div>' + '</div>';
+          tmpCardsContainer.innerHTML = '' + '<div class="report-card ' + tmpOutcomeClass + '">' + '  <div class="card-label">Outcome</div>' + '  <div class="card-value" style="color:' + tmpOutcomeColor + '">' + pReport.Outcome + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Duration</div>' + '  <div class="card-value">' + tmpDurationStr + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Entities</div>' + '  <div class="card-value">' + pReport.Summary.Complete + ' / ' + pReport.Summary.TotalEntities + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Records Pushed</div>' + '  <div class="card-value">' + tmpTotalPushed + '</div>' + '  <div style="font-size:0.75em; color:var(--theme-color-text-muted, #888)">of ' + tmpTotalRecords + '</div>' + '</div>';
 
           // Anomalies
           let tmpAnomalyContainer = document.getElementById('reportAnomalies');
           if (pReport.Anomalies.length === 0) {
-            tmpAnomalyContainer.innerHTML = '<div style="color:#28a745; font-weight:600; font-size:0.9em">No anomalies detected.</div>';
+            tmpAnomalyContainer.innerHTML = '<div style="color:var(--theme-color-status-success, #28a745); font-weight:600; font-size:0.9em">No anomalies detected.</div>';
           } else {
             let tmpHtml = '<h4 style="margin:0 0 8px; color:#dc3545; font-size:0.95em">Anomalies (' + pReport.Anomalies.length + ')</h4>';
             tmpHtml += '<table class="progress-table">';
@@ -6017,7 +6017,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           // Entity details
           let tmpEntityContainer = document.getElementById('reportEntityDetails');
           if (pReport.Entities && pReport.Entities.length > 0) {
-            let tmpHtml = '<h4 style="margin:0 0 8px; font-size:0.95em; color:#444">Entity Details</h4>';
+            let tmpHtml = '<h4 style="margin:0 0 8px; font-size:0.95em; color:var(--theme-color-text-secondary, #444)">Entity Details</h4>';
             tmpHtml += '<table class="progress-table">';
             tmpHtml += '<tr><th>Entity</th><th>Duration</th><th>Records</th><th>Status</th></tr>';
             for (let i = 0; i < pReport.Entities.length; i++) {
@@ -6181,22 +6181,22 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         DefaultDestinationAddress: '#ComprehensionLoader-Section-Load',
         CSS: /*css*/`
 .progress-table { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 4px; }
-.progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+.progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--theme-color-border-light, #eee); font-size: 0.9em; }
 .progress-table th { background: #f8f9fa; font-weight: 600; }
-.progress-table-muted td { color: #888; padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
+.progress-table-muted td { color: var(--theme-color-text-muted, #888); padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
 .progress-bar-container { width: 120px; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
-.progress-bar-fill { height: 100%; background: #28a745; transition: width 0.3s; }
-.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid #e0e0e0; }
+.progress-bar-fill { height: 100%; background: var(--theme-color-status-success, #28a745); transition: width 0.3s; }
+.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid var(--theme-color-border-default, #e0e0e0); }
 .sync-section-header:first-child { border-top: none; margin-top: 10px; }
 .sync-section-header-error { color: #dc3545; }
-.sync-section-header-ok { color: #28a745; }
-.sync-section-count { font-weight: 400; color: #999; font-size: 0.95em; }
-.sync-section-overflow { font-size: 0.8em; color: #aaa; padding: 2px 12px 6px; }
-.sync-pending-count { text-align: right; color: #aaa; font-size: 0.85em; }
+.sync-section-header-ok { color: var(--theme-color-status-success, #28a745); }
+.sync-section-count { font-weight: 400; color: var(--theme-color-text-muted, #999); font-size: 0.95em; }
+.sync-section-overflow { font-size: 0.8em; color: var(--theme-color-text-muted, #aaa); padding: 2px 12px 6px; }
+.sync-pending-count { text-align: right; color: var(--theme-color-text-muted, #aaa); font-size: 0.85em; }
 .report-card { background: #f8f9fa; border-radius: 8px; padding: 12px 16px; min-width: 140px; text-align: center; border: 1px solid #e9ecef; }
-.report-card .card-label { font-size: 0.8em; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.report-card .card-label { font-size: 0.8em; color: var(--theme-color-text-secondary, #666); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .report-card .card-value { font-size: 1.4em; font-weight: 700; }
-.report-card.outcome-success { border-left: 4px solid #28a745; }
+.report-card.outcome-success { border-left: 4px solid var(--theme-color-status-success, #28a745); }
 .report-card.outcome-partial { border-left: 4px solid #ffc107; }
 .report-card.outcome-error { border-left: 4px solid #dc3545; }
 .report-card.outcome-stopped { border-left: 4px solid #6c757d; }
@@ -6227,7 +6227,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<div id="loadProgress"></div>
 
 			<!-- Load Report (appears after load completes) -->
-			<div id="loadReportSection" style="display:none; margin-top:16px; padding-top:16px; border-top:2px solid #ddd">
+			<div id="loadReportSection" style="display:none; margin-top:16px; padding-top:16px; border-top:2px solid var(--theme-color-border-default, #ddd)">
 				<h3 style="margin:0 0 12px; font-size:1.1em">Load Report</h3>
 
 				<div id="reportSummaryCards" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px"></div>
@@ -6289,12 +6289,12 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           let tmpContainer = document.getElementById('entityList');
           if (!tmpContainer) return;
           if (tmpEntities.length === 0) {
-            tmpContainer.innerHTML = '<div style="color:#888; font-size:0.9em">No entities found.</div>';
+            tmpContainer.innerHTML = '<div style="color:var(--theme-color-text-muted, #888); font-size:0.9em">No entities found.</div>';
             return;
           }
-          let tmpHtml = '<div style="font-size:0.9em; color:#555">';
+          let tmpHtml = '<div style="font-size:0.9em; color:var(--theme-color-text-secondary, #555)">';
           for (let i = 0; i < tmpEntities.length; i++) {
-            tmpHtml += '<span style="display:inline-block; background:#f0f0f0; border-radius:4px; padding:2px 8px; margin:2px 4px 2px 0; font-size:0.9em">';
+            tmpHtml += '<span style="display:inline-block; background:var(--theme-color-background-tertiary, #f0f0f0); border-radius:4px; padding:2px 8px; margin:2px 4px 2px 0; font-size:0.9em">';
             tmpHtml += this.pict.providers.ComprehensionLoader.escapeHtml(tmpEntities[i]);
             tmpHtml += '</span>';
           }
@@ -6490,7 +6490,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			</div>
 
 			<details style="margin-bottom:10px">
-				<summary style="cursor:pointer; font-size:0.9em; color:#666">Advanced Session Options</summary>
+				<summary style="cursor:pointer; font-size:0.9em; color:var(--theme-color-text-secondary, #666)">Advanced Session Options</summary>
 				<div style="padding:10px 0">
 					<label for="authURI">Authentication URI Template (leave blank for default)</label>
 					<input type="text" id="authURI" placeholder="Authenticate/{~D:Record.UserName~}/{~D:Record.Password~}">
@@ -6510,7 +6510,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<button class="primary" onclick="pict.views['ComprehensionLoader-Session'].configureSession()">Configure Session</button>
 			<div id="sessionConfigStatus"></div>
 
-			<hr style="margin:16px 0; border:none; border-top:1px solid #eee">
+			<hr style="margin:16px 0; border:none; border-top:1px solid var(--theme-color-border-light, #eee)">
 
 			<div class="inline-group">
 				<div>
@@ -6674,8 +6674,8 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           let tmpContainer = document.getElementById('comprehensionSummary');
           if (!tmpContainer) return;
           let tmpHtml = '<table style="width:100%; border-collapse:collapse; margin-top:8px; font-size:0.9em">';
-          tmpHtml += '<thead><tr><th style="text-align:left; padding:6px 12px; border-bottom:2px solid #ddd">Entity</th>';
-          tmpHtml += '<th style="text-align:right; padding:6px 12px; border-bottom:2px solid #ddd">Records</th></tr></thead>';
+          tmpHtml += '<thead><tr><th style="text-align:left; padding:6px 12px; border-bottom:2px solid var(--theme-color-border-default, #ddd)">Entity</th>';
+          tmpHtml += '<th style="text-align:right; padding:6px 12px; border-bottom:2px solid var(--theme-color-border-default, #ddd)">Records</th></tr></thead>';
           tmpHtml += '<tbody>';
           let tmpEntityList = pResult.EntityList || [];
           let tmpRecordCounts = pResult.RecordCounts || {};
@@ -6683,8 +6683,8 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
             let tmpName = tmpEntityList[i];
             let tmpCount = tmpRecordCounts[tmpName] || 0;
             tmpHtml += '<tr>';
-            tmpHtml += '<td style="padding:4px 12px; border-bottom:1px solid #f0f0f0">' + this.pict.providers.ComprehensionLoader.escapeHtml(tmpName) + '</td>';
-            tmpHtml += '<td style="padding:4px 12px; border-bottom:1px solid #f0f0f0; text-align:right; font-variant-numeric:tabular-nums">' + this.pict.providers.ComprehensionLoader.formatNumber(tmpCount) + '</td>';
+            tmpHtml += '<td style="padding:4px 12px; border-bottom:1px solid var(--theme-color-background-tertiary, #f0f0f0)">' + this.pict.providers.ComprehensionLoader.escapeHtml(tmpName) + '</td>';
+            tmpHtml += '<td style="padding:4px 12px; border-bottom:1px solid var(--theme-color-background-tertiary, #f0f0f0); text-align:right; font-variant-numeric:tabular-nums">' + this.pict.providers.ComprehensionLoader.formatNumber(tmpCount) + '</td>';
             tmpHtml += '</tr>';
           }
           tmpHtml += '</tbody>';
@@ -6749,11 +6749,11 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 				<div style="display:flex; gap:16px; align-items:center">
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="comprehensionSourceMode" id="sourceMode_url" value="url" checked onchange="pict.views['ComprehensionLoader-Source'].onSourceModeChange()"> URL
-						<span style="color:#888; font-size:0.85em">(fetch from a URL)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(fetch from a URL)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="comprehensionSourceMode" id="sourceMode_file" value="file" onchange="pict.views['ComprehensionLoader-Source'].onSourceModeChange()"> File Upload
-						<span style="color:#888; font-size:0.85em">(load JSON from local files)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(load JSON from local files)</span>
 					</label>
 				</div>
 			</div>
@@ -6767,7 +6767,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<div id="sourceFileSection" style="display:none">
 				<label for="comprehensionFiles">Comprehension JSON File(s)</label>
 				<input type="file" id="comprehensionFiles" multiple accept=".json" style="margin-bottom:10px">
-				<div style="font-size:0.8em; color:#888; margin-bottom:10px">Multiple files will be merged (entity keys combined).</div>
+				<div style="font-size:0.8em; color:var(--theme-color-text-muted, #888); margin-bottom:10px">Multiple files will be merged (entity keys combined).</div>
 				<button class="primary" onclick="pict.views['ComprehensionLoader-Source'].loadFromFiles()">Load Files</button>
 			</div>
 

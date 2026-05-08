@@ -733,7 +733,7 @@ class DataClonerProvider extends libPictProvider
 				tmpHtml += '<tr' + tmpRowClass + '>';
 				tmpHtml += '<td>' + this.escapeHtml(tmpT.Name) + '</td>';
 				tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums">' + tmpCountFmt + '</td>';
-				tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums; color:#888">' + tmpTimeFmt + '</td>';
+				tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums; color:var(--theme-color-text-muted, #888)">' + tmpTimeFmt + '</td>';
 				tmpHtml += '</tr>';
 			}
 			tmpHtml += '</tbody>';
@@ -908,11 +908,11 @@ class DataClonerProvider extends libPictProvider
 		{
 			if (tmpIsLive)
 			{
-				tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">Sync in progress, waiting for table data\u2026</div>';
+				tmpHtml = '<div style="font-size:0.9em; color:var(--theme-color-text-muted, #888); padding:8px 0">Sync in progress, waiting for table data\u2026</div>';
 			}
 			else
 			{
-				tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">No sync data available. Run a sync to see operation details here.</div>';
+				tmpHtml = '<div style="font-size:0.9em; color:var(--theme-color-text-muted, #888); padding:8px 0">No sync data available. Run a sync to see operation details here.</div>';
 			}
 		}
 

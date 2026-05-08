@@ -214,7 +214,7 @@ module.exports.default_configuration =
 			</div>
 
 			<details style="margin-bottom:10px">
-				<summary style="cursor:pointer; font-size:0.9em; color:#666">Advanced Session Options</summary>
+				<summary style="cursor:pointer; font-size:0.9em; color:var(--theme-color-text-secondary, #666)">Advanced Session Options</summary>
 				<div style="padding:10px 0">
 					<label for="authURI">Authentication URI Template (leave blank for default)</label>
 					<input type="text" id="authURI" placeholder="Authenticate/{~D:Record.UserName~}/{~D:Record.Password~}">
@@ -234,7 +234,7 @@ module.exports.default_configuration =
 			<button class="primary" onclick="pict.views['DataCloner-Session'].configureSession()">Configure Session</button>
 			<div id="sessionConfigStatus"></div>
 
-			<hr style="margin:16px 0; border:none; border-top:1px solid #eee">
+			<hr style="margin:16px 0; border:none; border-top:1px solid var(--theme-color-border-light, #eee)">
 
 			<div class="inline-group">
 				<div>

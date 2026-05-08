@@ -81,7 +81,7 @@ class DataClonerViewDataView extends libPictView
 
 		if (!pRows || pRows.length === 0)
 		{
-			tmpContainer.innerHTML = '<p style="color:#666; font-size:0.9em; padding:8px">No rows.</p>';
+			tmpContainer.innerHTML = '<p style="color:var(--theme-color-text-secondary, #666); font-size:0.9em; padding:8px">No rows.</p>';
 			return;
 		}
 
@@ -123,9 +123,9 @@ module.exports.default_configuration =
 	DefaultDestinationAddress: '#DataCloner-Section-ViewData',
 	CSS: /*css*/`
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.8em; font-family: monospace; }
-.data-table th { background: #f8f9fa; font-weight: 600; text-align: left; padding: 4px 8px; border: 1px solid #ddd; white-space: nowrap; position: sticky; top: 0; }
-.data-table td { padding: 4px 8px; border: 1px solid #eee; white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
-.data-table tr:nth-child(even) { background: #fafafa; }
+.data-table th { background: #f8f9fa; font-weight: 600; text-align: left; padding: 4px 8px; border: 1px solid var(--theme-color-border-default, #ddd); white-space: nowrap; position: sticky; top: 0; }
+.data-table td { padding: 4px 8px; border: 1px solid var(--theme-color-border-light, #eee); white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+.data-table tr:nth-child(even) { background: var(--theme-color-background-secondary, #fafafa); }
 .data-table tr:hover { background: #f0f7ff; }
 `,
 	Templates:

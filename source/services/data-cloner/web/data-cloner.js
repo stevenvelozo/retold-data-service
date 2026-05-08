@@ -1934,7 +1934,7 @@
 	padding: 7px 10px;
 	border: 1px solid #cbd5e1;
 	border-radius: 6px;
-	background: #fff;
+	background: var(--theme-color-background-panel, #fff);
 	color: #0f172a;
 	height: 36px;
 }
@@ -1962,7 +1962,7 @@
 	padding: 7px 10px;
 	border: 1px solid #cbd5e1;
 	border-radius: 6px;
-	background: #fff;
+	background: var(--theme-color-background-panel, #fff);
 	color: #0f172a;
 }
 .pict-conn-form__field input[type="checkbox"] {
@@ -2581,7 +2581,7 @@
 .pict-histogram-value-label
 {
 	text-align: center;
-	color: #666;
+	color: var(--theme-color-text-secondary, #666);
 	font-size: 11px;
 	padding: 2px 0;
 	white-space: nowrap;
@@ -2593,7 +2593,7 @@
 .pict-histogram-bin-label
 {
 	text-align: center;
-	color: #333;
+	color: var(--theme-color-text-primary, #333);
 	font-size: 11px;
 	padding: 4px 2px 0 2px;
 	white-space: nowrap;
@@ -2628,7 +2628,7 @@
 	left: 0;
 	right: 0;
 	height: 4px;
-	background: #E0E0E0;
+	background: var(--theme-color-border-default, #E0E0E0);
 	border-radius: 2px;
 }
 .pict-histogram-horizontal .pict-histogram-range-track
@@ -2661,7 +2661,7 @@
 	top: 4px;
 	width: 16px;
 	height: 16px;
-	background: #fff;
+	background: var(--theme-color-background-panel, #fff);
 	border: 2px solid #4A90D9;
 	border-radius: 50%;
 	cursor: grab;
@@ -6121,7 +6121,7 @@
               tmpHtml += '<tr' + tmpRowClass + '>';
               tmpHtml += '<td>' + this.escapeHtml(tmpT.Name) + '</td>';
               tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums">' + tmpCountFmt + '</td>';
-              tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums; color:#888">' + tmpTimeFmt + '</td>';
+              tmpHtml += '<td style="text-align:right; font-variant-numeric:tabular-nums; color:var(--theme-color-text-muted, #888)">' + tmpTimeFmt + '</td>';
               tmpHtml += '</tr>';
             }
             tmpHtml += '</tbody>';
@@ -6266,9 +6266,9 @@
           }
           if (tmpHtml === '') {
             if (tmpIsLive) {
-              tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">Sync in progress, waiting for table data\u2026</div>';
+              tmpHtml = '<div style="font-size:0.9em; color:var(--theme-color-text-muted, #888); padding:8px 0">Sync in progress, waiting for table data\u2026</div>';
             } else {
-              tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">No sync data available. Run a sync to see operation details here.</div>';
+              tmpHtml = '<div style="font-size:0.9em; color:var(--theme-color-text-muted, #888); padding:8px 0">No sync data available. Run a sync to see operation details here.</div>';
             }
           }
           tmpContainer.innerHTML = tmpHtml;
@@ -6651,7 +6651,7 @@
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
 		<div class="accordion-body">
-			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Configure the local database where cloned data will be stored.  The provider list comes from the host's installed meadow-connection modules.</p>
+			<p style="font-size:0.9em; color:var(--theme-color-text-secondary, #666); margin-bottom:10px">Configure the local database where cloned data will be stored.  The provider list comes from the host's installed meadow-connection modules.</p>
 
 			<div class="inline-group" style="margin-bottom:10px">
 				<div style="flex:1; display:flex; align-items:flex-end; gap:8px; justify-content:flex-end">
@@ -6896,7 +6896,7 @@
         }
         auditGUIDIndices() {
           let tmpReportEl = document.getElementById('guidIndexReport');
-          if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:#888">Checking GUID indices...</span>';
+          if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:var(--theme-color-text-muted, #888)">Checking GUID indices...</span>';
           let tmpSelf = this;
           this.pict.providers.DataCloner.api('GET', '/clone/schema/guid-index-audit').then(function (pData) {
             if (!tmpReportEl) return;
@@ -6910,13 +6910,13 @@
             }
             let tmpHTML = '<div style="margin-top:6px"><strong>' + pData.Message + '</strong></div>';
             tmpHTML += '<table style="font-size:0.85em; margin:6px 0; border-collapse:collapse; width:100%">';
-            tmpHTML += '<tr style="text-align:left; border-bottom:1px solid #ccc"><th style="padding:3px 8px">Table</th><th style="padding:3px 8px">GUID Column</th><th style="padding:3px 8px">Index</th></tr>';
+            tmpHTML += '<tr style="text-align:left; border-bottom:1px solid var(--theme-color-border-default, #ccc)"><th style="padding:3px 8px">Table</th><th style="padding:3px 8px">GUID Column</th><th style="padding:3px 8px">Index</th></tr>';
             for (let t = 0; t < pData.Tables.length; t++) {
               let tmpTable = pData.Tables[t];
               for (let c = 0; c < tmpTable.GUIDColumns.length; c++) {
                 let tmpCol = tmpTable.GUIDColumns[c];
                 let tmpStatus = tmpCol.HasIndex ? '<span style="color:green">' + tmpCol.IndexName + '</span>' : '<span style="color:red">MISSING</span>';
-                tmpHTML += '<tr style="border-bottom:1px solid #eee"><td style="padding:3px 8px">' + tmpTable.Table + '</td><td style="padding:3px 8px">' + tmpCol.Column + '</td><td style="padding:3px 8px">' + tmpStatus + '</td></tr>';
+                tmpHTML += '<tr style="border-bottom:1px solid var(--theme-color-border-light, #eee)"><td style="padding:3px 8px">' + tmpTable.Table + '</td><td style="padding:3px 8px">' + tmpCol.Column + '</td><td style="padding:3px 8px">' + tmpStatus + '</td></tr>';
               }
             }
             tmpHTML += '</table>';
@@ -6928,7 +6928,7 @@
         }
         createMissingGUIDIndices() {
           let tmpReportEl = document.getElementById('guidIndexReport');
-          if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:#888">Creating GUID indices...</span>';
+          if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:var(--theme-color-text-muted, #888)">Creating GUID indices...</span>';
           let tmpSelf = this;
           this.pict.providers.DataCloner.api('POST', '/clone/schema/guid-index-create').then(function (pData) {
             if (!tmpReportEl) return;
@@ -6993,7 +6993,7 @@
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
 		<div class="accordion-body">
-			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Creates the selected tables in the local database and sets up CRUD endpoints (e.g. GET /1.0/Documents).</p>
+			<p style="font-size:0.9em; color:var(--theme-color-text-secondary, #666); margin-bottom:10px">Creates the selected tables in the local database and sets up CRUD endpoints (e.g. GET /1.0/Documents).</p>
 			<button class="primary" onclick="pict.views['DataCloner-Deploy'].deploySchema()">Deploy Selected Tables</button>
 			<button onclick="pict.views['DataCloner-Deploy'].auditGUIDIndices()">Check GUID Indices</button>
 			<button class="danger" onclick="pict.views['DataCloner-Deploy'].resetDatabase()">Reset Database</button>
@@ -7395,7 +7395,7 @@
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
 		<div class="accordion-body">
-			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Generate a JSON config file from your current settings. Use it to run headless clones from the command line.</p>
+			<p style="font-size:0.9em; color:var(--theme-color-text-secondary, #666); margin-bottom:10px">Generate a JSON config file from your current settings. Use it to run headless clones from the command line.</p>
 			<div style="display:flex; gap:8px; margin-bottom:10px">
 				<button class="primary" onclick="pict.views['DataCloner-Export'].generateConfig()">Generate Config</button>
 				<button class="secondary" onclick="pict.views['DataCloner-Export'].copyConfig()">Copy to Clipboard</button>
@@ -7403,28 +7403,28 @@
 			</div>
 			<div id="configExportStatus"></div>
 			<div id="cliCommand" style="display:none; margin-bottom:10px">
-				<label style="margin-bottom:4px">CLI Command <span style="color:#888; font-weight:normal">(with config file)</span></label>
-				<div style="background:#1a1a1a; color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyCLI()" title="Click to copy"></div>
+				<label style="margin-bottom:4px">CLI Command <span style="color:var(--theme-color-text-muted, #888); font-weight:normal">(with config file)</span></label>
+				<div style="background:var(--theme-color-text-primary, #1a1a1a); color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyCLI()" title="Click to copy"></div>
 			</div>
 			<div id="cliOneShot" style="display:none; margin-bottom:10px">
-				<label style="margin-bottom:4px">One-liner <span style="color:#888; font-weight:normal">(no config file needed)</span></label>
-				<div style="background:#1a1a1a; color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer; white-space:pre-wrap" onclick="pict.views['DataCloner-Export'].copyOneShot()" title="Click to copy"></div>
+				<label style="margin-bottom:4px">One-liner <span style="color:var(--theme-color-text-muted, #888); font-weight:normal">(no config file needed)</span></label>
+				<div style="background:var(--theme-color-text-primary, #1a1a1a); color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer; white-space:pre-wrap" onclick="pict.views['DataCloner-Export'].copyOneShot()" title="Click to copy"></div>
 			</div>
-			<textarea id="configOutput" style="display:none; width:100%; min-height:300px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid #ccc; border-radius:4px; background:#fafafa; tab-size:4; resize:vertical" readonly></textarea>
+			<textarea id="configOutput" style="display:none; width:100%; min-height:300px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid var(--theme-color-border-default, #ccc); border-radius:4px; background:var(--theme-color-background-secondary, #fafafa); tab-size:4; resize:vertical" readonly></textarea>
 
-			<div id="mdwintExport" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid #eee">
-				<h3 style="margin:0 0 8px; font-size:1em">meadow-integration CLI <span style="color:#888; font-weight:normal; font-size:0.85em">(mdwint clone)</span></h3>
-				<p style="font-size:0.85em; color:#666; margin-bottom:8px">Save as <code>.meadow.config.json</code> in your project root, then run the command below. Requires a local Meadow extended schema JSON file.</p>
+			<div id="mdwintExport" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--theme-color-border-light, #eee)">
+				<h3 style="margin:0 0 8px; font-size:1em">meadow-integration CLI <span style="color:var(--theme-color-text-muted, #888); font-weight:normal; font-size:0.85em">(mdwint clone)</span></h3>
+				<p style="font-size:0.85em; color:var(--theme-color-text-secondary, #666); margin-bottom:8px">Save as <code>.meadow.config.json</code> in your project root, then run the command below. Requires a local Meadow extended schema JSON file.</p>
 				<div style="display:flex; gap:8px; margin-bottom:10px">
 					<button class="secondary" onclick="pict.views['DataCloner-Export'].copyMdwintConfig()">Copy Config</button>
 					<button class="secondary" onclick="pict.views['DataCloner-Export'].downloadMdwintConfig()">Download .meadow.config.json</button>
 				</div>
 				<div id="mdwintCLICommand" style="margin-bottom:10px">
 					<label style="margin-bottom:4px">CLI Command</label>
-					<div style="background:#1a1a1a; color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyMdwintCLI()" title="Click to copy"></div>
+					<div style="background:var(--theme-color-text-primary, #1a1a1a); color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyMdwintCLI()" title="Click to copy"></div>
 				</div>
 				<div id="mdwintConfigStatus"></div>
-				<textarea id="mdwintConfigOutput" style="width:100%; min-height:250px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid #ccc; border-radius:4px; background:#fafafa; tab-size:4; resize:vertical" readonly></textarea>
+				<textarea id="mdwintConfigOutput" style="width:100%; min-height:250px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid var(--theme-color-border-default, #ccc); border-radius:4px; background:var(--theme-color-background-secondary, #fafafa); tab-size:4; resize:vertical" readonly></textarea>
 			</div>
 		</div>
 	</div>
@@ -7506,11 +7506,11 @@
         DefaultDestinationAddress: '#DataCloner-Application-Container',
         CSS: /*css*/`
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
-h1 { margin-bottom: 20px; color: #1a1a1a; }
-h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px solid #ddd; padding-bottom: 6px; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--theme-color-background-secondary, #f5f5f5); color: var(--theme-color-text-primary, #333); padding: 20px; }
+h1 { margin-bottom: 20px; color: var(--theme-color-text-primary, #1a1a1a); }
+h2 { margin-bottom: 12px; color: var(--theme-color-text-secondary, #444); font-size: 1.2em; border-bottom: 2px solid var(--theme-color-border-default, #ddd); padding-bottom: 6px; }
 
-.section { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.section { background: var(--theme-color-background-panel, #fff); border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
 /* Accordion layout */
 .accordion-row { display: flex; gap: 0; margin-bottom: 16px; align-items: stretch; }
@@ -7520,25 +7520,25 @@ h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px soli
 	user-select: none;
 }
 .accordion-card {
-	flex: 1; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+	flex: 1; background: var(--theme-color-background-panel, #fff); border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 	overflow: hidden; min-width: 0;
 }
 .accordion-header {
 	display: flex; align-items: center; padding: 14px 20px; cursor: pointer;
 	user-select: none; gap: 12px; transition: background 0.15s; line-height: 1.4;
 }
-.accordion-header:hover { background: #fafafa; }
-.accordion-title { font-weight: 600; color: #333; font-size: 1.05em; white-space: nowrap; }
-.accordion-preview { flex: 1; font-style: italic; color: #888; font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.accordion-header:hover { background: var(--theme-color-background-secondary, #fafafa); }
+.accordion-title { font-weight: 600; color: var(--theme-color-text-primary, #333); font-size: 1.05em; white-space: nowrap; }
+.accordion-preview { flex: 1; font-style: italic; color: var(--theme-color-text-muted, #888); font-size: 0.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .accordion-toggle {
 	flex: 0 0 20px; display: flex; align-items: center; justify-content: center;
-	border-radius: 4px; transition: background 0.15s, transform 0.25s; font-size: 0.7em; color: #888;
+	border-radius: 4px; transition: background 0.15s, transform 0.25s; font-size: 0.7em; color: var(--theme-color-text-muted, #888);
 }
-.accordion-header:hover .accordion-toggle { background: #eee; color: #555; }
+.accordion-header:hover .accordion-toggle { background: var(--theme-color-border-light, #eee); color: var(--theme-color-text-secondary, #555); }
 .accordion-card.open .accordion-toggle { transform: rotate(180deg); }
 .accordion-body { padding: 0 20px 20px; display: none; }
 .accordion-card.open .accordion-body { display: block; }
-.accordion-card.open .accordion-header { border-bottom: 1px solid #eee; }
+.accordion-card.open .accordion-header { border-bottom: 1px solid var(--theme-color-border-light, #eee); }
 .accordion-card.open .accordion-preview { display: none; }
 
 /* Action controls (go link + auto checkbox) */
@@ -7551,13 +7551,13 @@ h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px soli
 }
 .accordion-go:hover { background: #e8f0fe; text-decoration: underline; }
 .accordion-auto {
-	font-size: 0.82em; color: #999; white-space: nowrap; cursor: pointer;
+	font-size: 0.82em; color: var(--theme-color-text-muted, #999); white-space: nowrap; cursor: pointer;
 }
 .accordion-auto .auto-label { display: none; }
 .accordion-auto:hover .auto-label { display: inline; }
 .accordion-auto input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; vertical-align: middle; position: relative; top: 0px; opacity: 0.75; transition: opacity 0.15s; }
 .accordion-auto:hover input[type="checkbox"] { opacity: 1; }
-.accordion-auto:hover { color: #666; }
+.accordion-auto:hover { color: var(--theme-color-text-secondary, #666); }
 
 /* Phase status indicator */
 .accordion-phase {
@@ -7565,12 +7565,12 @@ h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px soli
 	font-size: 0.85em; line-height: 1;
 }
 .accordion-phase.visible { display: flex; }
-.accordion-phase-ok { color: #28a745; }
+.accordion-phase-ok { color: var(--theme-color-status-success, #28a745); }
 .accordion-phase-error { color: #dc3545; }
-.accordion-phase-busy { color: #28a745; }
+.accordion-phase-busy { color: var(--theme-color-status-success, #28a745); }
 .accordion-phase-busy .phase-spinner {
 	display: inline-block; width: 14px; height: 14px;
-	border: 2px solid #28a745; border-top-color: transparent; border-radius: 50%;
+	border: 2px solid var(--theme-color-status-success, #28a745); border-top-color: transparent; border-radius: 50%;
 	animation: phase-spin 0.8s linear infinite; vertical-align: middle;
 }
 @keyframes phase-spin {
@@ -7582,13 +7582,13 @@ h2 { margin-bottom: 12px; color: #444; font-size: 1.2em; border-bottom: 2px soli
 }
 .accordion-controls button {
 	padding: 4px 10px; font-size: 0.82em; font-weight: 500; background: none;
-	border: 1px solid #ccc; border-radius: 4px; color: #666; cursor: pointer; margin: 0;
+	border: 1px solid var(--theme-color-border-default, #ccc); border-radius: 4px; color: var(--theme-color-text-secondary, #666); cursor: pointer; margin: 0;
 }
-.accordion-controls button:hover { background: #f0f0f0; border-color: #aaa; color: #333; }
+.accordion-controls button:hover { background: var(--theme-color-background-tertiary, #f0f0f0); border-color: var(--theme-color-text-muted, #aaa); color: var(--theme-color-text-primary, #333); }
 
 label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 0.9em; }
 input[type="text"], input[type="password"], input[type="number"] {
-	width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px;
+	width: 100%; padding: 8px 12px; border: 1px solid var(--theme-color-border-default, #ccc); border-radius: 4px;
 	font-size: 0.95em; margin-bottom: 10px;
 }
 input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus {
@@ -7599,13 +7599,13 @@ button {
 	padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;
 	font-size: 0.9em; font-weight: 600; margin-right: 8px; margin-bottom: 8px;
 }
-button.primary { background: #4a90d9; color: #fff; }
+button.primary { background: #4a90d9; color: var(--theme-color-background-panel, #fff); }
 button.primary:hover { background: #357abd; }
-button.secondary { background: #6c757d; color: #fff; }
+button.secondary { background: #6c757d; color: var(--theme-color-background-panel, #fff); }
 button.secondary:hover { background: #5a6268; }
-button.danger { background: #dc3545; color: #fff; }
+button.danger { background: #dc3545; color: var(--theme-color-background-panel, #fff); }
 button.danger:hover { background: #c82333; }
-button.success { background: #28a745; color: #fff; }
+button.success { background: var(--theme-color-status-success, #28a745); color: var(--theme-color-background-panel, #fff); }
 button.success:hover { background: #218838; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -7620,7 +7620,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 a { color: #4a90d9; }
 
-select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95em; margin-bottom: 10px; }
+select { background: var(--theme-color-background-panel, #fff); width: 100%; padding: 8px 12px; border: 1px solid var(--theme-color-border-default, #ccc); border-radius: 4px; font-size: 0.95em; margin-bottom: 10px; }
 
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .checkbox-row input[type="checkbox"] { width: auto; margin: 0; }
@@ -7628,16 +7628,16 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 
 /* Live Status Bar */
 .live-status-bar {
-	background: #fff; border-radius: 8px; margin-bottom: 16px;
+	background: var(--theme-color-background-panel, #fff); border-radius: 8px; margin-bottom: 16px;
 	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 	position: sticky; top: 0; z-index: 100; border-left: 4px solid #6c757d;
 }
 .live-status-bar.phase-idle { border-left-color: #6c757d; }
 .live-status-bar.phase-disconnected { border-left-color: #dc3545; }
 .live-status-bar.phase-ready { border-left-color: #4a90d9; }
-.live-status-bar.phase-syncing { border-left-color: #28a745; }
+.live-status-bar.phase-syncing { border-left-color: var(--theme-color-status-success, #28a745); }
 .live-status-bar.phase-stopping { border-left-color: #ffc107; }
-.live-status-bar.phase-complete { border-left-color: #28a745; }
+.live-status-bar.phase-complete { border-left-color: var(--theme-color-status-success, #28a745); }
 
 .live-status-dot {
 	width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
@@ -7647,34 +7647,34 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 .live-status-bar.phase-disconnected .live-status-dot { background: #dc3545; }
 .live-status-bar.phase-ready .live-status-dot { background: #4a90d9; }
 .live-status-bar.phase-syncing .live-status-dot {
-	background: #28a745;
+	background: var(--theme-color-status-success, #28a745);
 	animation: live-pulse 1.5s ease-in-out infinite;
 }
 .live-status-bar.phase-stopping .live-status-dot {
 	background: #ffc107;
 	animation: live-pulse 0.8s ease-in-out infinite;
 }
-.live-status-bar.phase-complete .live-status-dot { background: #28a745; }
+.live-status-bar.phase-complete .live-status-dot { background: var(--theme-color-status-success, #28a745); }
 
 @keyframes live-pulse {
 	0%, 100% { opacity: 1; transform: scale(1); }
 	50% { opacity: 0.4; transform: scale(0.8); }
 }
 
-.live-status-message { flex: 1; font-size: 0.92em; color: #333; line-height: 1.4; }
+.live-status-message { flex: 1; font-size: 0.92em; color: var(--theme-color-text-primary, #333); line-height: 1.4; }
 
 .live-status-meta {
-	display: flex; gap: 16px; flex-shrink: 0; font-size: 0.82em; color: #666;
+	display: flex; gap: 16px; flex-shrink: 0; font-size: 0.82em; color: var(--theme-color-text-secondary, #666);
 }
 .live-status-meta-item { white-space: nowrap; }
-.live-status-meta-item strong { color: #333; }
+.live-status-meta-item strong { color: var(--theme-color-text-primary, #333); }
 
 .live-status-progress-bar {
 	height: 3px; background: #e9ecef; border-radius: 2px; overflow: hidden;
 	position: absolute; bottom: 0; left: 0; right: 0;
 }
 .live-status-progress-fill {
-	height: 100%; background: #28a745; transition: width 1s ease;
+	height: 100%; background: var(--theme-color-status-success, #28a745); transition: width 1s ease;
 }
 /* Expandable status bar */
 .live-status-header {
@@ -7686,7 +7686,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 }
 .live-status-expand-toggle {
 	flex: 0 0 20px; display: flex; align-items: center; justify-content: center;
-	font-size: 0.7em; color: #888; transition: transform 0.25s;
+	font-size: 0.7em; color: var(--theme-color-text-muted, #888); transition: transform 0.25s;
 }
 .live-status-bar.expanded .live-status-expand-toggle { transform: rotate(180deg); }
 
@@ -7700,19 +7700,19 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	padding: 8px 0 12px; margin-bottom: 12px; border-bottom: 1px solid #e9ecef;
 }
 .status-detail-summary-message {
-	font-size: 0.92em; color: #333; font-weight: 600;
+	font-size: 0.92em; color: var(--theme-color-text-primary, #333); font-weight: 600;
 }
 .status-detail-summary-counters {
-	display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.82em; color: #666;
+	display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.82em; color: var(--theme-color-text-secondary, #666);
 }
 
 /* Status Detail Sections */
 .status-detail-section { margin-bottom: 14px; }
 .status-detail-section:last-child { margin-bottom: 0; }
 .status-detail-section-title {
-	font-size: 0.85em; font-weight: 600; color: #555; text-transform: uppercase;
+	font-size: 0.85em; font-weight: 600; color: var(--theme-color-text-secondary, #555); text-transform: uppercase;
 	letter-spacing: 0.5px; margin-bottom: 8px; padding-bottom: 4px;
-	border-bottom: 1px solid #eee;
+	border-bottom: 1px solid var(--theme-color-border-light, #eee);
 }
 
 /* Running Operations */
@@ -7726,18 +7726,18 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	min-width: 120px;
 }
 .running-op-bar-fill { height: 100%; background: #4a90d9; transition: width 0.5s ease; }
-.running-op-count { font-size: 0.85em; color: #666; white-space: nowrap; }
-.running-op-pending { color: #888; font-size: 0.85em; font-style: italic; padding: 4px 0; }
+.running-op-count { font-size: 0.85em; color: var(--theme-color-text-secondary, #666); white-space: nowrap; }
+.running-op-pending { color: var(--theme-color-text-muted, #888); font-size: 0.85em; font-style: italic; padding: 4px 0; }
 
 /* Completed Operations */
-.completed-op-row { padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.completed-op-row { padding: 8px 0; border-bottom: 1px solid var(--theme-color-background-tertiary, #f0f0f0); }
 .completed-op-row:last-child { border-bottom: none; }
 .completed-op-header {
 	display: flex; align-items: center; gap: 10px; font-size: 0.9em; margin-bottom: 4px;
 }
 .completed-op-name { font-weight: 600; }
-.completed-op-stats { color: #666; font-size: 0.85em; }
-.completed-op-checkmark { color: #28a745; }
+.completed-op-stats { color: var(--theme-color-text-secondary, #666); font-size: 0.85em; }
+.completed-op-checkmark { color: var(--theme-color-status-success, #28a745); }
 
 /* Ratio Bar */
 .ratio-bar-container {
@@ -7746,28 +7746,28 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 }
 .ratio-bar-segment { height: 100%; transition: width 0.5s ease; }
 .ratio-bar-segment.unchanged { background: #6c757d; }
-.ratio-bar-segment.new-records { background: #28a745; }
+.ratio-bar-segment.new-records { background: var(--theme-color-status-success, #28a745); }
 .ratio-bar-segment.updated { background: #4a90d9; }
 .ratio-bar-segment.deleted { background: #dc3545; }
 .ratio-bar-legend {
-	display: flex; gap: 12px; font-size: 0.75em; color: #666; margin-top: 2px; flex-wrap: wrap;
+	display: flex; gap: 12px; font-size: 0.75em; color: var(--theme-color-text-secondary, #666); margin-top: 2px; flex-wrap: wrap;
 }
 .ratio-bar-legend-item { display: flex; align-items: center; gap: 4px; }
 .ratio-bar-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .ratio-bar-legend-dot.unchanged-dot { background: #6c757d; }
-.ratio-bar-legend-dot.new-dot { background: #28a745; }
+.ratio-bar-legend-dot.new-dot { background: var(--theme-color-status-success, #28a745); }
 .ratio-bar-legend-dot.updated-dot { background: #4a90d9; }
 .ratio-bar-legend-dot.deleted-dot { background: #dc3545; }
 
 /* Error Operations */
-.error-op-row { padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9em; }
+.error-op-row { padding: 6px 0; border-bottom: 1px solid var(--theme-color-background-tertiary, #f0f0f0); font-size: 0.9em; }
 .error-op-row:last-child { border-bottom: none; }
 .error-op-header { display: flex; align-items: center; gap: 8px; }
 .error-op-name { font-weight: 600; color: #dc3545; }
 .error-op-status { font-size: 0.82em; color: #dc3545; }
-.error-op-message { font-size: 0.82em; color: #888; margin-top: 2px; padding-left: 18px; }
+.error-op-message { font-size: 0.82em; color: var(--theme-color-text-muted, #888); margin-top: 2px; padding-left: 18px; }
 .error-op-log-entries {
-	font-size: 0.78em; color: #888; margin-top: 4px; padding-left: 18px;
+	font-size: 0.78em; color: var(--theme-color-text-muted, #888); margin-top: 4px; padding-left: 18px;
 	font-family: monospace; max-height: 80px; overflow-y: auto;
 }
 
@@ -7776,12 +7776,12 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 	width: 100%; border-collapse: collapse; font-size: 0.88em;
 }
 .precount-table thead th {
-	text-align: left; font-weight: 600; color: #555; font-size: 0.85em;
+	text-align: left; font-weight: 600; color: var(--theme-color-text-secondary, #555); font-size: 0.85em;
 	text-transform: uppercase; letter-spacing: 0.3px;
 	padding: 4px 8px 6px; border-bottom: 2px solid #e9ecef;
 }
 .precount-table tbody td {
-	padding: 4px 8px; border-bottom: 1px solid #f0f0f0;
+	padding: 4px 8px; border-bottom: 1px solid var(--theme-color-background-tertiary, #f0f0f0);
 }
 .precount-table tbody tr:last-child td { border-bottom: 1px solid #e9ecef; }
 .precount-table tfoot td {
@@ -7789,12 +7789,12 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 }
 .precount-error td { color: #dc3545; }
 .precount-pending {
-	color: #888; font-size: 0.85em; font-style: italic; padding: 8px 0 2px;
+	color: var(--theme-color-text-muted, #888); font-size: 0.85em; font-style: italic; padding: 8px 0 2px;
 	display: flex; align-items: center; gap: 6px;
 }
 .precount-spinner {
 	display: inline-block; width: 12px; height: 12px;
-	border: 2px solid #ddd; border-top-color: #4a90d9;
+	border: 2px solid var(--theme-color-border-default, #ddd); border-top-color: #4a90d9;
 	border-radius: 50%; animation: precount-spin 0.8s linear infinite;
 }
 @keyframes precount-spin { to { transform: rotate(360deg); } }
@@ -7979,9 +7979,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         DefaultRenderable: 'DataCloner-Schema',
         DefaultDestinationAddress: '#DataCloner-Section-Schema',
         CSS: /*css*/`
-.table-list { max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 8px; margin: 10px 0; }
+.table-list { max-height: 300px; overflow-y: auto; border: 1px solid var(--theme-color-border-default, #ddd); border-radius: 4px; padding: 8px; margin: 10px 0; }
 .table-item { padding: 4px 8px; display: flex; align-items: center; }
-.table-item:hover { background: #f0f0f0; }
+.table-item:hover { background: var(--theme-color-background-tertiary, #f0f0f0); }
 .table-item input[type="checkbox"] { margin-right: 8px; width: auto; }
 .table-item label { display: inline; font-weight: normal; margin-bottom: 0; cursor: pointer; }
 `,
@@ -8014,7 +8014,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 					<input type="text" id="tableFilter" placeholder="Filter tables..." style="flex:1; margin-bottom:0" oninput="pict.views['DataCloner-Schema'].filterTableList()">
 					<button class="secondary" onclick="pict.views['DataCloner-Schema'].selectAllTables(true)" style="font-size:0.8em">Select All</button>
 					<button class="secondary" onclick="pict.views['DataCloner-Schema'].selectAllTables(false)" style="font-size:0.8em">Deselect All</button>
-					<span id="tableSelectionCount" style="font-size:0.85em; color:#666; white-space:nowrap"></span>
+					<span id="tableSelectionCount" style="font-size:0.85em; color:var(--theme-color-text-secondary, #666); white-space:nowrap"></span>
 				</div>
 				<div id="tableList" class="table-list"></div>
 			</div>
@@ -8176,7 +8176,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			</div>
 
 			<details style="margin-bottom:10px">
-				<summary style="cursor:pointer; font-size:0.9em; color:#666">Advanced Session Options</summary>
+				<summary style="cursor:pointer; font-size:0.9em; color:var(--theme-color-text-secondary, #666)">Advanced Session Options</summary>
 				<div style="padding:10px 0">
 					<label for="authURI">Authentication URI Template (leave blank for default)</label>
 					<input type="text" id="authURI" placeholder="Authenticate/{~D:Record.UserName~}/{~D:Record.Password~}">
@@ -8196,7 +8196,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<button class="primary" onclick="pict.views['DataCloner-Session'].configureSession()">Configure Session</button>
 			<div id="sessionConfigStatus"></div>
 
-			<hr style="margin:16px 0; border:none; border-top:1px solid #eee">
+			<hr style="margin:16px 0; border:none; border-top:1px solid var(--theme-color-border-light, #eee)">
 
 			<div class="inline-group">
 				<div>
@@ -8386,12 +8386,12 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           let tmpDurationStr = tmpDurationSec < 60 ? tmpDurationSec + 's' : Math.floor(tmpDurationSec / 60) + 'm ' + tmpDurationSec % 60 + 's';
           let tmpTotalSynced = pReport.Summary.TotalSynced.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
           let tmpTotalRecords = pReport.Summary.TotalRecords.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-          tmpCardsContainer.innerHTML = '' + '<div class="report-card ' + tmpOutcomeClass + '">' + '  <div class="card-label">Outcome</div>' + '  <div class="card-value" style="color:' + tmpOutcomeColor + '">' + pReport.Outcome + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Mode</div>' + '  <div class="card-value">' + pReport.Config.SyncMode + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Duration</div>' + '  <div class="card-value">' + tmpDurationStr + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Tables</div>' + '  <div class="card-value">' + pReport.Summary.Complete + ' / ' + pReport.Summary.TotalTables + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Records</div>' + '  <div class="card-value">' + tmpTotalSynced + '</div>' + '  <div style="font-size:0.75em; color:#888">of ' + tmpTotalRecords + '</div>' + '</div>';
+          tmpCardsContainer.innerHTML = '' + '<div class="report-card ' + tmpOutcomeClass + '">' + '  <div class="card-label">Outcome</div>' + '  <div class="card-value" style="color:' + tmpOutcomeColor + '">' + pReport.Outcome + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Mode</div>' + '  <div class="card-value">' + pReport.Config.SyncMode + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Duration</div>' + '  <div class="card-value">' + tmpDurationStr + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Tables</div>' + '  <div class="card-value">' + pReport.Summary.Complete + ' / ' + pReport.Summary.TotalTables + '</div>' + '</div>' + '<div class="report-card">' + '  <div class="card-label">Records</div>' + '  <div class="card-value">' + tmpTotalSynced + '</div>' + '  <div style="font-size:0.75em; color:var(--theme-color-text-muted, #888)">of ' + tmpTotalRecords + '</div>' + '</div>';
 
           // --- Anomalies ---
           let tmpAnomalyContainer = document.getElementById('reportAnomalies');
           if (pReport.Anomalies.length === 0) {
-            tmpAnomalyContainer.innerHTML = '<div style="color:#28a745; font-weight:600; font-size:0.9em">No anomalies detected.</div>';
+            tmpAnomalyContainer.innerHTML = '<div style="color:var(--theme-color-status-success, #28a745); font-weight:600; font-size:0.9em">No anomalies detected.</div>';
           } else {
             let tmpHtml = '<h4 style="margin:0 0 8px; color:#dc3545; font-size:0.95em">Anomalies (' + pReport.Anomalies.length + ')</h4>';
             tmpHtml += '<table class="progress-table">';
@@ -8413,7 +8413,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
           let tmpTopContainer = document.getElementById('reportTopTables');
           let tmpTopCount = Math.min(10, pReport.Tables.length);
           if (tmpTopCount > 0) {
-            let tmpHtml = '<h4 style="margin:0 0 8px; font-size:0.95em; color:#444">Top Tables by Duration</h4>';
+            let tmpHtml = '<h4 style="margin:0 0 8px; font-size:0.95em; color:var(--theme-color-text-secondary, #444)">Top Tables by Duration</h4>';
             tmpHtml += '<table class="progress-table">';
             tmpHtml += '<tr><th>Table</th><th>Duration</th><th>Records</th><th>Status</th></tr>';
             for (let i = 0; i < tmpTopCount; i++) {
@@ -8604,22 +8604,22 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         DefaultDestinationAddress: '#DataCloner-Section-Sync',
         CSS: /*css*/`
 .progress-table { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 4px; }
-.progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+.progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--theme-color-border-light, #eee); font-size: 0.9em; }
 .progress-table th { background: #f8f9fa; font-weight: 600; }
-.progress-table-muted td { color: #888; padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
+.progress-table-muted td { color: var(--theme-color-text-muted, #888); padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
 .progress-bar-container { width: 120px; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
-.progress-bar-fill { height: 100%; background: #28a745; transition: width 0.3s; }
-.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid #e0e0e0; }
+.progress-bar-fill { height: 100%; background: var(--theme-color-status-success, #28a745); transition: width 0.3s; }
+.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid var(--theme-color-border-default, #e0e0e0); }
 .sync-section-header:first-child { border-top: none; margin-top: 10px; }
 .sync-section-header-error { color: #dc3545; }
-.sync-section-header-ok { color: #28a745; }
-.sync-section-count { font-weight: 400; color: #999; font-size: 0.95em; }
-.sync-section-overflow { font-size: 0.8em; color: #aaa; padding: 2px 12px 6px; }
-.sync-pending-count { text-align: right; color: #aaa; font-size: 0.85em; }
+.sync-section-header-ok { color: var(--theme-color-status-success, #28a745); }
+.sync-section-count { font-weight: 400; color: var(--theme-color-text-muted, #999); font-size: 0.95em; }
+.sync-section-overflow { font-size: 0.8em; color: var(--theme-color-text-muted, #aaa); padding: 2px 12px 6px; }
+.sync-pending-count { text-align: right; color: var(--theme-color-text-muted, #aaa); font-size: 0.85em; }
 .report-card { background: #f8f9fa; border-radius: 8px; padding: 12px 16px; min-width: 140px; text-align: center; border: 1px solid #e9ecef; }
-.report-card .card-label { font-size: 0.8em; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.report-card .card-label { font-size: 0.8em; color: var(--theme-color-text-secondary, #666); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .report-card .card-value { font-size: 1.4em; font-weight: 700; }
-.report-card.outcome-success { border-left: 4px solid #28a745; }
+.report-card.outcome-success { border-left: 4px solid var(--theme-color-status-success, #28a745); }
 .report-card.outcome-partial { border-left: 4px solid #ffc107; }
 .report-card.outcome-error { border-left: 4px solid #dc3545; }
 .report-card.outcome-stopped { border-left: 4px solid #6c757d; }
@@ -8655,30 +8655,30 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 					<button class="danger" style="margin:0" onclick="pict.views['DataCloner-Sync'].stopSync()">Stop Sync</button>
 				</div>
 			</div>
-			<div style="font-size:0.8em; color:#888; margin-bottom:10px; padding-left:158px">Cross-DB tolerance for date comparison (default: 1000ms)</div>
+			<div style="font-size:0.8em; color:var(--theme-color-text-muted, #888); margin-bottom:10px; padding-left:158px">Cross-DB tolerance for date comparison (default: 1000ms)</div>
 
 			<div style="margin-bottom:10px">
 				<label style="margin-bottom:6px">Sync Mode</label>
 				<div style="display:flex; gap:12px 20px; align-items:center; flex-wrap:wrap">
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="syncMode" id="syncModeInitial" value="Initial" checked onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Initial
-						<span style="color:#888; font-size:0.85em">(full clone)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(full clone)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="syncMode" id="syncModeOngoing" value="Ongoing" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Ongoing
-						<span style="color:#888; font-size:0.85em">(delta sync)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(delta sync)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="syncMode" id="syncModeOngoingEventualConsistency" value="OngoingEventualConsistency" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Eventual
-						<span style="color:#888; font-size:0.85em">(time-budgeted back-sync)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(time-budgeted back-sync)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="syncMode" id="syncModeTrueUp" value="TrueUp" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> True-Up
-						<span style="color:#888; font-size:0.85em">(linear walk, one-time)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(linear walk, one-time)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="syncMode" id="syncModeComparisonOnly" value="ComparisonOnly" onchange="pict.views['DataCloner-Sync'].onSyncModeChanged()"> Compare
-						<span style="color:#888; font-size:0.85em">(diff report, no sync)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(diff report, no sync)</span>
 					</label>
 				</div>
 			</div>
@@ -8690,7 +8690,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 						<input type="number" id="backSyncTimeLimit" value="30000" min="1000" max="600000" style="margin-bottom:0">
 					</div>
 				</div>
-				<div style="font-size:0.8em; color:#888; padding-left:4px">Milliseconds devoted to backwards bisection per entity before pulling new records (default: 30000)</div>
+				<div style="font-size:0.8em; color:var(--theme-color-text-muted, #888); padding-left:4px">Milliseconds devoted to backwards bisection per entity before pulling new records (default: 30000)</div>
 			</div>
 
 			<div id="syncModeOptions-TrueUp" style="display:none; margin-bottom:10px">
@@ -8700,7 +8700,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 						<input type="number" id="trueUpPageSize" value="500" min="10" max="10000" style="margin-bottom:0">
 					</div>
 				</div>
-				<div style="font-size:0.8em; color:#888; padding-left:4px">Records per page for the linear keyset walk (default: 500)</div>
+				<div style="font-size:0.8em; color:var(--theme-color-text-muted, #888); padding-left:4px">Records per page for the linear keyset walk (default: 500)</div>
 			</div>
 
 			<div class="checkbox-row">
@@ -8730,7 +8730,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
 			<div id="syncProgress"></div>
 
 			<!-- Sync Report (appears after sync completes) -->
-			<div id="syncReportSection" style="display:none; margin-top:16px; padding-top:16px; border-top:2px solid #ddd">
+			<div id="syncReportSection" style="display:none; margin-top:16px; padding-top:16px; border-top:2px solid var(--theme-color-border-default, #ddd)">
 				<h3 style="margin:0 0 12px; font-size:1.1em">Sync Report</h3>
 
 				<!-- Summary cards -->
@@ -8819,7 +8819,7 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         renderDataTable(pRows) {
           let tmpContainer = document.getElementById('viewDataContainer');
           if (!pRows || pRows.length === 0) {
-            tmpContainer.innerHTML = '<p style="color:#666; font-size:0.9em; padding:8px">No rows.</p>';
+            tmpContainer.innerHTML = '<p style="color:var(--theme-color-text-secondary, #666); font-size:0.9em; padding:8px">No rows.</p>';
             return;
           }
 
@@ -8852,9 +8852,9 @@ select { background: #fff; width: 100%; padding: 8px 12px; border: 1px solid #cc
         DefaultDestinationAddress: '#DataCloner-Section-ViewData',
         CSS: /*css*/`
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.8em; font-family: monospace; }
-.data-table th { background: #f8f9fa; font-weight: 600; text-align: left; padding: 4px 8px; border: 1px solid #ddd; white-space: nowrap; position: sticky; top: 0; }
-.data-table td { padding: 4px 8px; border: 1px solid #eee; white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
-.data-table tr:nth-child(even) { background: #fafafa; }
+.data-table th { background: #f8f9fa; font-weight: 600; text-align: left; padding: 4px 8px; border: 1px solid var(--theme-color-border-default, #ddd); white-space: nowrap; position: sticky; top: 0; }
+.data-table td { padding: 4px 8px; border: 1px solid var(--theme-color-border-light, #eee); white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+.data-table tr:nth-child(even) { background: var(--theme-color-background-secondary, #fafafa); }
 .data-table tr:hover { background: #f0f7ff; }
 `,
         Templates: [{

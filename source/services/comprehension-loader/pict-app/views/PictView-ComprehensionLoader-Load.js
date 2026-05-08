@@ -162,14 +162,14 @@ class ComprehensionLoaderLoadView extends libPictView
 			+ '<div class="report-card">'
 			+ '  <div class="card-label">Records Pushed</div>'
 			+ '  <div class="card-value">' + tmpTotalPushed + '</div>'
-			+ '  <div style="font-size:0.75em; color:#888">of ' + tmpTotalRecords + '</div>'
+			+ '  <div style="font-size:0.75em; color:var(--theme-color-text-muted, #888)">of ' + tmpTotalRecords + '</div>'
 			+ '</div>';
 
 		// Anomalies
 		let tmpAnomalyContainer = document.getElementById('reportAnomalies');
 		if (pReport.Anomalies.length === 0)
 		{
-			tmpAnomalyContainer.innerHTML = '<div style="color:#28a745; font-weight:600; font-size:0.9em">No anomalies detected.</div>';
+			tmpAnomalyContainer.innerHTML = '<div style="color:var(--theme-color-status-success, #28a745); font-weight:600; font-size:0.9em">No anomalies detected.</div>';
 		}
 		else
 		{
@@ -194,7 +194,7 @@ class ComprehensionLoaderLoadView extends libPictView
 		let tmpEntityContainer = document.getElementById('reportEntityDetails');
 		if (pReport.Entities && pReport.Entities.length > 0)
 		{
-			let tmpHtml = '<h4 style="margin:0 0 8px; font-size:0.95em; color:#444">Entity Details</h4>';
+			let tmpHtml = '<h4 style="margin:0 0 8px; font-size:0.95em; color:var(--theme-color-text-secondary, #444)">Entity Details</h4>';
 			tmpHtml += '<table class="progress-table">';
 			tmpHtml += '<tr><th>Entity</th><th>Duration</th><th>Records</th><th>Status</th></tr>';
 			for (let i = 0; i < pReport.Entities.length; i++)
@@ -394,22 +394,22 @@ module.exports.default_configuration =
 	DefaultDestinationAddress: '#ComprehensionLoader-Section-Load',
 	CSS: /*css*/`
 .progress-table { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 4px; }
-.progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid #eee; font-size: 0.9em; }
+.progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--theme-color-border-light, #eee); font-size: 0.9em; }
 .progress-table th { background: #f8f9fa; font-weight: 600; }
-.progress-table-muted td { color: #888; padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
+.progress-table-muted td { color: var(--theme-color-text-muted, #888); padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
 .progress-bar-container { width: 120px; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
-.progress-bar-fill { height: 100%; background: #28a745; transition: width 0.3s; }
-.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid #e0e0e0; }
+.progress-bar-fill { height: 100%; background: var(--theme-color-status-success, #28a745); transition: width 0.3s; }
+.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid var(--theme-color-border-default, #e0e0e0); }
 .sync-section-header:first-child { border-top: none; margin-top: 10px; }
 .sync-section-header-error { color: #dc3545; }
-.sync-section-header-ok { color: #28a745; }
-.sync-section-count { font-weight: 400; color: #999; font-size: 0.95em; }
-.sync-section-overflow { font-size: 0.8em; color: #aaa; padding: 2px 12px 6px; }
-.sync-pending-count { text-align: right; color: #aaa; font-size: 0.85em; }
+.sync-section-header-ok { color: var(--theme-color-status-success, #28a745); }
+.sync-section-count { font-weight: 400; color: var(--theme-color-text-muted, #999); font-size: 0.95em; }
+.sync-section-overflow { font-size: 0.8em; color: var(--theme-color-text-muted, #aaa); padding: 2px 12px 6px; }
+.sync-pending-count { text-align: right; color: var(--theme-color-text-muted, #aaa); font-size: 0.85em; }
 .report-card { background: #f8f9fa; border-radius: 8px; padding: 12px 16px; min-width: 140px; text-align: center; border: 1px solid #e9ecef; }
-.report-card .card-label { font-size: 0.8em; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.report-card .card-label { font-size: 0.8em; color: var(--theme-color-text-secondary, #666); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .report-card .card-value { font-size: 1.4em; font-weight: 700; }
-.report-card.outcome-success { border-left: 4px solid #28a745; }
+.report-card.outcome-success { border-left: 4px solid var(--theme-color-status-success, #28a745); }
 .report-card.outcome-partial { border-left: 4px solid #ffc107; }
 .report-card.outcome-error { border-left: 4px solid #dc3545; }
 .report-card.outcome-stopped { border-left: 4px solid #6c757d; }
@@ -442,7 +442,7 @@ module.exports.default_configuration =
 			<div id="loadProgress"></div>
 
 			<!-- Load Report (appears after load completes) -->
-			<div id="loadReportSection" style="display:none; margin-top:16px; padding-top:16px; border-top:2px solid #ddd">
+			<div id="loadReportSection" style="display:none; margin-top:16px; padding-top:16px; border-top:2px solid var(--theme-color-border-default, #ddd)">
 				<h3 style="margin:0 0 12px; font-size:1.1em">Load Report</h3>
 
 				<div id="reportSummaryCards" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px"></div>

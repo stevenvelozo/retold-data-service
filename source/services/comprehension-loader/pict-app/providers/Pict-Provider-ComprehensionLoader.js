@@ -580,11 +580,11 @@ class ComprehensionLoaderProvider extends libPictProvider
 		{
 			if (tmpIsLive)
 			{
-				tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">Load in progress, waiting for entity data\u2026</div>';
+				tmpHtml = '<div style="font-size:0.9em; color:var(--theme-color-text-muted, #888); padding:8px 0">Load in progress, waiting for entity data\u2026</div>';
 			}
 			else
 			{
-				tmpHtml = '<div style="font-size:0.9em; color:#888; padding:8px 0">No load data available. Run a load to see operation details here.</div>';
+				tmpHtml = '<div style="font-size:0.9em; color:var(--theme-color-text-muted, #888); padding:8px 0">No load data available. Run a load to see operation details here.</div>';
 			}
 		}
 

@@ -53,14 +53,14 @@ class ComprehensionLoaderSchemaView extends libPictView
 
 		if (tmpEntities.length === 0)
 		{
-			tmpContainer.innerHTML = '<div style="color:#888; font-size:0.9em">No entities found.</div>';
+			tmpContainer.innerHTML = '<div style="color:var(--theme-color-text-muted, #888); font-size:0.9em">No entities found.</div>';
 			return;
 		}
 
-		let tmpHtml = '<div style="font-size:0.9em; color:#555">';
+		let tmpHtml = '<div style="font-size:0.9em; color:var(--theme-color-text-secondary, #555)">';
 		for (let i = 0; i < tmpEntities.length; i++)
 		{
-			tmpHtml += '<span style="display:inline-block; background:#f0f0f0; border-radius:4px; padding:2px 8px; margin:2px 4px 2px 0; font-size:0.9em">';
+			tmpHtml += '<span style="display:inline-block; background:var(--theme-color-background-tertiary, #f0f0f0); border-radius:4px; padding:2px 8px; margin:2px 4px 2px 0; font-size:0.9em">';
 			tmpHtml += this.pict.providers.ComprehensionLoader.escapeHtml(tmpEntities[i]);
 			tmpHtml += '</span>';
 		}

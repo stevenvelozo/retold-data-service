@@ -62,7 +62,7 @@ class DataClonerDeployView extends libPictView
 	auditGUIDIndices()
 	{
 		let tmpReportEl = document.getElementById('guidIndexReport');
-		if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:#888">Checking GUID indices...</span>';
+		if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:var(--theme-color-text-muted, #888)">Checking GUID indices...</span>';
 
 		let tmpSelf = this;
 		this.pict.providers.DataCloner.api('GET', '/clone/schema/guid-index-audit')
@@ -84,7 +84,7 @@ class DataClonerDeployView extends libPictView
 
 				let tmpHTML = '<div style="margin-top:6px"><strong>' + pData.Message + '</strong></div>';
 				tmpHTML += '<table style="font-size:0.85em; margin:6px 0; border-collapse:collapse; width:100%">';
-				tmpHTML += '<tr style="text-align:left; border-bottom:1px solid #ccc"><th style="padding:3px 8px">Table</th><th style="padding:3px 8px">GUID Column</th><th style="padding:3px 8px">Index</th></tr>';
+				tmpHTML += '<tr style="text-align:left; border-bottom:1px solid var(--theme-color-border-default, #ccc)"><th style="padding:3px 8px">Table</th><th style="padding:3px 8px">GUID Column</th><th style="padding:3px 8px">Index</th></tr>';
 
 				for (let t = 0; t < pData.Tables.length; t++)
 				{
@@ -95,7 +95,7 @@ class DataClonerDeployView extends libPictView
 						let tmpStatus = tmpCol.HasIndex
 							? '<span style="color:green">' + tmpCol.IndexName + '</span>'
 							: '<span style="color:red">MISSING</span>';
-						tmpHTML += '<tr style="border-bottom:1px solid #eee"><td style="padding:3px 8px">' + tmpTable.Table + '</td><td style="padding:3px 8px">' + tmpCol.Column + '</td><td style="padding:3px 8px">' + tmpStatus + '</td></tr>';
+						tmpHTML += '<tr style="border-bottom:1px solid var(--theme-color-border-light, #eee)"><td style="padding:3px 8px">' + tmpTable.Table + '</td><td style="padding:3px 8px">' + tmpCol.Column + '</td><td style="padding:3px 8px">' + tmpStatus + '</td></tr>';
 					}
 				}
 				tmpHTML += '</table>';
@@ -112,7 +112,7 @@ class DataClonerDeployView extends libPictView
 	createMissingGUIDIndices()
 	{
 		let tmpReportEl = document.getElementById('guidIndexReport');
-		if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:#888">Creating GUID indices...</span>';
+		if (tmpReportEl) tmpReportEl.innerHTML = '<span style="color:var(--theme-color-text-muted, #888)">Creating GUID indices...</span>';
 
 		let tmpSelf = this;
 		this.pict.providers.DataCloner.api('POST', '/clone/schema/guid-index-create')
@@ -206,7 +206,7 @@ module.exports.default_configuration =
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
 		<div class="accordion-body">
-			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Creates the selected tables in the local database and sets up CRUD endpoints (e.g. GET /1.0/Documents).</p>
+			<p style="font-size:0.9em; color:var(--theme-color-text-secondary, #666); margin-bottom:10px">Creates the selected tables in the local database and sets up CRUD endpoints (e.g. GET /1.0/Documents).</p>
 			<button class="primary" onclick="pict.views['DataCloner-Deploy'].deploySchema()">Deploy Selected Tables</button>
 			<button onclick="pict.views['DataCloner-Deploy'].auditGUIDIndices()">Check GUID Indices</button>
 			<button class="danger" onclick="pict.views['DataCloner-Deploy'].resetDatabase()">Reset Database</button>

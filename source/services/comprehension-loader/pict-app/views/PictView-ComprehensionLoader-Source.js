@@ -189,8 +189,8 @@ class ComprehensionLoaderSourceView extends libPictView
 		if (!tmpContainer) return;
 
 		let tmpHtml = '<table style="width:100%; border-collapse:collapse; margin-top:8px; font-size:0.9em">';
-		tmpHtml += '<thead><tr><th style="text-align:left; padding:6px 12px; border-bottom:2px solid #ddd">Entity</th>';
-		tmpHtml += '<th style="text-align:right; padding:6px 12px; border-bottom:2px solid #ddd">Records</th></tr></thead>';
+		tmpHtml += '<thead><tr><th style="text-align:left; padding:6px 12px; border-bottom:2px solid var(--theme-color-border-default, #ddd)">Entity</th>';
+		tmpHtml += '<th style="text-align:right; padding:6px 12px; border-bottom:2px solid var(--theme-color-border-default, #ddd)">Records</th></tr></thead>';
 		tmpHtml += '<tbody>';
 
 		let tmpEntityList = pResult.EntityList || [];
@@ -200,8 +200,8 @@ class ComprehensionLoaderSourceView extends libPictView
 			let tmpName = tmpEntityList[i];
 			let tmpCount = tmpRecordCounts[tmpName] || 0;
 			tmpHtml += '<tr>';
-			tmpHtml += '<td style="padding:4px 12px; border-bottom:1px solid #f0f0f0">' + this.pict.providers.ComprehensionLoader.escapeHtml(tmpName) + '</td>';
-			tmpHtml += '<td style="padding:4px 12px; border-bottom:1px solid #f0f0f0; text-align:right; font-variant-numeric:tabular-nums">' + this.pict.providers.ComprehensionLoader.formatNumber(tmpCount) + '</td>';
+			tmpHtml += '<td style="padding:4px 12px; border-bottom:1px solid var(--theme-color-background-tertiary, #f0f0f0)">' + this.pict.providers.ComprehensionLoader.escapeHtml(tmpName) + '</td>';
+			tmpHtml += '<td style="padding:4px 12px; border-bottom:1px solid var(--theme-color-background-tertiary, #f0f0f0); text-align:right; font-variant-numeric:tabular-nums">' + this.pict.providers.ComprehensionLoader.formatNumber(tmpCount) + '</td>';
 			tmpHtml += '</tr>';
 		}
 
@@ -287,11 +287,11 @@ module.exports.default_configuration =
 				<div style="display:flex; gap:16px; align-items:center">
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="comprehensionSourceMode" id="sourceMode_url" value="url" checked onchange="pict.views['ComprehensionLoader-Source'].onSourceModeChange()"> URL
-						<span style="color:#888; font-size:0.85em">(fetch from a URL)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(fetch from a URL)</span>
 					</label>
 					<label style="font-weight:normal; margin:0; cursor:pointer">
 						<input type="radio" name="comprehensionSourceMode" id="sourceMode_file" value="file" onchange="pict.views['ComprehensionLoader-Source'].onSourceModeChange()"> File Upload
-						<span style="color:#888; font-size:0.85em">(load JSON from local files)</span>
+						<span style="color:var(--theme-color-text-muted, #888); font-size:0.85em">(load JSON from local files)</span>
 					</label>
 				</div>
 			</div>
@@ -305,7 +305,7 @@ module.exports.default_configuration =
 			<div id="sourceFileSection" style="display:none">
 				<label for="comprehensionFiles">Comprehension JSON File(s)</label>
 				<input type="file" id="comprehensionFiles" multiple accept=".json" style="margin-bottom:10px">
-				<div style="font-size:0.8em; color:#888; margin-bottom:10px">Multiple files will be merged (entity keys combined).</div>
+				<div style="font-size:0.8em; color:var(--theme-color-text-muted, #888); margin-bottom:10px">Multiple files will be merged (entity keys combined).</div>
 				<button class="primary" onclick="pict.views['ComprehensionLoader-Source'].loadFromFiles()">Load Files</button>
 			</div>
 

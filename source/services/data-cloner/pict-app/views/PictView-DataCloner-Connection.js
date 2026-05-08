@@ -51,7 +51,7 @@ const _ViewConfiguration =
 			<div class="accordion-toggle">&#9660;</div>
 		</div>
 		<div class="accordion-body">
-			<p style="font-size:0.9em; color:#666; margin-bottom:10px">Configure the local database where cloned data will be stored.  The provider list comes from the host's installed meadow-connection modules.</p>
+			<p style="font-size:0.9em; color:var(--theme-color-text-secondary, #666); margin-bottom:10px">Configure the local database where cloned data will be stored.  The provider list comes from the host's installed meadow-connection modules.</p>
 
 			<div class="inline-group" style="margin-bottom:10px">
 				<div style="flex:1; display:flex; align-items:flex-end; gap:8px; justify-content:flex-end">
