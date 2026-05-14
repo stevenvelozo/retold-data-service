@@ -68,31 +68,31 @@
     },
     "homepage": "https://github.com/stevenvelozo/retold-data-service",
     "devDependencies": {
-        "meadow-connection-sqlite": "^1.0.19",
-        "pict-docuserve": "^0.1.5",
+        "meadow-connection-sqlite": "^1.0.20",
+        "pict-docuserve": "^1.0.1",
         "puppeteer": "^24.40.0",
         "quackage": "^1.2.3",
-        "stricture": "^4.0.2",
+        "stricture": "^4.0.3",
         "supertest": "^7.2.2"
     },
     "dependencies": {
         "bibliograph": "^0.1.7",
         "fable": "^3.1.72",
         "fable-serviceproviderbase": "^3.0.19",
-        "meadow": "^2.0.38",
+        "meadow": "^2.0.39",
         "meadow-connection-manager": "^1.1.2",
-        "pict-section-connection-form": "^0.0.2",
+        "pict-section-connection-form": "^0.0.3",
         "meadow-connection-mysql": "^1.0.19",
-        "meadow-endpoints": "^4.0.20",
+        "meadow-endpoints": "^4.0.21",
         "meadow-integration": "^1.0.40",
         "meadow-migrationmanager": "^0.0.16",
         "orator": "^6.1.2",
         "orator-http-proxy": "^1.0.5",
         "orator-serviceserver-restify": "^2.0.11",
         "orator-static-server": "^2.1.4",
-        "pict": "^1.0.366",
+        "pict": "^1.0.368",
         "pict-section-histogram": "^1.0.0",
         "pict-sessionmanager": "^1.0.2",
-        "stricture": "^4.0.2"
+        "stricture": "^4.0.3"
     }
 }
