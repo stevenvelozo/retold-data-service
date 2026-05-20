@@ -10,6 +10,109 @@
 const libFableLog = require('fable-log');
 const libPath = require('path');
 
+// Runtime-overridable sync properties for the /clone/sync/start route.
+// Each entry is a coerce function returning the value to apply, or null
+// if the input is invalid. Drives both the top-level body overrides and
+// the per-entity `SyncEntityOptions` overrides — adding a new knob is a
+// one-line change here.
+const _RuntimeSyncProperties = {
+	BackSyncTimeLimit:       (pVal) => { let tmpN = parseInt(pVal, 10); return (!isNaN(tmpN) && tmpN > 0) ? tmpN : null; },
+	MaxRecordsPerEntity:     (pVal) => { let tmpN = parseInt(pVal, 10); return (!isNaN(tmpN) && tmpN > 0) ? tmpN : null; },
+	DateTimePrecisionMS:     (pVal) => { let tmpN = parseInt(pVal, 10); return !isNaN(tmpN)               ? tmpN : null; },
+	TrueUpPageSize:          (pVal) => { let tmpN = parseInt(pVal, 10); return (!isNaN(tmpN) && tmpN > 0) ? tmpN : null; },
+	UseAdvancedIDPagination: (pVal) => !!pVal,
+	SyncDeletedRecords:      (pVal) => !!pVal
+};
+
+/**
+ * Apply runtime sync overrides from a request body to a live MeadowSync.
+ *
+ * Mutates `pMeadowSync.MeadowSyncEntities[*]` properties, plus mirrors the
+ * "base" globals onto the MeadowSync orchestrator and `cloneState.SyncDeletedRecords`.
+ * Top-level body keys form the base config; per-entity overrides under
+ * `pBody.SyncEntityOptions[<TableName>]` are layered on top (per-entity wins).
+ *
+ * Only properties listed in `_RuntimeSyncProperties` are honored; unknown keys
+ * and invalid values are silently ignored. Unknown entity names produce a warn.
+ *
+ * @param {Object} pBody - Request body (or any plain object with the same shape).
+ * @param {Object} pMeadowSync - MeadowSync orchestrator instance with `MeadowSyncEntities`.
+ * @param {Object} pCloneState - Clone-state object whose `SyncDeletedRecords` mirrors the base.
+ * @param {Object} pLog - Logger with `info(msg)` and `warn(msg)`.
+ */
+const applyRuntimeSyncOverrides = (pBody, pMeadowSync, pCloneState, pLog) =>
+{
+	// Compute the base runtime config from top-level body keys.
+	let tmpBase = {};
+	let tmpBaseSchemaKeys = Object.keys(_RuntimeSyncProperties);
+	for (let i = 0; i < tmpBaseSchemaKeys.length; i++)
+	{
+		let tmpKey = tmpBaseSchemaKeys[i];
+		if (!pBody.hasOwnProperty(tmpKey)) continue;
+		let tmpCoerced = _RuntimeSyncProperties[tmpKey](pBody[tmpKey]);
+		if (tmpCoerced === null) continue;
+		tmpBase[tmpKey] = tmpCoerced;
+	}
+
+	let tmpPerEntity = (pBody.SyncEntityOptions && typeof(pBody.SyncEntityOptions) === 'object') ? pBody.SyncEntityOptions : {};
+
+	// Mirror base values onto the MeadowSync orchestrator + cloneState.
+	let tmpBaseKeys = Object.keys(tmpBase);
+	for (let i = 0; i < tmpBaseKeys.length; i++)
+	{
+		if (pMeadowSync.hasOwnProperty(tmpBaseKeys[i]))
+		{
+			pMeadowSync[tmpBaseKeys[i]] = tmpBase[tmpBaseKeys[i]];
+		}
+	}
+	if (tmpBase.hasOwnProperty('SyncDeletedRecords'))
+	{
+		pCloneState.SyncDeletedRecords = tmpBase.SyncDeletedRecords;
+	}
+
+	// Apply base to every entity.
+	let tmpAllEntityNames = Object.keys(pMeadowSync.MeadowSyncEntities || {});
+	for (let i = 0; i < tmpAllEntityNames.length; i++)
+	{
+		let tmpEntity = pMeadowSync.MeadowSyncEntities[tmpAllEntityNames[i]];
+		for (let j = 0; j < tmpBaseKeys.length; j++)
+		{
+			tmpEntity[tmpBaseKeys[j]] = tmpBase[tmpBaseKeys[j]];
+		}
+	}
+
+	// Layer per-entity overrides on top. Log per entity that actually had
+	// overrides applied; warn on unknown entity names.
+	let tmpPerEntityNames = Object.keys(tmpPerEntity);
+	for (let i = 0; i < tmpPerEntityNames.length; i++)
+	{
+		let tmpEntityName = tmpPerEntityNames[i];
+		let tmpEntity = pMeadowSync.MeadowSyncEntities && pMeadowSync.MeadowSyncEntities[tmpEntityName];
+		if (!tmpEntity)
+		{
+			pLog.warn(`SyncEntityOptions: no sync entity ${tmpEntityName} loaded; ignoring overrides for it.`);
+			continue;
+		}
+		let tmpOverrides = tmpPerEntity[tmpEntityName];
+		if (!tmpOverrides || typeof(tmpOverrides) !== 'object') continue;
+		let tmpApplied = [];
+		let tmpOverrideKeys = Object.keys(tmpOverrides);
+		for (let j = 0; j < tmpOverrideKeys.length; j++)
+		{
+			let tmpKey = tmpOverrideKeys[j];
+			if (!_RuntimeSyncProperties.hasOwnProperty(tmpKey)) continue;
+			let tmpCoerced = _RuntimeSyncProperties[tmpKey](tmpOverrides[tmpKey]);
+			if (tmpCoerced === null) continue;
+			tmpEntity[tmpKey] = tmpCoerced;
+			tmpApplied.push(`${tmpKey}=${tmpCoerced}`);
+		}
+		if (tmpApplied.length > 0)
+		{
+			pLog.info(`SyncEntityOptions: ${tmpEntityName} ← ${tmpApplied.join(', ')}`);
+		}
+	}
+};
+
 module.exports = (pDataClonerService, pOratorServiceServer) =>
 {
 	let tmpFable = pDataClonerService.fable;
@@ -43,81 +146,9 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 			let tmpRequestedMode = tmpBody.SyncMode || 'Initial';
 			let tmpMaxRecords = parseInt(tmpBody.MaxRecordsPerEntity, 10) || 0;
 
-			// Update SyncDeletedRecords from request if provided
-			if (tmpBody.hasOwnProperty('SyncDeletedRecords'))
-			{
-				tmpCloneState.SyncDeletedRecords = !!tmpBody.SyncDeletedRecords;
-				let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
-				for (let i = 0; i < tmpEntityNames.length; i++)
-				{
-					tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].SyncDeletedRecords = tmpCloneState.SyncDeletedRecords;
-				}
-			}
-
-			// Update MaxRecordsPerEntity on sync entities
-			if (tmpMaxRecords > 0)
-			{
-				let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
-				for (let i = 0; i < tmpEntityNames.length; i++)
-				{
-					tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].MaxRecordsPerEntity = tmpMaxRecords;
-				}
-			}
-
-			// Update UseAdvancedIDPagination on all sync entities
-			if (tmpBody.hasOwnProperty('UseAdvancedIDPagination'))
-			{
-				let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
-				for (let i = 0; i < tmpEntityNames.length; i++)
-				{
-					tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].UseAdvancedIDPagination = !!tmpBody.UseAdvancedIDPagination;
-				}
-			}
-
-			// Update DateTimePrecisionMS on MeadowSync and all sync entities
-			if (tmpBody.hasOwnProperty('DateTimePrecisionMS'))
-			{
-				let tmpPrecision = parseInt(tmpBody.DateTimePrecisionMS, 10);
-				if (!isNaN(tmpPrecision))
-				{
-					tmpFable.MeadowSync.DateTimePrecisionMS = tmpPrecision;
-					let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
-					for (let i = 0; i < tmpEntityNames.length; i++)
-					{
-						tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].DateTimePrecisionMS = tmpPrecision;
-					}
-				}
-			}
-
-			// Update BackSyncTimeLimit on MeadowSync and all sync entities
-			if (tmpBody.hasOwnProperty('BackSyncTimeLimit'))
-			{
-				let tmpBackSyncTimeLimit = parseInt(tmpBody.BackSyncTimeLimit, 10);
-				if (!isNaN(tmpBackSyncTimeLimit) && tmpBackSyncTimeLimit > 0)
-				{
-					tmpFable.MeadowSync.BackSyncTimeLimit = tmpBackSyncTimeLimit;
-					let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
-					for (let i = 0; i < tmpEntityNames.length; i++)
-					{
-						tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].BackSyncTimeLimit = tmpBackSyncTimeLimit;
-					}
-				}
-			}
-
-			// Update TrueUpPageSize on MeadowSync and all sync entities
-			if (tmpBody.hasOwnProperty('TrueUpPageSize'))
-			{
-				let tmpTrueUpPageSize = parseInt(tmpBody.TrueUpPageSize, 10);
-				if (!isNaN(tmpTrueUpPageSize) && tmpTrueUpPageSize > 0)
-				{
-					tmpFable.MeadowSync.TrueUpPageSize = tmpTrueUpPageSize;
-					let tmpEntityNames = Object.keys(tmpFable.MeadowSync.MeadowSyncEntities);
-					for (let i = 0; i < tmpEntityNames.length; i++)
-					{
-						tmpFable.MeadowSync.MeadowSyncEntities[tmpEntityNames[i]].TrueUpPageSize = tmpTrueUpPageSize;
-					}
-				}
-			}
+			// Apply global + per-entity runtime sync overrides. See
+			// applyRuntimeSyncOverrides() at module scope.
+			applyRuntimeSyncOverrides(tmpBody, tmpFable.MeadowSync, tmpCloneState, tmpFable.log);
 
 			// If no tables specified, sync all entities
 			if (tmpSelectedTables.length === 0)
@@ -579,3 +610,7 @@ module.exports = (pDataClonerService, pOratorServiceServer) =>
 			return fNext();
 		});
 };
+
+// Exposed for unit tests.
+module.exports._RuntimeSyncProperties = _RuntimeSyncProperties;
+module.exports.applyRuntimeSyncOverrides = applyRuntimeSyncOverrides;

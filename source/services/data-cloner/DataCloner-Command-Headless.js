@@ -253,7 +253,8 @@ module.exports = (pDataClonerService, pConfig, pCLIOptions, fCallback) =>
 				MaxRecordsPerEntity: tmpMaxRecords || tmpSync.MaxRecordsPerEntity || 0,
 				DateTimePrecisionMS: tmpSync.DateTimePrecisionMS,
 				BackSyncTimeLimit: tmpSync.BackSyncTimeLimit,
-				TrueUpPageSize: tmpSync.TrueUpPageSize
+				TrueUpPageSize: tmpSync.TrueUpPageSize,
+				SyncEntityOptions: tmpSync.SyncEntityOptions
 			});
 
 		tmpFable.log.info(`Headless: Starting ${tmpSyncBody.SyncMode} sync...`);
