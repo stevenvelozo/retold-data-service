@@ -2,16 +2,27 @@ const libPictApplication = require('pict-application');
 
 const libProvider = require('./providers/Pict-Provider-DataCloner.js');
 
-const libViewLayout = require('./views/PictView-DataCloner-Layout.js');
+const libViewLayout     = require('./views/PictView-DataCloner-Layout.js');
 const libViewConnection = require('./views/PictView-DataCloner-Connection.js');
-const libViewSession = require('./views/PictView-DataCloner-Session.js');
-const libViewSchema = require('./views/PictView-DataCloner-Schema.js');
-const libViewDeploy = require('./views/PictView-DataCloner-Deploy.js');
-const libViewSync = require('./views/PictView-DataCloner-Sync.js');
-const libViewExport = require('./views/PictView-DataCloner-Export.js');
-const libViewViewData = require('./views/PictView-DataCloner-ViewData.js');
-const libViewHistogram = require('pict-section-histogram');
+const libViewSession    = require('./views/PictView-DataCloner-Session.js');
+const libViewSchema     = require('./views/PictView-DataCloner-Schema.js');
+const libViewDeploy     = require('./views/PictView-DataCloner-Deploy.js');
+const libViewSync       = require('./views/PictView-DataCloner-Sync.js');
+const libViewExport     = require('./views/PictView-DataCloner-Export.js');
+const libViewViewData   = require('./views/PictView-DataCloner-ViewData.js');
+const libViewHistogram  = require('pict-section-histogram');
 const libViewConnectionForm = require('pict-section-connection-form');
+
+const libPictSectionModal = require('pict-section-modal');
+const libPictSectionTheme = require('pict-section-theme');
+const libBrand            = require('../../RetoldDataService-Brand.js');
+
+const libViewShell        = require('./views/PictView-DataCloner-Shell.js');
+const libViewTopBarNav    = require('./views/PictView-DataCloner-TopBar-Nav.js');
+const libViewTopBarUser   = require('./views/PictView-DataCloner-TopBar-User.js');
+const libViewStatusBar    = require('./views/PictView-DataCloner-StatusBar.js');
+const libViewStatusDetail = require('./views/PictView-DataCloner-StatusDetail.js');
+const libViewSettings     = require('./views/PictView-DataCloner-SettingsPanel.js');
 
 class DataClonerApplication extends libPictApplication
 {
@@ -19,18 +30,20 @@ class DataClonerApplication extends libPictApplication
 	{
 		super(pFable, pOptions, pServiceHash);
 
-		// Register provider
-		this.pict.addProvider('DataCloner', libProvider.default_configuration, libProvider);
+		// 1. Modal section (provides shell + panels + modal API).
+		this.pict.addView('Pict-Section-Modal',
+			libPictSectionModal.default_configuration, libPictSectionModal);
 
-		// Register views
-		this.pict.addView('DataCloner-Layout', libViewLayout.default_configuration, libViewLayout);
+		// 2. Provider + existing section views.
+		this.pict.addProvider('DataCloner', libProvider.default_configuration, libProvider);
+		this.pict.addView('DataCloner-Layout',     libViewLayout.default_configuration,     libViewLayout);
 		this.pict.addView('DataCloner-Connection', libViewConnection.default_configuration, libViewConnection);
-		this.pict.addView('DataCloner-Session', libViewSession.default_configuration, libViewSession);
-		this.pict.addView('DataCloner-Schema', libViewSchema.default_configuration, libViewSchema);
-		this.pict.addView('DataCloner-Deploy', libViewDeploy.default_configuration, libViewDeploy);
-		this.pict.addView('DataCloner-Sync', libViewSync.default_configuration, libViewSync);
-		this.pict.addView('DataCloner-Export', libViewExport.default_configuration, libViewExport);
-		this.pict.addView('DataCloner-ViewData', libViewViewData.default_configuration, libViewViewData);
+		this.pict.addView('DataCloner-Session',    libViewSession.default_configuration,    libViewSession);
+		this.pict.addView('DataCloner-Schema',     libViewSchema.default_configuration,     libViewSchema);
+		this.pict.addView('DataCloner-Deploy',     libViewDeploy.default_configuration,     libViewDeploy);
+		this.pict.addView('DataCloner-Sync',       libViewSync.default_configuration,       libViewSync);
+		this.pict.addView('DataCloner-Export',     libViewExport.default_configuration,     libViewExport);
+		this.pict.addView('DataCloner-ViewData',   libViewViewData.default_configuration,   libViewViewData);
 		this.pict.addView('DataCloner-StatusHistogram',
 			{
 				ViewIdentifier: 'DataCloner-StatusHistogram',
@@ -43,14 +56,12 @@ class DataClonerApplication extends libPictApplication
 				ShowValues: false,
 				ShowLabels: true,
 				MaxBarSize: 80,
-				BarColor: '#4a90d9',
+				BarColor: 'var(--theme-color-brand-primary, #4a90d9)',
 				Bins: []
 			}, libViewHistogram);
 
-		// Shared schema-driven connection form.  Renders into the slot
-		// the DataCloner-Connection accordion shell exposes; the
-		// provider's bootstrapConnectionSchemas() pumps the schemas in
-		// once the host's /clone/connection/schemas endpoint responds.
+		// Shared schema-driven connection form (renders into the
+		// DataCloner-Connection accordion shell's slot).
 		this.pict.addView('PictSection-ConnectionForm',
 			Object.assign({}, libViewConnectionForm.default_configuration,
 				{
@@ -60,21 +71,39 @@ class DataClonerApplication extends libPictApplication
 					ActiveAddress:             'AppData.DataCloner.Connection.ActiveProvider',
 					FieldIDPrefix:             'datacloner-conn'
 				}), libViewConnectionForm);
+
+		// 3. Shell host + slot views + status bar / detail + settings panel.
+		this.pict.addView('DataCloner-Shell',
+			libViewShell.default_configuration, libViewShell);
+		this.pict.addView('DataCloner-TopBar-Nav',
+			libViewTopBarNav.default_configuration, libViewTopBarNav);
+		this.pict.addView('DataCloner-TopBar-User',
+			libViewTopBarUser.default_configuration, libViewTopBarUser);
+		this.pict.addView('DataCloner-StatusBar',
+			libViewStatusBar.default_configuration, libViewStatusBar);
+		this.pict.addView('DataCloner-StatusDetail',
+			libViewStatusDetail.default_configuration, libViewStatusDetail);
+		this.pict.addView('DataCloner-SettingsPanel',
+			libViewSettings.default_configuration, libViewSettings);
+
+		// 4. Theme-Section provider — registered LAST so it can find the slot views.
+		this.pict.addProvider('Theme-Section',
+			{
+				ApplyDefault: 'pict-default',
+				DefaultMode:  'system',
+				DefaultScale: 1.0,
+				Brand:        libBrand,
+				Views: ['Picker', 'ModeToggle', 'ScaleSelect', 'BrandMark', 'TopBar', 'BottomBar'],
+				ViewOptions:
+				{
+					TopBar:    { NavView:    'DataCloner-TopBar-Nav', UserView: 'DataCloner-TopBar-User', Height: 56 },
+					BottomBar: { StatusView: 'DataCloner-StatusBar', Height: 36 }
+				}
+			}, libPictSectionTheme);
 	}
 
 	onAfterInitializeAsync(fCallback)
 	{
-		// Centralized state (replaces global variables).
-		//
-		// PersistFields covers the static, non-connection inputs only.
-		// Connection-section fields (provider picker + per-provider
-		// inputs) are schema-driven now: their DOM ids and
-		// localStorage keys are derived at runtime from the host's
-		// /clone/connection/schemas response and persistence is hooked
-		// up by Pict-Provider-DataCloner#bootstrapConnectionSchemas
-		// after the schema-driven Connection view re-renders.  See
-		// PictView-DataCloner-Connection.js for the field-id
-		// convention.
 		this.pict.AppData.DataCloner =
 		{
 			FetchedTables: [],
@@ -94,9 +123,6 @@ class DataClonerApplication extends libPictApplication
 				'userName', 'password', 'schemaURL', 'pageSize', 'dateTimePrecisionMS',
 				'syncMaxRecords'
 			],
-			// Connection state — populated by bootstrapConnectionSchemas().
-			// Initialized empty here so the Connection view's first
-			// onBeforeRender finds a valid (if empty) shape.
 			Connection:
 			{
 				Schemas:         [],
@@ -108,15 +134,17 @@ class DataClonerApplication extends libPictApplication
 			}
 		};
 
-		// Make pict available for inline onclick handlers
 		window.pict = this.pict;
 
-		// Render layout (which chains child view renders via onAfterRender).
-		// The Connection view renders an empty shell here — the schemas
-		// arrive asynchronously and trigger a re-render once they land.
+		// Render the shell first — creates panel destination divs.
+		this.pict.views['DataCloner-Shell'].render();
+
+		// Render the layout (chains child renders) into #DataCloner-Workspace.
 		this.pict.views['DataCloner-Layout'].render();
 
-		// Post-render initialization for the static (non-connection) UI.
+		// Render the StatusBar into the BottomBar slot.
+		this.pict.views['DataCloner-StatusBar'].render();
+
 		this.pict.providers.DataCloner.initPersistence();
 		this.pict.providers.DataCloner.restoreDeployedTables();
 		this.pict.providers.DataCloner.startLiveStatusPolling();
@@ -125,11 +153,6 @@ class DataClonerApplication extends libPictApplication
 		this.pict.views['DataCloner-Layout'].collapseAllSections();
 		this.pict.providers.DataCloner.initAutoProcess();
 
-		// Async: fetch the host's connection-form schemas and re-render
-		// the Connection section.  bootstrapConnectionSchemas restores
-		// localStorage values + hooks save listeners once the new DOM
-		// is in place, then invokes onProviderChange() to surface the
-		// active provider's form.
 		this.pict.providers.DataCloner.bootstrapConnectionSchemas(function () { /* fire-and-forget */ });
 
 		return fCallback();

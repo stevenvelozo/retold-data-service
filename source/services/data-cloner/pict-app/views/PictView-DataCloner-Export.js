@@ -459,11 +459,11 @@ module.exports.default_configuration =
 			<div id="configExportStatus"></div>
 			<div id="cliCommand" style="display:none; margin-bottom:10px">
 				<label style="margin-bottom:4px">CLI Command <span style="color:var(--theme-color-text-muted, #888); font-weight:normal">(with config file)</span></label>
-				<div style="background:var(--theme-color-text-primary, #1a1a1a); color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyCLI()" title="Click to copy"></div>
+				<div style="background:var(--theme-color-text-primary, #1a1a1a); color:var(--theme-color-status-info, #4fc3f7); padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyCLI()" title="Click to copy"></div>
 			</div>
 			<div id="cliOneShot" style="display:none; margin-bottom:10px">
 				<label style="margin-bottom:4px">One-liner <span style="color:var(--theme-color-text-muted, #888); font-weight:normal">(no config file needed)</span></label>
-				<div style="background:var(--theme-color-text-primary, #1a1a1a); color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer; white-space:pre-wrap" onclick="pict.views['DataCloner-Export'].copyOneShot()" title="Click to copy"></div>
+				<div style="background:var(--theme-color-text-primary, #1a1a1a); color:var(--theme-color-status-info, #4fc3f7); padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer; white-space:pre-wrap" onclick="pict.views['DataCloner-Export'].copyOneShot()" title="Click to copy"></div>
 			</div>
 			<textarea id="configOutput" style="display:none; width:100%; min-height:300px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid var(--theme-color-border-default, #ccc); border-radius:4px; background:var(--theme-color-background-secondary, #fafafa); tab-size:4; resize:vertical" readonly></textarea>
 
@@ -476,7 +476,7 @@ module.exports.default_configuration =
 				</div>
 				<div id="mdwintCLICommand" style="margin-bottom:10px">
 					<label style="margin-bottom:4px">CLI Command</label>
-					<div style="background:var(--theme-color-text-primary, #1a1a1a); color:#4fc3f7; padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyMdwintCLI()" title="Click to copy"></div>
+					<div style="background:var(--theme-color-text-primary, #1a1a1a); color:var(--theme-color-status-info, #4fc3f7); padding:10px 14px; border-radius:4px; font-family:monospace; font-size:0.9em; word-break:break-all; cursor:pointer" onclick="pict.views['DataCloner-Export'].copyMdwintCLI()" title="Click to copy"></div>
 				</div>
 				<div id="mdwintConfigStatus"></div>
 				<textarea id="mdwintConfigOutput" style="width:100%; min-height:250px; font-family:monospace; font-size:0.85em; padding:10px; border:1px solid var(--theme-color-border-default, #ccc); border-radius:4px; background:var(--theme-color-background-secondary, #fafafa); tab-size:4; resize:vertical" readonly></textarea>

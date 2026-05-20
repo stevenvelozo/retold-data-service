@@ -196,7 +196,7 @@ class DataClonerSyncView extends libPictView
 		// --- Summary Cards ---
 		let tmpCardsContainer = document.getElementById('reportSummaryCards');
 		let tmpOutcomeClass = 'outcome-' + pReport.Outcome.toLowerCase();
-		let tmpOutcomeColor = { Success: '#28a745', Partial: '#ffc107', Error: '#dc3545', Stopped: '#6c757d' }[pReport.Outcome] || '#666';
+		let tmpOutcomeColor = { Success: 'var(--theme-color-status-success, #28a745)', Partial: 'var(--theme-color-status-warning, #ffc107)', Error: 'var(--theme-color-status-error, #dc3545)', Stopped: 'var(--theme-color-text-secondary, #6c757d)' }[pReport.Outcome] || 'var(--theme-color-text-secondary, #666)';
 
 		let tmpDurationSec = pReport.RunTimestamps.DurationSeconds || 0;
 		let tmpDurationStr = tmpDurationSec < 60 ? tmpDurationSec + 's' : Math.floor(tmpDurationSec / 60) + 'm ' + (tmpDurationSec % 60) + 's';
@@ -235,13 +235,13 @@ class DataClonerSyncView extends libPictView
 		}
 		else
 		{
-			let tmpHtml = '<h4 style="margin:0 0 8px; color:#dc3545; font-size:0.95em">Anomalies (' + pReport.Anomalies.length + ')</h4>';
+			let tmpHtml = '<h4 style="margin:0 0 8px; color:var(--theme-color-status-error, #dc3545); font-size:0.95em">Anomalies (' + pReport.Anomalies.length + ')</h4>';
 			tmpHtml += '<table class="progress-table">';
 			tmpHtml += '<tr><th>Table</th><th>Type</th><th>Message</th></tr>';
 			for (let i = 0; i < pReport.Anomalies.length; i++)
 			{
 				let tmpAnomaly = pReport.Anomalies[i];
-				let tmpTypeColor = tmpAnomaly.Type === 'Error' ? '#dc3545' : (tmpAnomaly.Type === 'Partial' ? '#ffc107' : '#6c757d');
+				let tmpTypeColor = tmpAnomaly.Type === 'Error' ? 'var(--theme-color-status-error, #dc3545)' : (tmpAnomaly.Type === 'Partial' ? 'var(--theme-color-status-warning, #ffc107)' : 'var(--theme-color-text-secondary, #6c757d)');
 				tmpHtml += '<tr>';
 				tmpHtml += '<td><strong>' + this.pict.providers.DataCloner.escapeHtml(tmpAnomaly.Table) + '</strong></td>';
 				tmpHtml += '<td style="color:' + tmpTypeColor + '">' + tmpAnomaly.Type + '</td>';
@@ -265,7 +265,7 @@ class DataClonerSyncView extends libPictView
 				let tmpTable = pReport.Tables[i];
 				let tmpDur = tmpTable.DurationSeconds < 60 ? tmpTable.DurationSeconds + 's' : Math.floor(tmpTable.DurationSeconds / 60) + 'm ' + (tmpTable.DurationSeconds % 60) + 's';
 				let tmpRecs = tmpTable.Total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-				let tmpStatusColor = { Complete: '#28a745', Error: '#dc3545', Partial: '#ffc107' }[tmpTable.Status] || '#666';
+				let tmpStatusColor = { Complete: 'var(--theme-color-status-success, #28a745)', Error: 'var(--theme-color-status-error, #dc3545)', Partial: 'var(--theme-color-status-warning, #ffc107)' }[tmpTable.Status] || 'var(--theme-color-text-secondary, #666)';
 				tmpHtml += '<tr>';
 				tmpHtml += '<td><strong>' + this.pict.providers.DataCloner.escapeHtml(tmpTable.Name) + '</strong></td>';
 				tmpHtml += '<td>' + tmpDur + '</td>';
@@ -369,11 +369,11 @@ class DataClonerSyncView extends libPictView
 			}
 
 			// Color the progress bar based on status
-			let tmpBarColor = '#28a745'; // green
-			if (pTable.Status === 'Error') tmpBarColor = '#dc3545';
-			else if (pTable.Status === 'Partial') tmpBarColor = '#ffc107';
-			else if (pTable.Status === 'Syncing') tmpBarColor = '#4a90d9';
-			else if (pTable.Status === 'Pending') tmpBarColor = '#adb5bd';
+			let tmpBarColor = 'var(--theme-color-status-success, #28a745)'; // green
+			if (pTable.Status === 'Error') tmpBarColor = 'var(--theme-color-status-error, #dc3545)';
+			else if (pTable.Status === 'Partial') tmpBarColor = 'var(--theme-color-status-warning, #ffc107)';
+			else if (pTable.Status === 'Syncing') tmpBarColor = 'var(--theme-color-brand-primary, #4a90d9)';
+			else if (pTable.Status === 'Pending') tmpBarColor = 'var(--theme-color-text-muted, #adb5bd)';
 
 			// Status badge
 			let tmpStatusBadge = pTable.Status;
@@ -482,24 +482,24 @@ module.exports.default_configuration =
 	CSS: /*css*/`
 .progress-table { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 4px; }
 .progress-table th, .progress-table td { text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--theme-color-border-light, #eee); font-size: 0.9em; }
-.progress-table th { background: #f8f9fa; font-weight: 600; }
-.progress-table-muted td { color: var(--theme-color-text-muted, #888); padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid #f4f5f6; }
-.progress-bar-container { width: 120px; height: 16px; background: #e9ecef; border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
+.progress-table th { background: var(--theme-color-background-secondary, #f8f9fa); font-weight: 600; }
+.progress-table-muted td { color: var(--theme-color-text-muted, #888); padding: 3px 12px; font-size: 0.85em; border-bottom: 1px solid var(--theme-color-background-secondary, #f4f5f6); }
+.progress-bar-container { width: 120px; height: 16px; background: var(--theme-color-background-tertiary, #e9ecef); border-radius: 8px; overflow: hidden; display: inline-block; vertical-align: middle; }
 .progress-bar-fill { height: 100%; background: var(--theme-color-status-success, #28a745); transition: width 0.3s; }
-.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #4a90d9; padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid var(--theme-color-border-default, #e0e0e0); }
+.sync-section-header { font-size: 0.8em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--theme-color-brand-primary, #4a90d9); padding: 10px 0 2px 0; margin-top: 6px; border-top: 1px solid var(--theme-color-border-default, #e0e0e0); }
 .sync-section-header:first-child { border-top: none; margin-top: 10px; }
-.sync-section-header-error { color: #dc3545; }
+.sync-section-header-error { color: var(--theme-color-status-error, #dc3545); }
 .sync-section-header-ok { color: var(--theme-color-status-success, #28a745); }
 .sync-section-count { font-weight: 400; color: var(--theme-color-text-muted, #999); font-size: 0.95em; }
 .sync-section-overflow { font-size: 0.8em; color: var(--theme-color-text-muted, #aaa); padding: 2px 12px 6px; }
 .sync-pending-count { text-align: right; color: var(--theme-color-text-muted, #aaa); font-size: 0.85em; }
-.report-card { background: #f8f9fa; border-radius: 8px; padding: 12px 16px; min-width: 140px; text-align: center; border: 1px solid #e9ecef; }
+.report-card { background: var(--theme-color-background-secondary, #f8f9fa); border-radius: 8px; padding: 12px 16px; min-width: 140px; text-align: center; border: 1px solid var(--theme-color-background-tertiary, #e9ecef); }
 .report-card .card-label { font-size: 0.8em; color: var(--theme-color-text-secondary, #666); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .report-card .card-value { font-size: 1.4em; font-weight: 700; }
 .report-card.outcome-success { border-left: 4px solid var(--theme-color-status-success, #28a745); }
-.report-card.outcome-partial { border-left: 4px solid #ffc107; }
-.report-card.outcome-error { border-left: 4px solid #dc3545; }
-.report-card.outcome-stopped { border-left: 4px solid #6c757d; }
+.report-card.outcome-partial { border-left: 4px solid var(--theme-color-status-warning, #ffc107); }
+.report-card.outcome-error { border-left: 4px solid var(--theme-color-status-error, #dc3545); }
+.report-card.outcome-stopped { border-left: 4px solid var(--theme-color-text-secondary, #6c757d); }
 `,
 	Templates:
 	[
