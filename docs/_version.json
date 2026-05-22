@@ -1,7 +1,7 @@
 {
 	"Name": "retold-data-service",
-	"Version": "2.0.33",
+	"Version": "2.1.4",
 	"Description": "Serve up a whole model!",
-	"GeneratedAt": "2026-04-10T17:22:17.821Z",
-	"GitCommit": "bfd3f2c"
+	"GeneratedAt": "2026-05-22T05:40:39.777Z",
+	"GitCommit": "558305a"
 }

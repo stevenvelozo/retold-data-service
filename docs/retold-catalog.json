@@ -1,144 +1,144 @@
 {
-	"Generated": "2026-04-10T17:22:17.521Z",
+	"Generated": "2026-05-22T05:40:39.605Z",
+	"Mode": "module",
 	"GitHubOrg": "stevenvelozo",
 	"DefaultBranch": "master",
-	"Groups": [
-		{
-			"Name": ".config",
-			"Key": ".config",
-			"Description": "",
-			"Modules": [
-				{
-					"Name": "code-server",
-					"Repo": "code-server",
-					"Group": ".config",
-					"Branch": "master",
-					"HasDocs": false,
-					"HasCover": false,
-					"Sidebar": [],
-					"DocFiles": []
-				},
-				{
-					"Name": "configstore",
-					"Repo": "configstore",
-					"Group": ".config",
-					"Branch": "master",
-					"HasDocs": false,
-					"HasCover": false,
-					"Sidebar": [],
-					"DocFiles": []
-				},
-				{
-					"Name": "luxury-extras",
-					"Repo": "luxury-extras",
-					"Group": ".config",
-					"Branch": "master",
-					"HasDocs": false,
-					"HasCover": false,
-					"Sidebar": [],
-					"DocFiles": []
-				},
-				{
-					"Name": "vscode-sqltools",
-					"Repo": "vscode-sqltools",
-					"Group": ".config",
-					"Branch": "master",
-					"HasDocs": false,
-					"HasCover": false,
-					"Sidebar": [],
-					"DocFiles": []
-				}
-			]
-		},
-		{
-			"Name": "Dist",
-			"Key": "dist",
-			"Description": "",
-			"Modules": [
-				{
-					"Name": "indoctrinate_content_staging",
-					"Repo": "indoctrinate_content_staging",
-					"Group": "dist",
-					"Branch": "master",
-					"HasDocs": false,
-					"HasCover": false,
-					"Sidebar": [],
-					"DocFiles": []
-				}
-			]
-		},
-		{
-			"Name": "Docs",
-			"Key": "docs",
-			"Description": "",
-			"Modules": [
-				{
-					"Name": "api",
-					"Repo": "api",
-					"Group": "docs",
-					"Branch": "master",
-					"HasDocs": true,
-					"HasCover": false,
-					"Sidebar": [],
-					"DocFiles": [
-						"api/constructor.md",
-						"api/initializeDataEndpoints.md",
-						"api/initializePersistenceEngine.md",
-						"api/initializeService.md",
-						"api/onAfterInitialize.md",
-						"api/onBeforeInitialize.md",
-						"api/onInitialize.md",
-						"api/reference.md",
-						"api/stopService.md"
-					]
-				},
-				{
-					"Name": "css",
-					"Repo": "css",
-					"Group": "docs",
-					"Branch": "master",
-					"HasDocs": true,
-					"HasCover": false,
-					"Sidebar": [],
-					"DocFiles": [
-						"css/docuserve.css"
-					]
-				}
-			]
-		},
-		{
-			"Name": "Source",
-			"Key": "source",
-			"Description": "",
-			"Modules": [
-				{
-					"Name": "services",
-					"Repo": "services",
-					"Group": "source",
-					"Branch": "master",
-					"HasDocs": false,
-					"HasCover": false,
-					"Sidebar": [],
-					"DocFiles": []
-				}
-			]
-		},
-		{
-			"Name": "Test",
-			"Key": "test",
-			"Description": "",
-			"Modules": [
-				{
-					"Name": "model",
-					"Repo": "model",
-					"Group": "test",
-					"Branch": "master",
-					"HasDocs": false,
-					"HasCover": false,
-					"Sidebar": [],
-					"DocFiles": []
-				}
-			]
-		}
-	]
+	"Module": {
+		"Name": "retold-data-service",
+		"Repo": "retold-data-service",
+		"Group": "",
+		"Branch": "master",
+		"HasDocs": true,
+		"HasCover": true,
+		"Sidebar": [
+			{
+				"Title": "Getting Started",
+				"Children": [
+					{
+						"Title": "Overview",
+						"Path": "README.md"
+					},
+					{
+						"Title": "Quick Start",
+						"Path": "quick-start.md"
+					},
+					{
+						"Title": "Configuration",
+						"Path": "configuration.md"
+					}
+				]
+			},
+			{
+				"Title": "Architecture",
+				"Children": [
+					{
+						"Title": "System Design",
+						"Path": "architecture.md"
+					},
+					{
+						"Title": "Initialization",
+						"Path": "initialization.md"
+					},
+					{
+						"Title": "Schema Definition",
+						"Path": "schema-definition.md"
+					}
+				]
+			},
+			{
+				"Title": "Usage",
+				"Children": [
+					{
+						"Title": "REST Endpoints",
+						"Path": "endpoints.md"
+					},
+					{
+						"Title": "DAL Access",
+						"Path": "dal-access.md"
+					},
+					{
+						"Title": "Behavior Injection",
+						"Path": "behavior-injection.md"
+					},
+					{
+						"Title": "Lifecycle Hooks",
+						"Path": "lifecycle-hooks.md"
+					}
+				]
+			},
+			{
+				"Title": "API Reference",
+				"Children": [
+					{
+						"Title": "Overview",
+						"Path": "api/reference.md"
+					},
+					{
+						"Title": "constructor",
+						"Path": "api/constructor.md"
+					},
+					{
+						"Title": "initializeService",
+						"Path": "api/initializeService.md"
+					},
+					{
+						"Title": "stopService",
+						"Path": "api/stopService.md"
+					},
+					{
+						"Title": "initializePersistenceEngine",
+						"Path": "api/initializePersistenceEngine.md"
+					},
+					{
+						"Title": "initializeDataEndpoints",
+						"Path": "api/initializeDataEndpoints.md"
+					},
+					{
+						"Title": "onBeforeInitialize",
+						"Path": "api/onBeforeInitialize.md"
+					},
+					{
+						"Title": "onInitialize",
+						"Path": "api/onInitialize.md"
+					},
+					{
+						"Title": "onAfterInitialize",
+						"Path": "api/onAfterInitialize.md"
+					}
+				]
+			}
+		],
+		"DocFiles": [
+			".nojekyll",
+			"README.md",
+			"_brand.json",
+			"_cover.md",
+			"_sidebar.md",
+			"_topbar.md",
+			"_version.json",
+			"api/constructor.md",
+			"api/initializeDataEndpoints.md",
+			"api/initializePersistenceEngine.md",
+			"api/initializeService.md",
+			"api/onAfterInitialize.md",
+			"api/onBeforeInitialize.md",
+			"api/onInitialize.md",
+			"api/reference.md",
+			"api/stopService.md",
+			"architecture.md",
+			"behavior-injection.md",
+			"configuration.md",
+			"dal-access.md",
+			"endpoints.md",
+			"index.html",
+			"initialization.md",
+			"lifecycle-hooks.md",
+			"quick-start.md",
+			"retold-catalog.json",
+			"retold-keyword-index.json",
+			"schema-definition.md",
+			"storage-providers.md"
+		]
+	},
+	"Groups": []
 }
