@@ -12,14 +12,14 @@ Extends `fable-serviceproviderbase`. Registered as service type `'RetoldDataServ
 
 | Method | Description |
 |--------|-------------|
-| [constructor](api/constructor.md) | Create a new RetoldDataService instance |
-| [initializeService](api/initializeService.md) | Initialize the full service stack |
-| [stopService](api/stopService.md) | Stop the Orator web server |
-| [initializePersistenceEngine](api/initializePersistenceEngine.md) | Load the storage provider module |
-| [initializeDataEndpoints](api/initializeDataEndpoints.md) | Load model and create DAL + endpoints |
-| [onBeforeInitialize](api/onBeforeInitialize.md) | Pre-initialization lifecycle hook |
-| [onInitialize](api/onInitialize.md) | Mid-initialization lifecycle hook |
-| [onAfterInitialize](api/onAfterInitialize.md) | Post-initialization lifecycle hook |
+| [constructor](constructor.md) | Create a new RetoldDataService instance |
+| [initializeService](initializeService.md) | Initialize the full service stack |
+| [stopService](stopService.md) | Stop the Orator web server |
+| [initializePersistenceEngine](initializePersistenceEngine.md) | Load the storage provider module |
+| [initializeDataEndpoints](initializeDataEndpoints.md) | Load model and create DAL + endpoints |
+| [onBeforeInitialize](onBeforeInitialize.md) | Pre-initialization lifecycle hook |
+| [onInitialize](onInitialize.md) | Mid-initialization lifecycle hook |
+| [onAfterInitialize](onAfterInitialize.md) | Post-initialization lifecycle hook |
 
 ### Properties
 
