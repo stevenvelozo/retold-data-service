@@ -11,7 +11,6 @@
 		"coverage": "npx quack coverage",
 		"test": "npx quack test",
 		"brand": "node node_modules/pict-section-theme/bin/pict-section-theme-brand.js --manifest ../../../Retold-Modules-Manifest.json --module retold-data-service --favicons source/services/comprehension-loader/web/favicons && cp -r source/services/comprehension-loader/web/favicons source/services/data-cloner/web/favicons",
-		"prebuild": "npm run brand",
 		"build": "node build-all.js",
 		"build:cloner": "npx quack build",
 		"build:loader": "node -e \"require('fs').writeFileSync('.quackage.json', require('fs').readFileSync('.quackage-comprehension-loader.json', 'utf8'))\" && npx quack build",
