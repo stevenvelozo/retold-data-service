@@ -1,2 +1,2 @@
-- [GitHub](https://github.com/stevenvelozo/retold-data-service)
+- [GitHub](https://github.com/fable-retold/retold-data-service)
 - [npm](https://www.npmjs.com/package/retold-data-service)

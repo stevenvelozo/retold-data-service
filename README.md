@@ -1,6 +1,6 @@
 # Retold Data Service
 
-> **[&#9654; Read the Retold-Data-Service Documentation](https://stevenvelozo.github.io/retold-data-service/)** &mdash; interactive docs with the full API reference.
+> **[&#9654; Read the Retold-Data-Service Documentation](https://fable-retold.github.io/retold-data-service/)** &mdash; interactive docs with the full API reference.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -228,13 +228,13 @@ npx docsify-cli serve docs
 
 ## Related Packages
 
-- [meadow](https://github.com/stevenvelozo/meadow) -- data access and ORM
-- [meadow-endpoints](https://github.com/stevenvelozo/meadow-endpoints) -- auto-generated REST endpoints
-- [foxhound](https://github.com/stevenvelozo/foxhound) -- query DSL for SQL generation
-- [stricture](https://github.com/stevenvelozo/stricture) -- schema definition DDL compiler
-- [orator](https://github.com/stevenvelozo/orator) -- API server abstraction
-- [fable](https://github.com/stevenvelozo/fable) -- application services framework
-- [retold-harness](https://github.com/stevenvelozo/retold-harness) -- application harness using this service
+- [meadow](https://github.com/fable-retold/meadow) -- data access and ORM
+- [meadow-endpoints](https://github.com/fable-retold/meadow-endpoints) -- auto-generated REST endpoints
+- [foxhound](https://github.com/fable-retold/foxhound) -- query DSL for SQL generation
+- [stricture](https://github.com/fable-retold/stricture) -- schema definition DDL compiler
+- [orator](https://github.com/fable-retold/orator) -- API server abstraction
+- [fable](https://github.com/fable-retold/fable) -- application services framework
+- [retold-harness](https://github.com/fable-retold/retold-harness) -- application harness using this service
 
 ## License
 

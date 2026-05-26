@@ -6,11 +6,11 @@ An all-in-one Fable service that turns a compiled Stricture schema into a comple
 
 Retold Data Service orchestrates several Retold modules into a unified service:
 
-- **[Meadow](https://github.com/stevenvelozo/meadow)** provides the data access layer and ORM
-- **[Meadow Endpoints](https://github.com/stevenvelozo/meadow-endpoints)** generates REST routes for every entity
-- **[Orator](https://github.com/stevenvelozo/orator)** serves the HTTP API via Restify
-- **[FoxHound](https://github.com/stevenvelozo/foxhound)** builds SQL queries from a declarative DSL
-- **[Stricture](https://github.com/stevenvelozo/stricture)** compiles schema definitions into the model
+- **[Meadow](https://github.com/fable-retold/meadow)** provides the data access layer and ORM
+- **[Meadow Endpoints](https://github.com/fable-retold/meadow-endpoints)** generates REST routes for every entity
+- **[Orator](https://github.com/fable-retold/orator)** serves the HTTP API via Restify
+- **[FoxHound](https://github.com/fable-retold/foxhound)** builds SQL queries from a declarative DSL
+- **[Stricture](https://github.com/fable-retold/stricture)** compiles schema definitions into the model
 
 ## Features
 
@@ -25,10 +25,10 @@ Retold Data Service orchestrates several Retold modules into a unified service:
 
 ## Related Packages
 
-- [meadow](https://github.com/stevenvelozo/meadow) -- Data access layer and ORM
-- [meadow-endpoints](https://github.com/stevenvelozo/meadow-endpoints) -- REST endpoint generation
-- [foxhound](https://github.com/stevenvelozo/foxhound) -- Query DSL for SQL generation
-- [stricture](https://github.com/stevenvelozo/stricture) -- Schema definition DDL compiler
-- [orator](https://github.com/stevenvelozo/orator) -- API server abstraction
-- [fable](https://github.com/stevenvelozo/fable) -- Application services framework
-- [retold-harness](https://github.com/stevenvelozo/retold-harness) -- Application harness using this service
+- [meadow](https://github.com/fable-retold/meadow) -- Data access layer and ORM
+- [meadow-endpoints](https://github.com/fable-retold/meadow-endpoints) -- REST endpoint generation
+- [foxhound](https://github.com/fable-retold/foxhound) -- Query DSL for SQL generation
+- [stricture](https://github.com/fable-retold/stricture) -- Schema definition DDL compiler
+- [orator](https://github.com/fable-retold/orator) -- API server abstraction
+- [fable](https://github.com/fable-retold/fable) -- Application services framework
+- [retold-harness](https://github.com/fable-retold/retold-harness) -- Application harness using this service

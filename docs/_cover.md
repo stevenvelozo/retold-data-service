@@ -8,4 +8,4 @@
 - Direct DAL access for server-side data operations
 
 [Getting Started](#retold-data-service)
-[GitHub](https://github.com/stevenvelozo/retold-data-service)
+[GitHub](https://github.com/fable-retold/retold-data-service)
