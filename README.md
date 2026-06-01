@@ -1,6 +1,6 @@
 # Retold Data Service
 
-> **[&#9654; Read the Retold-Data-Service Documentation](https://fable-retold.github.io/retold-data-service/)** &mdash; interactive docs with the full API reference.
+> **[Read the Retold-Data-Service Documentation](https://fable-retold.github.io/retold-data-service/)** - interactive docs with the full API reference.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
