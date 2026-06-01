@@ -2,7 +2,7 @@
 
 > **[Read the Retold-Data-Service Documentation](https://fable-retold.github.io/retold-data-service/)** - interactive docs with the full API reference.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[MIT License](LICENSE)
 
 > An all-in-one Fable service that turns a compiled Stricture schema into a complete REST API
 
