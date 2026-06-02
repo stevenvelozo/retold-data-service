@@ -53,49 +53,13 @@ Retold Data Service orchestrates several Retold modules into a unified service t
 
 The `initializeService()` method runs an ordered sequence of asynchronous steps using Fable's Anticipate pattern:
 
-```mermaid
-sequenceDiagram
-    participant App as Application
-    participant RDS as RetoldDataService
-    participant O as Orator
-    participant PE as PersistenceEngine
-    participant M as Meadow
-    participant ME as MeadowEndpoints
-
-    App->>RDS: initializeService()
-    RDS->>RDS: onBeforeInitialize()
-    RDS->>O: startWebServer()
-    RDS->>PE: initializePersistenceEngine()
-    RDS->>RDS: onInitialize()
-    RDS->>M: Load Stricture model
-    loop Each Entity
-        RDS->>M: loadFromPackageObject(schema)
-        M-->>RDS: DAL instance
-        RDS->>ME: new MeadowEndpoints(DAL)
-        ME->>O: connectRoutes()
-    end
-    RDS->>RDS: onAfterInitialize()
-    RDS-->>App: callback()
-```
+<!-- bespoke diagram: edit diagrams/initialization-flow.mmd or .hints.json, then: npx pict-renderer-graph build modules/meadow/retold-data-service/docs -->
+![Initialization Flow](diagrams/initialization-flow.svg)
 
 ## Component Diagram
 
-```mermaid
-graph TD
-    A[Application Code] --> B[RetoldDataService]
-    B --> C[Orator + Restify]
-    B --> D[Meadow DAL]
-    B --> E[MeadowEndpoints]
-    D --> F[FoxHound Query DSL]
-    D --> G[Storage Provider]
-    G --> H[MySQL]
-    G --> I[SQLite]
-    G --> J[MSSQL]
-    G --> K[PostgreSQL]
-    G --> L[MongoDB]
-    E --> M[REST Routes]
-    E --> N[Behavior Injection]
-```
+<!-- bespoke diagram: edit diagrams/component-diagram.mmd or .hints.json, then: npx pict-renderer-graph build modules/meadow/retold-data-service/docs -->
+![Component Diagram](diagrams/component-diagram.svg)
 
 ## How It Works
 

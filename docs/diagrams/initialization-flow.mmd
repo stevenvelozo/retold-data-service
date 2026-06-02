@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant App as Application
+    participant RDS as RetoldDataService
+    participant O as Orator
+    participant PE as PersistenceEngine
+    participant M as Meadow
+    participant ME as MeadowEndpoints
+
+    App->>RDS: initializeService()
+    RDS->>RDS: onBeforeInitialize()
+    RDS->>O: startWebServer()
+    RDS->>PE: initializePersistenceEngine()
+    RDS->>RDS: onInitialize()
+    RDS->>M: Load Stricture model
+    loop Each Entity
+        RDS->>M: loadFromPackageObject(schema)
+        M-->>RDS: DAL instance
+        RDS->>ME: new MeadowEndpoints(DAL)
+        ME->>O: connectRoutes()
+    end
+    RDS->>RDS: onAfterInitialize()
+    RDS-->>App: callback()
