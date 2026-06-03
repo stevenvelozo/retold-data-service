@@ -4,50 +4,8 @@ Retold Data Service orchestrates several Retold modules into a unified service t
 
 ## Component Stack
 
-```
-┌─────────────────────────────────────────────┐
-│            Your Application Code            │
-│   - Configure options                       │
-│   - Override lifecycle hooks                │
-│   - Inject behaviors                        │
-└──────────────────┬──────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────┐
-│          Retold Data Service                │
-│   - Loads Stricture model                   │
-│   - Creates DAL per entity                  │
-│   - Creates MeadowEndpoints per entity      │
-│   - Manages service lifecycle               │
-└──────────────────┬──────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────┐
-│              Orator (API Server)            │
-│   - HTTP server via Restify                 │
-│   - Route registration                      │
-│   - Request handling                        │
-└──────────────────┬──────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────┐
-│         Meadow Endpoints (REST Layer)       │
-│   - CRUD route handlers                     │
-│   - Behavior injection hooks                │
-│   - Session management                      │
-│   - Authorization enforcement               │
-└──────────────────┬──────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────┐
-│            Meadow (Data Access)             │
-│   - Schema management                       │
-│   - Query building via FoxHound             │
-│   - Provider-based query execution          │
-│   - Audit stamping and soft deletes         │
-└──────────────────┬──────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────┐
-│          Storage Provider                   │
-│   MySQL │ SQLite │ MSSQL │ ALASQL          │
-└─────────────────────────────────────────────┘
-```
+<!-- bespoke diagram: edit diagrams/component-stack.mmd or .hints.json, then: npx pict-renderer-graph build ../../meadow/retold-data-service/docs -->
+![Component Stack](diagrams/component-stack.svg)
 
 ## Initialization Flow
 

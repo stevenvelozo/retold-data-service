@@ -1,0 +1,6 @@
+graph TD
+    AppCode["Your Application Code<br/>- Configure options<br/>- Override lifecycle hooks<br/>- Inject behaviors"] --> RetoldDataService["Retold Data Service<br/>- Loads Stricture model<br/>- Creates DAL per entity<br/>- Creates MeadowEndpoints per entity<br/>- Manages service lifecycle"]
+    RetoldDataService --> Orator["Orator (API Server)<br/>- HTTP server via Restify<br/>- Route registration<br/>- Request handling"]
+    Orator --> MeadowEndpoints["Meadow Endpoints (REST Layer)<br/>- CRUD route handlers<br/>- Behavior injection hooks<br/>- Session management<br/>- Authorization enforcement"]
+    MeadowEndpoints --> Meadow["Meadow (Data Access)<br/>- Schema management<br/>- Query building via FoxHound<br/>- Provider-based query execution<br/>- Audit stamping and soft deletes"]
+    Meadow --> StorageProvider["Storage Provider<br/>MySQL | SQLite | MSSQL | ALASQL"]
