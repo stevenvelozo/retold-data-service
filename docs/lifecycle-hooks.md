@@ -46,27 +46,8 @@ class MyDataService extends libRetoldDataService
 
 ## Hook Execution Order
 
-```
-initializeService() called
-    │
-    ├── onBeforeInitialize()
-    │
-    ├── Start Orator (if AutoStartOrator)
-    │
-    ├── initializePersistenceEngine()
-    │
-    ├── onInitialize()
-    │
-    ├── initializeDataEndpoints()
-    │       ├── Load schema model
-    │       ├── Create DAL for each entity
-    │       ├── Create Endpoints for each entity
-    │       └── Connect routes to Orator
-    │
-    ├── onAfterInitialize()
-    │
-    └── callback(error)
-```
+<!-- bespoke diagram: edit diagrams/hook-execution-order.mmd or .hints.json, then: npx pict-renderer-graph build modules/meadow/retold-data-service/docs -->
+![Hook Execution Order](diagrams/hook-execution-order.svg)
 
 ## Error Handling
 

@@ -1,0 +1,19 @@
+initializeService() called
+    │
+    ├── onBeforeInitialize()
+    │
+    ├── Start Orator (if AutoStartOrator)
+    │
+    ├── initializePersistenceEngine()
+    │
+    ├── onInitialize()
+    │
+    ├── initializeDataEndpoints()
+    │       ├── Load schema model
+    │       ├── Create DAL for each entity
+    │       ├── Create Endpoints for each entity
+    │       └── Connect routes to Orator
+    │
+    ├── onAfterInitialize()
+    │
+    └── callback(error)

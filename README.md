@@ -72,25 +72,8 @@ _Fable.RetoldDataService.initializeService(
 
 Retold Data Service orchestrates the full Meadow stack into a single initialization sequence:
 
-```
-Fable (Core)
-  └── Retold Data Service
-        ├── Orator (API Server)
-        │     └── Restify (HTTP Engine)
-        ├── Meadow (Data Access Layer)
-        │     ├── Schema (from compiled Stricture model)
-        │     ├── FoxHound (Query DSL)
-        │     └── Provider (MySQL / MSSQL / PostgreSQL / SQLite / MongoDB / etc.)
-        └── Meadow Endpoints (REST Routes)
-              ├── Create   POST   /1.0/Entity
-              ├── Read     GET    /1.0/Entity/:ID
-              ├── Reads    GET    /1.0/Entities/:Begin/:Cap
-              ├── Update   PUT    /1.0/Entity
-              ├── Delete   DELETE /1.0/Entity/:ID
-              ├── Count    GET    /1.0/Entities/Count
-              ├── Schema   GET    /1.0/Entity/Schema
-              └── New      GET    /1.0/Entity/Schema/New
-```
+<!-- bespoke diagram: edit diagrams/architecture.mmd or .hints.json, then: npx pict-renderer-graph build modules/meadow/retold-data-service -->
+![Architecture](diagrams/architecture.svg)
 
 ## Options
 
